@@ -1,6 +1,10 @@
 {
   "name": "fray",
   "private": true,
+  "workspaces": [
+    "app/*",
+    "packages/*"
+  ],
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",

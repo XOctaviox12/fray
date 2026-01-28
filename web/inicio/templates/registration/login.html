@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Acceso FRAY</title>
+</head>
+<body class="bg-slate-900 flex items-center justify-center h-screen px-4">
+    <div class="w-full max-w-md">
+        <div class="bg-white rounded-[2.5rem] p-10 shadow-2xl">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <span class="text-white text-3xl font-bold">F</span>
+                </div>
+                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Bienvenido</h1>
+                <p class="text-slate-400 text-sm mt-1">Ingresa tus credenciales para continuar</p>
+            </div>
+
+            {% if form.errors or form.non_field_errors %}
+            <div class="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3">
+                <svg class="w-5 h-5 text-red-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <div class="text-[11px] font-bold text-red-600 uppercase tracking-wide leading-tight">
+                    {% if form.non_field_errors %}
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    {% else %}
+                        <p>Usuario o contraseña incorrectos. Por favor, verifica tus datos.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <form method="post" class="space-y-5">
+                {% csrf_token %}
+                
+                <div>
+                    <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Usuario</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <p class="text-[10px] text-red-500 font-bold mt-1 ml-1">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Contraseña</label>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <p class="text-[10px] text-red-500 font-bold mt-1 ml-1">{{ form.password.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98] mt-4">
+                    Entrar al Sistema
+                </button>
+            </form>
+        </div>
+        <p class="text-center text-slate-500 text-xs mt-8">FRAY &copy; 2026 - Kronerion Design</p>
+    </div>
+</body>
+</html>

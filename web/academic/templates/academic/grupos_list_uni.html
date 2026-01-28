@@ -1,0 +1,58 @@
+{% extends 'inicio/base.html' %}
+
+{% block content %}
+<div class="space-y-12">
+    <div class="flex justify-between items-center">
+        <h2 class="text-3xl font-black text-slate-800 tracking-tight">Facultades y Carreras</h2>
+        <a href="{% url 'crear_grupo' %}" class="bg-purple-600 text-white px-6 py-3 rounded-2xl font-bold shadow-xl">
+            + Registrar Grupo
+        </a>
+    </div>
+
+    {% for carrera, grupos in carreras.items %}
+    <div class="space-y-6">
+        <div class="flex items-center gap-4">
+            <div class="h-px flex-grow bg-slate-200"></div>
+            <h3 class="text-sm font-black text-purple-600 uppercase tracking-widest">{{ carrera }}</h3>
+            <div class="h-px flex-grow bg-slate-200"></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {% for grupo in grupos %}
+            <a href="{% url 'detalle_grupo' grupo.pk %}" class="group bg-white p-8 rounded-[2.5rem] border border-slate-200 hover:border-purple-500 transition-all transform hover:-translate-y-1">
+                <div class="flex justify-between items-center mb-6">
+                    <span class="text-3xl font-black text-slate-800">{{ grupo.grado }}º<span class="text-purple-600">{{ grupo.nombre }}</span></span>
+                    <div class="flex -space-x-3">
+                        {% for docente in grupo.docentes.all|slice:":3" %}
+                            <div class="w-8 h-8 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold" title="{{ docente.get_full_name }}">
+                                {{ docente.first_name|first }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Catedráticos Asignados</p>
+                <p class="text-xs text-slate-600 font-medium truncate">
+                    {% for d in grupo.docentes.all %}{{ d.last_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </p>
+
+                <div class="mt-6 pt-6 border-t border-slate-50 flex justify-between items-end">
+                    <div>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Matrícula</p>
+                        <p class="text-2xl font-black text-slate-800">{{ grupo.alumnos.count }}</p>
+                    </div>
+                    <div class="text-purple-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="py-20 text-center">
+        <p class="text-slate-400 font-bold uppercase tracking-widest">No hay facultades registradas.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

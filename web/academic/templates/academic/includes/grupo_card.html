@@ -1,0 +1,68 @@
+<a href="{% url 'detalle_grupo' grupo.pk %}" class="block group bg-white p-7 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-{{ color }}-300 transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden">
+    
+    <div class="absolute -right-6 -top-6 w-32 h-32 bg-{{ color }}-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+    <div class="flex justify-between items-start mb-6 relative z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-{{ color }}-50 text-{{ color }}-600 rounded-2xl flex items-center justify-center font-black text-lg group-hover:bg-{{ color }}-600 group-hover:text-white transition-colors shadow-sm">
+                {{ grupo.grado }}º
+            </div>
+            <div>
+                <span class="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Promedio</span>
+                <span class="text-sm font-bold text-slate-700">{{ grupo.promedio_general|floatformat:1 }}</span>
+            </div>
+        </div>
+        
+        {% if grupo.asignaturas.exists %}
+            <span class="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[9px] font-black uppercase tracking-widest">
+                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                {{ grupo.asignaturas.count }} Materias
+            </span>
+        {% else %}
+            <span class="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-500 border border-rose-100 rounded-full text-[9px] font-black uppercase tracking-widest">
+                <span class="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse"></span>
+                Sin Carga
+            </span>
+        {% endif %}
+    </div>
+    
+    <div class="relative z-10 mb-6">
+        <h4 class="text-xl font-bold text-slate-800 mb-2 truncate">Grupo {{ grupo.nombre }}</h4>
+        
+        <div class="space-y-1">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Docentes Responsables:</p>
+            <p class="text-xs text-slate-600 font-medium truncate leading-relaxed">
+                {% for docente in grupo.docentes.all %}
+                    <span class="hover:text-{{ color }}-600 transition-colors">{{ docente.get_full_name|title }}</span>{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                    <span class="text-rose-400 italic text-[10px]">Docente de grupo no asignado</span>
+                {% endfor %}
+            </p>
+        </div>
+    </div>
+    
+    <div class="pt-5 border-t border-slate-50 relative z-10">
+        <div class="flex justify-between items-end mb-2">
+            <div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                    Ocupación Aula
+                </p>
+                <p class="text-sm font-bold text-slate-700">
+                    {{ grupo.alumnos.count }} <span class="text-slate-400 font-normal text-xs">/ {{ grupo.capacidad_maxima }}</span>
+                </p>
+            </div>
+            <div class="text-[10px] font-bold text-{{ color }}-600 bg-{{ color }}-50 px-2 py-0.5 rounded-lg">
+                {{ grupo.ocupacion_porcentaje|floatformat:0 }}%
+            </div>
+        </div>
+
+        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-1000 ease-out 
+                {% if grupo.ocupacion_porcentaje >= 100 %}bg-rose-500
+                {% elif grupo.ocupacion_porcentaje >= 80 %}bg-amber-400
+                {% else %}bg-{{ color }}-400{% endif %}" 
+                style="width: {{ grupo.ocupacion_porcentaje }}%">
+            </div>
+        </div>
+    </div>
+</a>

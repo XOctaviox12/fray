@@ -1,0 +1,107 @@
+{% extends 'inicio/base.html' %}
+
+{% block content %}
+<div class="w-full px-4 md:px-6 lg:px-8 pb-12 space-y-8">
+    
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'dashboard' %}" class="group flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-{{ color }}-600 hover:border-{{ color }}-200 transition-all shadow-sm">
+                <svg class="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+            </a>
+            
+            <div>
+                <h2 class="text-3xl font-black text-slate-800 tracking-tight">Plan de Estudios</h2>
+                <p class="text-slate-500 text-sm font-medium">Retícula académica y carga de materias.</p>
+            </div>
+        </div>
+
+        <a href="{% url 'crear-materia'%}" class="px-6 py-3 rounded-xl bg-{{ color }}-600 hover:bg-{{ color }}-700 text-white font-bold text-sm shadow-lg shadow-{{ color }}-200 transition-all flex items-center gap-2 transform active:scale-95">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+            Nueva Materia
+        </a>
+    </div>
+
+    <div class="space-y-8">
+        {% for carrera in carreras %}
+        <div class="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm relative overflow-hidden group">
+            
+            <div class="absolute top-0 right-0 w-64 h-64 bg-{{ color }}-50 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -mr-16 -mt-16 pointer-events-none"></div>
+
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-8 relative z-10 border-b border-slate-100 pb-6">
+                <div class="w-16 h-16 rounded-2xl bg-{{ color }}-50 flex items-center justify-center text-{{ color }}-600 shadow-inner">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-1">
+                        <h3 class="text-2xl font-black text-slate-800">{{ carrera.nombre }}</h3>
+                        <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-widest border border-slate-200">
+                            {{ carrera.nivel }}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        <span>RVOE: {{ carrera.clave_rvoe|default:"Tramite Interno" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 relative z-10">
+                {% regroup carrera.asignaturas.all by grado as grados_list %}
+                
+                {% for grado in grados_list %}
+                <div class="bg-slate-50/50 rounded-3xl p-5 border border-slate-200 hover:border-{{ color }}-200 hover:shadow-md transition-all duration-300">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
+                        <h4 class="font-black text-slate-700 uppercase tracking-wider text-xs flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-{{ color }}-400"></span>
+                            {% if carrera.nivel == 'SECUNDARIA' or carrera.nivel == 'PREPARATORIA' %}
+                                {{ grado.grouper }}º Grado
+                            {% else %}
+                                {{ grado.grouper }}º Semestre
+                            {% endif %}
+                        </h4>
+                        <span class="text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded-md border border-slate-100">
+                            {{ grado.list|length }} Materias
+                        </span>
+                    </div>
+
+                    <ul class="space-y-2">
+                        {% for materia in grado.list %}
+                        <li class="group/item flex justify-between items-center bg-white p-3 rounded-xl border border-slate-100 hover:border-{{ color }}-200 hover:shadow-sm transition-all cursor-default">
+                            <div class="flex items-center gap-3">
+                                <div class="w-1 h-8 rounded-full bg-slate-200 group-hover/item:bg-{{ color }}-400 transition-colors"></div>
+                                <div>
+                                    <span class="block text-xs font-bold text-slate-700 group-hover/item:text-{{ color }}-700 transition-colors leading-tight">
+                                        {{ materia.nombre }}
+                                    </span>
+                                    {% if materia.clave %}
+                                    <span class="text-[9px] font-mono text-slate-400 block mt-0.5">{{ materia.clave }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if carrera.nivel == 'LICENCIATURA' or carrera.nivel == 'MAESTRIA' or carrera.nivel == 'UNIVERSIDAD' %}
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[9px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                                        {{ materia.creditos }} CR
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full py-20 flex flex-col items-center justify-center bg-white rounded-[2.5rem] border border-dashed border-slate-300">
+            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-700">Sin planes de estudio</h3>
+            <p class="text-slate-400 text-sm mt-1">No hay carreras ni materias configuradas para este plantel.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>{% block title %}FRAY | Sistema Escolar{% endblock %}</title>
+    <style>
+        /* Animaciones suaves para los toasts y modales */
+        .fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-[100] shadow-sm">
+        <div class="w-full px-4 md:px-6 lg:px-8"> <div class="flex justify-between h-16 items-center">
+                
+                <div class="flex items-center gap-4">
+                    <a href="{% url 'dashboard' %}" class="flex items-center gap-2 group">
+                        <div class="w-9 h-9 bg-{{ color }}-700 rounded-lg flex items-center justify-center shadow-lg shadow-{{ color }}-200 group-hover:scale-105 transition-transform">
+                            <span class="text-white font-black text-xl">F</span>
+                        </div>
+                        <span class="text-xl font-bold text-slate-800 tracking-tight group-hover:text-{{ color }}-700 transition-colors">FRAY</span>
+                    </a>
+                    
+                    <div class="hidden sm:flex items-center px-3 py-1 bg-{{ color }}-50 border border-{{ color }}-100 rounded-full">
+                        <span class="text-[10px] font-black text-{{ color }}-700 uppercase tracking-tighter truncate max-w-[150px]">
+                            📍 {{ user.plantel.nombre|default:"Administración Global" }}
+                        </span>
+                    </div>
+                </div>
+
+                <nav class="hidden md:flex items-center space-x-6">
+                    <a href="{% url 'dashboard' %}" class="text-{{ color }}-700 font-bold text-sm bg-{{ color }}-50 px-3 py-1.5 rounded-lg border border-{{ color }}-100 transition-all">
+                        Dashboard
+                    </a>
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-100 bg-slate-50/50">
+                        <span class="text-[9px] font-black text-slate-400 uppercase">Ciclo:</span>
+                        <span class="text-[10px] font-bold text-slate-700">Ene - Abr 2026</span>
+                    </div>
+                </nav>
+
+                <div class="flex items-center gap-4">
+                    <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </button>
+
+                    <a href="{% url 'perfil' %}" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-{{ color }}-100 hover:text-{{ color }}-600 transition shadow-sm border border-transparent hover:border-{{ color }}-200" title="Mi Perfil">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    </a>
+
+                    <div class="text-right hidden lg:block border-l pl-4 border-slate-200">
+                        <p class="text-xs font-bold text-slate-800 leading-none">{{ user.username }}</p>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">{{ user.get_rol_display|default:"Usuario" }}</p>
+                    </div>
+
+                    <form action="{% url 'logout' %}" method="post" class="hidden sm:block">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs font-black text-rose-500 bg-rose-50 hover:bg-rose-100 border border-rose-100 px-4 py-2 rounded-lg transition uppercase tracking-tighter">
+                            Salir
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div id="mobile-menu" class="hidden md:hidden border-t border-slate-100 bg-white absolute w-full left-0 top-16 shadow-lg p-4 space-y-4">
+            <div class="grid grid-cols-2 gap-2">
+                <a href="{% url 'dashboard' %}" class="block text-center p-3 bg-{{ color }}-50 text-{{ color }}-700 font-bold rounded-xl border border-{{ color }}-100">Dashboard</a>
+                <a href="{% url 'perfil' %}" class="block text-center p-3 bg-slate-50 text-slate-600 font-bold rounded-xl border border-slate-100">Mi Perfil</a>
+            </div>
+            <div class="flex items-center justify-between px-2 pt-2 border-t border-slate-100">
+                <span class="text-xs font-bold text-slate-500">{{ user.username }}</span>
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs font-black text-rose-500">CERRAR SESIÓN</button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow w-full px-4 md:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% if messages %}
+    <div class="fixed bottom-6 right-6 z-[200] space-y-3 flex flex-col items-end pointer-events-none">
+        {% for message in messages %}
+        <div class="toast-item pointer-events-auto transform translate-y-10 opacity-0 bg-slate-800 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border-l-4 border-{{ color }}-500 min-w-[300px] backdrop-blur-md transition-all duration-500">
+            <div class="shrink-0 w-6 h-6 rounded-full bg-{{ color }}-600 flex items-center justify-center text-white">
+                {% if message.tags == 'error' %}
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                {% else %}
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                {% endif %}
+            </div>
+            <div>
+                <p class="text-[10px] font-black uppercase tracking-widest text-{{ color }}-200 opacity-70 mb-0.5">Notificación</p>
+                <p class="text-xs font-bold leading-tight">{{ message }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toasts = document.querySelectorAll('.toast-item');
+            toasts.forEach((t, index) => {
+                setTimeout(() => t.classList.remove('translate-y-10', 'opacity-0'), 100 + (index * 100));
+                setTimeout(() => t.classList.add('translate-y-10', 'opacity-0'), 5000 + (index * 500));
+            });
+        });
+    </script>
+    {% endif %}
+
+    <footer class="bg-white border-t border-slate-200 py-8 mt-auto">
+        <div class="w-full px-4 md:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-{{ color }}-500"></span>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                    &copy; 2026 Kronerion Design S.A.S. de C.V.
+                </p>
+            </div>
+            <div class="flex gap-4">
+                <a href="#" class="text-[10px] font-bold text-slate-400 hover:text-{{ color }}-600 uppercase tracking-widest transition">Soporte</a>
+                <a href="#" class="text-[10px] font-bold text-slate-400 hover:text-{{ color }}-600 uppercase tracking-widest transition">Privacidad</a>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,58 @@
+{% extends 'inicio/base.html' %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="mb-4">
+        <a href="{% url 'dashboard' %}" class="inline-flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-colors group">
+            <div class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
+                <svg class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+            </div>
+            <span class="text-[10px] font-black uppercase tracking-widest">Panel Principal</span>
+        </a>
+    </div>
+
+    <div class="flex justify-between items-center">
+        <div>
+            <h2 class="text-3xl font-black text-slate-800 tracking-tight">Cuerpo Docente</h2>
+            <p class="text-slate-500 font-medium italic">Profesores de {{ user.plantel.nombre }}</p>
+        </div>
+        <a href="{% url 'crear_docente' %}" class="bg-purple-600 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-purple-100 hover:bg-purple-700 transition-all">
+            + Nuevo Docente
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {% for docente in docentes %}
+        <a href="{% url 'detalle_docente' docente.pk %}" class="block group bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-purple-500 transition-all duration-300 transform hover:-translate-y-1">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center overflow-hidden border border-purple-100 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                    {% if docente.foto_perfil %}
+                        <img src="{{ docente.foto_perfil.url }}" class="w-full h-full object-cover">
+                    {% else %}
+                        <span class="text-2xl font-black text-purple-600 group-hover:text-white">{{ docente.first_name|first|upper }}</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-800 group-hover:text-purple-700 transition-colors">{{ docente.get_full_name }}</h4>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: {{ docente.username }}</p>
+                </div>
+            </div>
+
+            <div class="space-y-2 mb-6 text-xs text-slate-500 font-medium">
+                <p>📧 {{ docente.email }}</p>
+                <p>📞 {{ docente.telefono }}</p>
+            </div>
+            
+            <div class="pt-4 border-t border-slate-50 flex justify-between items-center">
+                <span class="text-[9px] font-black text-purple-600 uppercase tracking-widest">Ver Expediente</span>
+                <svg class="w-4 h-4 text-purple-500 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </div>
+        </a>
+        {% empty %}
+        <div class="col-span-3 py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
+            <p class="text-slate-400 font-bold uppercase text-xs tracking-widest">No hay maestros registrados.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

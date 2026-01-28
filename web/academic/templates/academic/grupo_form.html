@@ -1,0 +1,155 @@
+{% extends 'inicio/base.html' %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-8 pb-12">
+    <div class="mb-4">
+        <a href="{% url 'lista_grupos' %}" class="inline-flex items-center gap-2 text-slate-400 hover:text-{{ color }}-600 transition-colors group">
+            <div class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-{{ color }}-200 group-hover:bg-{{ color }}-50 transition-all">
+                <svg class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+            </div>
+            <span class="text-[10px] font-black uppercase tracking-widest">Regresar a la Lista</span>
+        </a>
+    </div>
+
+    <div class="text-center md:text-left">
+        <h2 class="text-3xl font-black text-slate-800 tracking-tight">
+            {% if form.instance.pk %}Editar Grupo{% else %}Nuevo Grupo Académico{% endif %}
+        </h2>
+        <p class="text-slate-500 font-medium italic">Configuración para el plantel {{ user.plantel.nombre }}.</p>
+    </div>
+
+    <div class="bg-white rounded-[2.5rem] p-8 md:p-12 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-{{ color }}-50 rounded-bl-[2.5rem] -mr-8 -mt-8 opacity-50 pointer-events-none"></div>
+
+        <form method="POST" class="space-y-8 relative z-10">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-rose-50 text-rose-600 p-4 rounded-xl text-sm font-bold border border-rose-100">
+                {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="space-y-6">
+                <div class="flex items-center gap-3">
+                    <div class="h-px bg-slate-100 flex-1"></div>
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Paso 1: Nivel y Grado</span>
+                    <div class="h-px bg-slate-100 flex-1"></div>
+                </div>
+
+                <div class="space-y-2 group">
+                    <label for="id_carrera_grupo" class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2 group-focus-within:text-{{ color }}-600 transition-colors">
+                        {{ form.carrera.label }} <span class="text-rose-400">*</span>
+                    </label>
+                    {{ form.carrera }}
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2 group">
+                        <label id="label_grado_texto" for="id_grado_input" class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2 group-focus-within:text-{{ color }}-600 transition-colors">
+                            Grado Escolar <span class="text-rose-400">*</span>
+                        </label>
+                        {{ form.grado }}
+                    </div>
+                    <div class="space-y-2 group">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2 group-focus-within:text-{{ color }}-600 transition-colors">
+                            Identificador / Letra (A, B...)
+                        </label>
+                        {{ form.nombre }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="flex items-center gap-3">
+                    <div class="h-px bg-slate-100 flex-1"></div>
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Paso 2: Logística</span>
+                    <div class="h-px bg-slate-100 flex-1"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2 group">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Aula</label>
+                        {{ form.aula }}
+                    </div>
+                    <div class="space-y-2 group">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Capacidad Máxima</label>
+                        {{ form.capacidad_maxima }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3 relative">
+                <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Docentes Responsables</label>
+                <button type="button" id="btn-maestros" class="w-full flex justify-between items-center px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-100 transition-all shadow-sm">
+                    <span id="texto-seleccion">Seleccionar Docentes...</span>
+                    <svg id="icon-arrow" class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+
+                <div id="lista-maestros" class="hidden absolute z-20 w-full mt-2 bg-white rounded-3xl border border-slate-200 shadow-2xl p-6">
+                    <div class="max-h-60 overflow-y-auto custom-scrollbar">
+                        {{ form.docentes }}
+                    </div>
+                    <div class="pt-4 border-t border-slate-100 flex justify-end">
+                        <button type="button" id="btn-cerrar" class="text-[10px] font-black text-{{ color }}-600 uppercase tracking-widest p-2 hover:bg-slate-50 rounded-lg">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                Guardar Grupo
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+    #lista-maestros label { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; cursor: pointer; transition: all 0.2s; font-size: 13px; color: #475569; font-weight: 600; }
+    #lista-maestros label:hover { background-color: #f1f5f9; }
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const carreraSelect = document.getElementById('id_carrera_grupo');
+        const gradoLabel = document.getElementById('label_grado_texto');
+        
+        // Función: Actualizar texto de etiqueta dinámicamente
+        function actualizarEtiqueta() {
+            if (!carreraSelect || !gradoLabel) return;
+            const texto = carreraSelect.options[carreraSelect.selectedIndex].text.toLowerCase();
+            
+            if (texto.includes('prepa') || texto.includes('bachillerato') || texto.includes('universidad')) {
+                gradoLabel.innerHTML = 'Cuatrimestre / Semestre <span class="text-rose-400">*</span>';
+            } else {
+                gradoLabel.innerHTML = 'Grado Escolar <span class="text-rose-400">*</span>';
+            }
+        }
+        
+        carreraSelect.addEventListener('change', actualizarEtiqueta);
+        actualizarEtiqueta();
+
+        // Selector de Docentes
+        const btn = document.getElementById('btn-maestros');
+        const lista = document.getElementById('lista-maestros');
+        const icon = document.getElementById('icon-arrow');
+        const cerrar = document.getElementById('btn-cerrar');
+        const textoSeleccion = document.getElementById('texto-seleccion');
+        
+        function actualizarTexto() {
+            const checkboxes = lista.querySelectorAll('input[type="checkbox"]:checked');
+            const nombres = [];
+            checkboxes.forEach((cb) => { nombres.push(cb.parentElement.textContent.trim()); });
+            textoSeleccion.innerText = nombres.length === 0 ? "Seleccionar Docentes..." : 
+                                      (nombres.length <= 2 ? nombres.join(', ') : `${nombres.length} seleccionados`);
+        }
+
+        btn.addEventListener('click', () => { lista.classList.toggle('hidden'); icon.classList.toggle('rotate-180'); });
+        cerrar.addEventListener('click', () => { lista.classList.add('hidden'); icon.classList.remove('rotate-180'); });
+        lista.addEventListener('change', actualizarTexto);
+        actualizarTexto();
+    });
+</script>
+{% endblock %}

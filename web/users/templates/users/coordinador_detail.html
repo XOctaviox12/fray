@@ -1,0 +1,71 @@
+{% extends 'inicio/base.html' %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="mb-8 flex items-center justify-between">
+        <a href="{% url 'lista_coordinadores' %}" class="text-slate-400 text-xs font-black uppercase tracking-widest hover:text-blue-600">← Volver</a>
+        <form action="{% url 'eliminar_coordinador' coord.pk %}" method="POST" onsubmit="return confirm('¿Eliminar definitivamente?')">
+            {% csrf_token %}
+            <button type="submit" class="text-red-500 text-[10px] font-black uppercase hover:underline">Eliminar Coordinador</button>
+        </form>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
+                <h3 class="text-xl font-bold text-slate-800 mb-6">Información General</h3>
+                <div class="grid grid-cols-2 gap-8">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Nombre Completo</p>
+                        <p class="font-bold text-slate-700">{{ coord.first_name }} {{ coord.last_name }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Correo</p>
+                        <p class="font-bold text-slate-700">{{ coord.email }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Teléfono</p>
+                        <p class="font-bold text-slate-700">{{ coord.telefono }}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Nacimiento</p>
+                        <p class="font-bold text-slate-700">{{ coord.fecha_nacimiento|default:"No registrado" }}</p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Dirección</p>
+                        <p class="font-bold text-slate-700 leading-relaxed">{{ coord.direccion|default:"No registrada" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-1 space-y-6">
+            <div class="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
+                <div class="relative z-10">
+                    <h3 class="text-lg font-bold mb-6 text-red-400">Restablecer Acceso</h3>
+                    <form method="POST" class="space-y-4">
+                        {% csrf_token %}
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-500 uppercase">Nueva Pass</label>
+                            {{ form.password }}
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[9px] font-black text-slate-500 uppercase">Confirmar</label>
+                            {{ form.confirm_password }}
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 py-3 rounded-xl font-bold text-xs hover:bg-blue-700 transition mt-4">
+                            Actualizar Contraseña
+                        </button>
+                    </form>
+                </div>
+                <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl"></div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 text-center">
+                <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Estado de Cuenta</p>
+                <span class="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full uppercase">Activo</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

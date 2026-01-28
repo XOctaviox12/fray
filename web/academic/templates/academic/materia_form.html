@@ -1,0 +1,120 @@
+{% extends 'inicio/base.html' %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 md:px-0 py-6">
+    
+    <div class="flex items-center gap-4 mb-8">
+        <a href="{% url 'lista_asignatura' %}" class="group flex items-center justify-center w-12 h-12 rounded-2xl bg-white border border-slate-200 text-slate-400 hover:text-{{ color }}-600 hover:border-{{ color }}-200 hover:shadow-md transition-all">
+            <svg class="w-6 h-6 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+        </a>
+        <div>
+            <h1 class="text-3xl font-black text-slate-800 tracking-tight">
+                {% if form.instance.pk %}Editar Materia{% else %}Nueva Materia{% endif %}
+            </h1>
+            <p class="text-slate-500 font-medium text-sm">Organización académica por niveles.</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden relative">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-{{ color }}-50 rounded-bl-[2.5rem] -mr-8 -mt-8 opacity-50 pointer-events-none"></div>
+
+        <form method="POST" id="materiaForm" class="p-8 md:p-10 space-y-6 relative z-10">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="bg-rose-50 text-rose-600 p-4 rounded-xl text-sm font-bold border border-rose-100">
+                {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-{{ color }}-600 text-white flex items-center justify-center text-[10px] font-bold shadow-sm">1</span>
+                    <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-700">Selección de Nivel</h3>
+                </div>
+                <div class="space-y-2">
+                    {{ form.nivel_academico }}
+                </div>
+            </div>
+
+            <div id="wrapper-grupo" class="space-y-2 opacity-40 pointer-events-none transition-all duration-300">
+                <label class="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 ml-2">
+                    <span class="w-4 h-4 rounded-full bg-slate-300 text-white flex items-center justify-center text-[8px]" id="step-2-indicator">2</span>
+                    {{ form.grupo.label }}
+                </label>
+                {{ form.grupo }}
+                <p id="helper-text" class="text-[9px] text-slate-400 ml-2 italic">Primero seleccione un nivel arriba.</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 pt-6 border-t border-slate-100">
+                {% for field in form %}
+                    {% if field.name != 'nivel_academico' and field.name != 'grupo' %}
+                        {% if field.is_hidden %} {{ field }} {% else %}
+                        <div class="space-y-2 group">
+                            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 group-focus-within:text-{{ color }}-600 transition-colors">
+                                {{ field.label }} {% if field.field.required %}<span class="text-rose-400">*</span>{% endif %}
+                            </label>
+                            {{ field }}
+                            {% if field.errors %}<p class="text-xs text-rose-500 font-bold mt-1">{{ field.errors.0 }}</p>{% endif %}
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="pt-6 flex flex-col sm:flex-row gap-4 border-t border-slate-100 mt-8">
+                <button type="submit" class="flex-1 bg-slate-900 text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg transform active:scale-95">
+                    Guardar Materia
+                </button>
+                <a href="{% url 'lista_asignatura' %}" class="flex-none sm:w-auto px-8 py-4 bg-slate-50 text-slate-500 rounded-xl font-bold text-xs uppercase tracking-widest text-center transition-colors">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const nivelSelector = document.getElementById('id_nivel_selector');
+        const grupoSelect = document.getElementById('id_grupo_final');
+        const wrapperGrupo = document.getElementById('wrapper-grupo');
+        const indicator = document.getElementById('step-2-indicator');
+        const helper = document.getElementById('helper-text');
+        
+        // Guardamos las opciones originales
+        const opcionesBase = Array.from(grupoSelect.options);
+
+        function filtrar() {
+            const nivel = nivelSelector.value; 
+            grupoSelect.innerHTML = ''; // Limpiamos
+
+            if (!nivel) {
+                wrapperGrupo.classList.add('opacity-40', 'pointer-events-none');
+                indicator.classList.replace('bg-{{ color }}-600', 'bg-slate-300');
+                grupoSelect.innerHTML = '<option value="">--- Primero seleccione nivel ---</option>';
+                helper.innerText = "Primero seleccione un nivel arriba.";
+                return;
+            }
+
+            // Activamos sección
+            wrapperGrupo.classList.remove('opacity-40', 'pointer-events-none');
+            indicator.classList.replace('bg-slate-300', 'bg-{{ color }}-600');
+            helper.innerText = nivel === 'PREPARATORIA' ? "Mostrando cuatrimestres de preparatoria." : "Mostrando grados de secundaria.";
+
+            // Filtramos basado en el texto de la opción
+            const filtroBusqueda = nivel === 'PREPARATORIA' ? 'cuatrimestre' : 'grado';
+            
+            grupoSelect.innerHTML = '<option value="">Seleccione el grupo destino...</option>';
+            opcionesBase.forEach(opt => {
+                if (opt.text.toLowerCase().includes(filtroBusqueda)) {
+                    grupoSelect.appendChild(opt.cloneNode(true));
+                }
+            });
+        }
+
+        nivelSelector.addEventListener('change', filtrar);
+        if(nivelSelector.value) filtrar(); // Ejecución inicial para edición
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,218 @@
+{% extends 'inicio/base.html' %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8 pb-12">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <a href="{% url 'lista_grupos' %}" class="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] hover:text-{{ color }}-600 transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+            {{ labels.dashboard_btn }}
+        </a>
+        <div class="flex flex-wrap gap-3">
+            <div class="flex bg-slate-100 p-1 rounded-xl">
+                <button class="px-4 py-2 text-[9px] font-black uppercase text-slate-500 hover:text-slate-800 transition-colors">Carga Masiva</button>
+                <button class="px-4 py-2 text-[9px] font-black uppercase text-slate-500 hover:text-slate-800 transition-colors">Expedientes</button>
+            </div>
+            <button class="bg-white border border-slate-200 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                PDF Lista
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-slate-900 rounded-[3rem] p-10 md:p-14 text-white shadow-2xl relative overflow-hidden">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
+            <div class="space-y-6">
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="bg-{{ color }}-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest italic">
+                        {% if grupo.nivel == 'UNIVERSIDAD' %}{{ grupo.carrera }}{% else %}{{ labels.seccion }} {{ grupo.nivel }}{% endif %}
+                    </span>
+                    <span class="bg-white/10 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10 flex items-center gap-2">
+                        <svg class="w-3 h-3 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/></svg>
+                        Aula: {{ grupo.aula|default:"Sin asignar" }}
+                    </span>
+                </div>
+
+                <h2 class="text-6xl font-black tracking-tighter">{{ grupo.grado }}º {{ grupo.nombre }}</h2>
+                
+                <div class="flex flex-wrap items-center gap-2 mt-6">
+                    <p class="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Tutores Responsables:</p>
+                    {% for docente in grupo.docentes.all %}
+                        <span class="bg-white/10 px-3 py-1 rounded-lg text-xs font-bold border border-white/10">{{ docente.get_full_name }}</span>
+                    {% empty %}
+                        <span class="text-xs text-slate-500 italic">No hay tutores asignados</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10 text-center min-w-[200px]">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Cupo del Aula</p>
+                <div class="flex items-end justify-center gap-1">
+                    <p class="text-4xl font-black text-white">{{ alumnos.count }}</p>
+                    <p class="text-lg font-bold text-slate-500 pb-1">/ {{ grupo.capacidad_maxima }}</p>
+                </div>
+                <div class="w-full bg-white/10 h-1 mt-4 rounded-full overflow-hidden">
+                    <div class="bg-{{ color }}-400 h-full transition-all duration-1000" style="width: {{ ocupacion }}%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="absolute -bottom-20 -left-20 w-80 h-80 bg-{{ color }}-600/20 rounded-full blur-[80px]"></div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white border border-slate-200 p-8 rounded-[2.5rem] shadow-sm flex items-center gap-6">
+            <div class="w-14 h-14 rounded-2xl bg-{{ color }}-50 flex items-center justify-center text-{{ color }}-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Promedio General</p>
+                <p class="text-3xl font-black text-slate-800">{{ promedio_general|floatformat:1 }}</p>
+            </div>
+        </div>
+        
+        <div class="bg-white border border-slate-200 p-8 rounded-[2.5rem] shadow-sm flex items-center gap-6">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Asistencia Mes</p>
+                <p class="text-3xl font-black text-slate-800">{{ asistencia_mes|floatformat:0 }}%</p>
+            </div>
+        </div>
+
+        <div class="bg-rose-50 border border-rose-100 p-8 rounded-[2.5rem] shadow-sm flex items-center gap-6">
+            <div class="w-14 h-14 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <div>
+                <p class="text-[10px] font-black text-rose-400 uppercase tracking-widest">En Riesgo</p>
+                <p class="text-3xl font-black text-rose-600">{{ alumnos_riesgo }} Alumnos</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 space-y-8">
+            {% if alertas %}
+            <div class="bg-amber-50 border-l-4 border-amber-400 p-6 rounded-2xl">
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v4a1 1 0 102 0V7zm-1 8a1 1 0 100-2 1 1 0 000 2z"/></svg>
+                    <h4 class="text-sm font-black text-amber-900 uppercase">Alertas Activas</h4>
+                </div>
+                <ul class="text-xs text-amber-700 font-medium space-y-1 ml-8 list-disc italic">
+                    {% for alerta in alertas %}
+                        <li>{{ alerta }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="bg-white rounded-[2.5rem] border border-slate-200 overflow-hidden shadow-sm">
+                <div class="p-8 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row gap-4 justify-between items-center">
+                    <form method="GET" class="relative w-full md:max-w-xs">
+                        <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Buscar alumno..." 
+                               class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs outline-none focus:ring-2 focus:ring-{{ color }}-500 transition-all">
+                        <svg class="w-4 h-4 absolute left-4 top-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </form>
+                    <button class="bg-{{ color }}-600 text-white px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-{{ color }}-100 hover:scale-105 transition-transform">+ Inscribir</button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                                <th class="px-8 py-4">Estudiante</th>
+                                <th class="px-8 py-4">Estatus</th>
+                                <th class="px-8 py-4 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for alumno in alumnos %}
+                            <tr class="group hover:bg-slate-50/80 transition-colors">
+                                <td class="px-8 py-5">
+                                    <p class="text-sm font-bold text-slate-800">{{ alumno.get_full_name }}</p>
+                                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-tighter">{{ alumno.username }}</p>
+                                </td>
+                                <td class="px-8 py-5">
+                                    <span class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest 
+                                        {% if alumno.estatus == 'ACTIVO' %}bg-emerald-50 text-emerald-600{% elif alumno.estatus == 'BAJA' %}bg-rose-50 text-rose-600{% else %}bg-amber-50 text-amber-600{% endif %}">
+                                        {{ alumno.get_estatus_display|default:"Activo" }}
+                                    </span>
+                                </td>
+                                <td class="px-8 py-5 text-center">
+                                    <button class="p-2 text-slate-400 hover:text-{{ color }}-600 transition-colors">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="px-8 py-20 text-center">
+                                    <p class="text-[10px] font-black uppercase tracking-widest opacity-40 italic">No hay alumnos registrados en este grupo</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <div class="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-black text-slate-800 tracking-tight">Comunicados</h3>
+                    <button class="text-{{ color }}-600 text-[10px] font-black uppercase hover:underline">Nuevo</button>
+                </div>
+                <div class="space-y-4">
+                    <div class="p-4 bg-slate-50 rounded-2xl border-l-4 border-{{ color }}-500">
+                        <p class="text-[10px] font-black text-slate-400 mb-1">26 ENE, 2026</p>
+                        <p class="text-xs font-bold text-slate-700 italic">Mañana no hay clases por junta de consejo técnico.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm">
+                <div class="flex justify-between items-center mb-8">
+                    <h3 class="text-xl font-black text-slate-800 tracking-tight">Materias</h3>
+                    <button onclick="document.getElementById('modal-materia').classList.remove('hidden')" class="w-10 h-10 rounded-full bg-{{ color }}-600 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4" /></svg>
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    {% for asignatura in asignaturas %}
+                    <div class="p-5 rounded-3xl border border-slate-100 bg-slate-50/50 group hover:border-{{ color }}-300 transition-all">
+                        <p class="text-[10px] font-black text-{{ color }}-600 uppercase tracking-widest mb-2">{{ asignatura.nombre }}</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">
+                                {{ asignatura.docente.first_name|slice:":1" }}
+                            </div>
+                            <p class="text-sm font-bold text-slate-800">{{ asignatura.docente.get_full_name }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-6 border-2 border-dashed border-slate-100 rounded-3xl">
+                        <p class="text-[10px] font-black text-slate-400 uppercase italic">Sin materias asignadas</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal-materia" class="hidden fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-[3rem] w-full max-w-md p-10 shadow-2xl">
+        <h3 class="text-2xl font-black text-slate-800 mb-2">Asignar Materia</h3>
+        <p class="text-slate-500 text-sm mb-8 font-medium italic">Define la carga académica para este grupo.</p>
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+            {{ form_mat.as_p }}
+            <div class="pt-6 flex flex-col gap-3">
+                <button type="submit" name="btn_materia" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl">Confirmar</button>
+                <button type="button" onclick="document.getElementById('modal-materia').classList.add('hidden')" class="w-full py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

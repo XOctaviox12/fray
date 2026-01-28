@@ -1,0 +1,420 @@
+{% extends 'inicio/base.html' %}
+
+{% block content %}
+<div class="w-full px-4 md:px-6 lg:px-8 pb-12 space-y-6">
+    
+    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+        <div class="min-w-fit">
+            <h2 class="text-3xl font-extrabold text-slate-800 tracking-tight">Panel de Control</h2>
+            <div class="flex items-center gap-2 mt-1">
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-{{ color }}-50 text-{{ color }}-700 border border-{{ color }}-100">
+                    {{ user.plantel.nombre }}
+                </span>
+                <span class="text-slate-400 text-sm font-medium italic hidden sm:inline">Ciclo Activo &bull; {% now "Y" %}</span>
+            </div>
+        </div>
+
+        <div class="flex-1 w-full mx-0 xl:mx-8">
+            <div class="relative group w-full">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-slate-400 group-hover:text-{{ color }}-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+                <input type="text" list="search-suggestions" class="block w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-{{ color }}-500 focus:bg-white transition-all" placeholder="Buscar alumno, docente o grupo...">
+                
+                <datalist id="search-suggestions">
+                    <option value="Roberto Gómez (Alumno - 3A)">
+                    <option value="Roberto Díaz (Docente)">
+                    <option value="Grupo 501 (Ingeniería)">
+                </datalist>
+            </div>
+        </div>
+        
+        <button onclick="toggleModal('modal-promocion')" class="shrink-0 group flex items-center gap-3 px-5 py-3 rounded-2xl border border-rose-100 text-rose-500 hover:bg-rose-600 hover:text-white transition-all bg-rose-50">
+            <div class="flex flex-col items-end">
+                <span class="text-[9px] font-black uppercase tracking-widest leading-none mb-1">Gestión Anual</span>
+                <span class="text-xs font-bold leading-none">Cerrar Ciclo</span>
+            </div>
+            <div class="w-8 h-8 rounded-xl bg-white/50 group-hover:bg-white/20 flex items-center justify-center transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </div>
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-{{ color }}-50 rounded-full -mr-8 -mt-8 opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
+            <div class="relative z-10">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="p-3 bg-{{ color }}-50 rounded-2xl text-{{ color }}-600 shadow-sm">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    </div>
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Total Activos</span>
+                </div>
+                <p class="text-4xl font-black text-slate-800">{{ total_alumnos }}</p>
+                <div class="flex items-center justify-between mt-2">
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">{{ labels.alumnos }}</p>
+                    <span class="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-lg">+ Inscripciones</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full -mr-8 -mt-8 opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
+            <div class="relative z-10">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="p-3 bg-indigo-50 rounded-2xl text-indigo-600 shadow-sm">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                    </div>
+                    {% if docentes_pendientes > 0 %}
+                        <span class="px-2.5 py-1 bg-rose-100 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-widest animate-pulse">Pendientes</span>
+                    {% else %}
+                        <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Al día</span>
+                    {% endif %}
+                </div>
+                <p class="text-4xl font-black text-slate-800">{{ total_docentes }}</p>
+                <p class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">{{ labels.docentes }}</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-full -mr-8 -mt-8 opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
+            <div class="relative z-10">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="p-3 bg-amber-50 rounded-2xl text-amber-600 shadow-sm">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    </div>
+                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Admin</span>
+                </div>
+                <p class="text-4xl font-black text-slate-800">{{ total_coordinadores }}</p>
+                <p class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">Coordinadores</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full -mr-8 -mt-8 opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
+            <div class="relative z-10">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="p-3 bg-emerald-50 rounded-2xl text-emerald-600 shadow-sm">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Hoy</span>
+                </div>
+                <p class="text-4xl font-black text-slate-800">{{ asistencia_global }}</p>
+                
+                <div class="flex items-center gap-2 mt-2">
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Asistencia</p>
+                    <div class="flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
+                        <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                        <span class="text-[10px] font-black text-emerald-600">3% vs Ayer</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 md:gap-8 h-full">
+        <div class="xl:col-span-2 flex flex-col gap-6 md:gap-8 h-full">
+            <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-6 md:p-8 relative overflow-hidden flex-1">
+                <div class="absolute top-0 right-0 w-40 h-40 bg-rose-50 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -mr-10 -mt-10"></div>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 relative z-10">
+                    <h3 class="text-xl font-black text-slate-800 flex items-center gap-3">
+                        <span class="relative flex h-3 w-3">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                        </span>
+                        Radar de Riesgo
+                    </h3>
+                    <div class="flex items-center gap-2 mt-2 sm:mt-0 bg-white/50 px-3 py-1 rounded-full border border-slate-100">
+                        <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Promedios Críticos</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
+                    {% for alumno in alumnos_riesgo %}
+                    <div class="flex items-center justify-between p-4 bg-white border border-rose-100 rounded-2xl shadow-sm hover:shadow-md hover:border-rose-200 transition-all group cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-sm font-black text-rose-600 border border-rose-100 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                                {{ alumno.first_name|slice:":1" }}{{ alumno.last_name|slice:":1" }}
+                            </div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800 group-hover:text-rose-700 transition-colors">{{ alumno.get_full_name|title }}</p>
+                                <p class="text-[9px] font-bold text-rose-400 uppercase tracking-wide">Atención Requerida</p>
+                            </div>
+                        </div>
+                        <button class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+                        </button>
+                    </div>
+                    {% empty %}
+                    <div class="col-span-1 md:col-span-2 py-12 text-center bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
+                        <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        <p class="text-slate-500 font-bold text-sm">Todo bajo control</p>
+                        <p class="text-xs text-slate-400 mt-1">El sistema no detectó riesgos hoy.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="bg-slate-50 rounded-[2.5rem] border border-slate-200 p-6 md:p-8 flex-1">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Actividad Reciente
+                    </h3>
+                    <a href="#" class="text-[10px] font-bold text-{{ color }}-600 hover:underline uppercase tracking-widest">Ver Historial Completo</a>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0">
+                    {% for log in actividad_reciente %}
+                    <div class="relative pl-8 pb-6 border-l border-slate-200 last:pb-0 last:border-0 hover:bg-white/50 transition-colors rounded-r-xl pr-2">
+                        <div class="absolute left-[-17px] top-0 w-8 h-8 rounded-full bg-white border-2 border-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-sm z-10">
+                            {{ log.user.first_name|slice:":1" }}
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-600 leading-relaxed">
+                                <span class="font-bold text-slate-900">{{ log.user.get_full_name }}</span> 
+                                {% if log.action_flag == 1 %}<span class="text-emerald-600 font-bold bg-emerald-50 px-1 rounded">creó</span>{% elif log.action_flag == 2 %}<span class="text-amber-600 font-bold bg-amber-50 px-1 rounded">editó</span>{% else %}<span class="text-rose-600 font-bold bg-rose-50 px-1 rounded">eliminó</span>{% endif %}
+                                <span class="font-bold text-slate-700">{{ log.content_type.name }}</span>
+                            </p>
+                            <p class="text-[10px] text-slate-400 font-bold mt-1 flex items-center gap-1">
+                                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                                {{ log.action_time|timesince }}
+                            </p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-xs text-slate-400 italic">No hay registros recientes.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6 h-full flex flex-col">
+            <button onclick="toggleModal('modal-inscripcion')" class="w-full bg-slate-900 group hover:bg-slate-800 transition-all p-8 rounded-[2.5rem] shadow-xl shadow-slate-200 relative overflow-hidden text-left border border-slate-800 flex-none">
+                <div class="absolute right-0 top-0 w-40 h-40 bg-white opacity-5 rounded-full -mr-12 -mt-12 group-hover:scale-110 transition-transform duration-500"></div>
+                <div class="relative z-10">
+                    <div class="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-white backdrop-blur-sm mb-6 border border-white/10 group-hover:bg-white/20 transition-colors">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                    </div>
+                    <h3 class="text-2xl font-black text-white mb-2">Inscribir Alumno</h3>
+                    <p class="text-slate-400 text-sm font-medium">Alta rápida de expediente</p>
+                </div>
+            </button>
+
+            <div class="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm flex-1">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Agenda del Día</h3>
+                    <span class="text-[10px] font-bold bg-slate-100 px-2 py-1 rounded-md text-slate-500">{% now "d M" %}</span>
+                </div>
+                
+                {% if agenda %}
+                <div class="space-y-5">
+                    {% for item in agenda %}
+                    <div class="flex gap-4 items-start group">
+                        <div class="mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 ring-4 ring-slate-50 shadow-sm 
+                            {% if item.tipo == 'alerta' %}bg-rose-500 animate-pulse{% elif item.tipo == 'rutina' %}bg-slate-300{% else %}bg-amber-400{% endif %}"></div>
+                        <div>
+                            <p class="text-[10px] font-black text-slate-400 mb-0.5">{{ item.hora }}</p>
+                            <p class="text-sm font-bold text-slate-700 leading-snug group-hover:text-{{ color }}-600 transition-colors">{{ item.evento }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                    <div class="h-full flex items-center justify-center text-center">
+                        <p class="text-slate-400 text-xs italic">Sin pendientes urgentes.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 flex-none">
+                <a href="{% url 'crear_grupo' %}" class="bg-white p-5 rounded-[2rem] border border-slate-100 hover:border-{{ color }}-200 hover:shadow-md transition-all text-center flex flex-col items-center justify-center gap-3 group relative overflow-hidden">
+                    <div class="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-{{ color }}-50 group-hover:text-{{ color }}-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                    </div>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Nuevo Grupo</span>
+                    
+                    <div class="absolute top-3 right-3 bg-{{ color }}-50 px-2 py-0.5 rounded-full border border-{{ color }}-100">
+                         <p class="text-[8px] font-black text-{{ color }}-600">AULAS: {{ aulas_reales.ocupadas }}/{{ aulas_reales.total }}</p>
+                    </div>
+                </a>
+                
+                <button class="bg-white p-5 rounded-[2rem] border border-slate-100 hover:border-emerald-200 hover:shadow-md transition-all text-center flex flex-col items-center justify-center gap-3 group">
+                    <div class="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    </div>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Kárdex</span>
+                </button>
+
+                <button class="col-span-2 bg-slate-100 p-4 rounded-[2rem] border border-slate-200 hover:bg-slate-200 hover:border-slate-300 transition-all text-center flex items-center justify-center gap-3 group">
+                    <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-700">Crear Comunicado General</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-[2.5rem] p-6 md:p-10 border border-slate-100 shadow-sm">
+        <div class="flex justify-between items-center mb-8">
+            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Directorios del Sistema</h3>
+            <div class="h-px bg-slate-100 flex-1 ml-6"></div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <a href="{% url 'lista_docentes' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-{{ color }}-200 hover:shadow-xl transition-all duration-300 h-full">
+                <div class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg class="w-5 h-5 text-{{ color }}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-white text-{{ color }}-600 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-slate-800">{{ labels.docentes }}</h4>
+                        <p class="text-xs text-slate-500 mt-1">Gestión de plantilla.</p>
+                    </div>
+                </div>
+            </a>
+
+            <a href="{% url 'lista_grupos' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-blue-200 hover:shadow-xl transition-all duration-300 h-full">
+                <div class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-white text-blue-600 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-slate-800">{{ labels.grupos }}</h4>
+                        <p class="text-xs text-slate-500 mt-1">Gestión académica.</p>
+                    </div>
+                </div>
+            </a>
+
+            <a href="{% url 'lista_coordinadores' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-amber-200 hover:shadow-xl transition-all duration-300 h-full">
+                <div class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-white text-amber-600 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-slate-800">Coordinadores</h4>
+                        <p class="text-xs text-slate-500 mt-1">Permisos.</p>
+                    </div>
+                </div>
+            </a>
+
+            <a href="{% url 'lista_asignatura' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-purple-200 hover:shadow-xl transition-all duration-300 h-full">
+                <div class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-white text-purple-600 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-slate-800">Materias</h4>
+                        <p class="text-xs text-slate-500 mt-1">Retícula.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div id="modal-inscripcion" class="hidden fixed inset-0 z-[200] bg-slate-900/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity">
+    <div class="bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] max-w-2xl w-full p-8 shadow-2xl animate-in fade-in slide-in-from-bottom duration-300 relative max-h-[90vh] overflow-y-auto">
+        <button onclick="toggleModal('modal-inscripcion')" class="absolute top-6 right-6 p-2 bg-slate-50 rounded-full hover:bg-slate-100 text-slate-400 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-slate-200">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 tracking-tight">Nuevo Ingreso</h3>
+            <p class="text-slate-500 text-sm">Complete los datos básicos para crear el expediente.</p>
+        </div>
+
+        <form class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Nombre(s)</label>
+                    <input type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none transition-all" placeholder="Ej. Roberto">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Apellidos</label>
+                    <input type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none transition-all" placeholder="Ej. Gómez Pérez">
+                </div>
+            </div>
+            <div class="space-y-1">
+                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">CURP</label>
+                <input type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none transition-all" placeholder="Clave Única de Registro">
+            </div>
+            
+            <div class="pt-4 pb-4 sm:pb-0">
+                <button type="button" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-lg hover:shadow-xl transform active:scale-95">
+                    Guardar y Generar Matrícula
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="modal-promocion" class="hidden fixed inset-0 z-[200] bg-slate-900/90 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-[2.5rem] sm:rounded-[3rem] max-w-lg w-full p-10 shadow-2xl animate-in fade-in slide-in-from-bottom duration-300">
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800">¿Cerrar Ciclo Escolar?</h3>
+            <p class="text-slate-500 text-sm mt-2 font-medium">Esta acción moverá a TODOS los grupos al siguiente grado. <br><span class="text-rose-500">Es irreversible.</span></p>
+        </div>
+
+        <form action="{% url 'promocion_masiva' %}" method="POST" class="space-y-6">
+            {% csrf_token %}
+            <div class="space-y-2">
+                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Selecciona el Nuevo Periodo</label>
+                <select name="nuevo_periodo" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm text-slate-700 focus:ring-2 focus:ring-rose-500 outline-none">
+                    {% for p in periodos %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}
+                </select>
+            </div>
+            
+            <div class="flex flex-col gap-3 pt-2 pb-6 sm:pb-0">
+                <button type="submit" class="bg-rose-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-700 shadow-lg shadow-rose-200 transition-all">
+                    Confirmar Cierre
+                </button>
+                <button type="button" onclick="toggleModal('modal-promocion')" class="text-slate-400 font-bold text-xs uppercase tracking-widest py-3 hover:text-slate-600">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.toggle('hidden');
+            document.body.classList.toggle('overflow-hidden');
+        }
+    }
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { 
+            ['modal-promocion', 'modal-inscripcion'].forEach(id => {
+                const m = document.getElementById(id);
+                if (!m.classList.contains('hidden')) {
+                    m.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

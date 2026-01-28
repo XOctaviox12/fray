@@ -1,0 +1,95 @@
+{% extends 'inicio/base.html' %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <form method="post" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {% csrf_token %}
+        
+        <div class="lg:col-span-1 space-y-6">
+            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm text-center">
+                <div class="relative w-32 h-32 mx-auto mb-4">
+                    {% if user.foto_perfil %}
+                        <img src="{{ user.foto_perfil.url }}" class="w-full h-full object-cover rounded-3xl shadow-xl">
+                    {% else %}
+                        <div class="w-full h-full bg-blue-700 text-white rounded-3xl flex items-center justify-center shadow-xl">
+                            <span class="text-4xl font-black">{{ user.username|first|upper }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+                <h3 class="font-bold text-slate-800 text-lg">@{{ user.username }}</h3>
+                <p class="text-[10px] font-black text-slate-400 mb-4 uppercase">{{ user.get_rol_display }}</p>
+                
+                <label class="block text-[10px] font-black text-blue-600 uppercase cursor-pointer hover:underline">
+                    Cambiar foto
+                    <div class="hidden">{{ form.foto_perfil }}</div>
+                </label>
+
+                <div class="mt-6 pt-6 border-t border-slate-100">
+                    <span class="text-[10px] font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full uppercase">
+                        📍 {{ user.plantel.nombre|default:"Global" }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+            <h2 class="text-xl font-bold text-slate-800 mb-6">Información de Cuenta</h2>
+            
+            {% if form.errors %}
+                <div class="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-xs font-bold border border-red-100">
+                    Por favor, corrige los errores en el formulario.
+                </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Usuario</label>
+                    {{ form.username }}
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Correo</label>
+                    {{ form.email }}
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Nombre(s)</label>
+                    {{ form.first_name }}
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Apellidos</label>
+                    {{ form.last_name }}
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Teléfono</label>
+                    {{ form.telefono }}
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Fecha de Nacimiento</label>
+                    {{ form.fecha_nacimiento }}
+                </div>
+                <div class="md:col-span-2 space-y-1">
+                    <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Dirección Particular</label>
+                    {{ form.direccion }}
+                </div>
+            </div>
+
+            <div class="mt-10 pt-8 border-t border-slate-100">
+                <h3 class="text-lg font-bold text-red-600 mb-4 tracking-tight">Cambiar Seguridad</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Nueva Contraseña</label>
+                        {{ form.password }}
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-500 uppercase ml-1">Confirmar Contraseña</label>
+                        {{ form.confirm_password }}
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full mt-10 bg-blue-700 text-white py-4 rounded-2xl font-bold hover:bg-blue-800 shadow-xl shadow-blue-100 transition-all active:scale-[0.98]">
+                Guardar Cambios de Perfil
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

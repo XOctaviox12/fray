@@ -10,4 +10,4 @@ def temas_plantel(request):
                 'nivel': 'Nivel Superior' if es_uni else 'Nivel Básico',
             }
         }
-    return {'color': 'blue', 'labels': {}} # Default para login
+    return {'color': 'blue', 'labels': {}} 

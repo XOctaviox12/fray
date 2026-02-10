@@ -2,14 +2,14 @@ from django.db import models
 from django.conf import settings
 from django.db.models import Avg
 from django.utils import timezone
-from users.models import Plantel  # Asegúrate de que esta importación sea correcta
+from users.models import Plantel 
 
 # ==========================================
 # 1. CATALOGOS Y ESTRUCTURA
 # ==========================================
 
 class Periodo(models.Model):
-    nombre = models.CharField(max_length=50)  # Ej: "Ciclo 2025-2026 A"
+    nombre = models.CharField(max_length=50)  
     fecha_inicio = models.DateField(null=True, blank=True)
     fecha_fin = models.DateField(null=True, blank=True)
     activo = models.BooleanField(default=True)
@@ -42,7 +42,6 @@ class Carrera(models.Model):
 class Grupo(models.Model):
     # Relaciones Jerárquicas
     plantel = models.ForeignKey(Plantel, on_delete=models.CASCADE)
-    # Permitimos nulos para que la migración no falle con los datos viejos
     carrera = models.ForeignKey(Carrera, on_delete=models.CASCADE, related_name='grupos', null=True, blank=True)
     periodo = models.ForeignKey(Periodo, on_delete=models.CASCADE, null=True, blank=True)
     
@@ -54,9 +53,6 @@ class Grupo(models.Model):
     
     # Usuarios
     docentes = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='grupos_asignados', limit_choices_to={'rol': 'DOCENTE'}, blank=True)
-    # Nota: Los alumnos suelen relacionarse con una FK desde el modelo User (User.alumno_grupo), 
-    # pero si usas ManyToMany aquí, descomenta la siguiente línea:
-    # alumnos = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='grupos_inscritos', limit_choices_to={'rol': 'ALUMNO'}, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -132,3 +128,5 @@ class Asistencia(models.Model):
     grupo = models.ForeignKey(Grupo, on_delete=models.CASCADE)
     fecha = models.DateField(auto_now_add=True)
     presente = models.BooleanField(default=True)
+
+

@@ -1,0 +1,59 @@
+<div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <table class="min-w-full text-xs">
+    <thead class="bg-slate-50 text-slate-600 uppercase tracking-widest text-[10px]">
+      <tr>
+        <th class="px-6 py-4 text-left">Alumno</th>
+        <th class="px-6 py-4 text-left">Usuario</th>
+        <th class="px-6 py-4 text-center">Estado</th>
+        <th class="px-6 py-4 text-right">Acciones</th>
+      </tr>
+    </thead>
+
+    <tbody class="divide-y divide-slate-100">
+      {% for alumno in alumnos %}
+      <tr class="hover:bg-slate-50 transition">
+
+        <td class="px-6 py-4">
+          <p class="font-bold text-slate-800">
+            {{ alumno.first_name }} {{ alumno.last_name }}
+          </p>
+          <p class="text-[11px] text-slate-400">
+            {{ alumno.email }}
+          </p>
+        </td>
+
+        <td class="px-6 py-4 text-slate-500">
+          {{ alumno.username }}
+        </td>
+
+        <td class="px-6 py-4 text-center">
+          {% if alumno.is_active %}
+            <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">
+              Activo
+            </span>
+          {% else %}
+            <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-red-100 text-red-700">
+              Baja
+            </span>
+          {% endif %}
+        </td>
+
+        <td class="px-6 py-4 text-right">
+          <button
+            onclick="abrirModalAlumno({{ alumno.id }})"
+            class="text-{{ color }}-600 text-[10px] font-black uppercase hover:underline">
+            Ver detalles
+          </button>
+        </td>
+
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" class="px-6 py-10 text-center text-slate-400 italic">
+          No hay alumnos registrados
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,85 @@
+<div
+  id="modal-alumno"
+  class="hidden fixed inset-0 z-[100] bg-slate-900/70 backdrop-blur-sm
+         flex items-center justify-center px-4">
+
+  <div
+    class="relative w-full max-w-lg bg-white
+           rounded-[2.5rem] p-8 sm:p-10 shadow-2xl">
+
+    <!-- ❌ CERRAR -->
+    <button
+      onclick="document.getElementById('modal-alumno').classList.add('hidden')"
+      class="absolute top-6 right-6 text-slate-400 hover:text-slate-700
+             text-2xl font-black transition">
+      ×
+    </button>
+
+    <!-- HEADER -->
+    <h3 class="text-2xl font-black text-slate-900 mb-2">
+      Inscribir alumno
+    </h3>
+
+    <p class="text-slate-500 text-sm mb-8 leading-relaxed">
+      El alumno quedará asignado automáticamente a este
+      <span class="font-semibold">grupo</span> y
+      <span class="font-semibold">plantel</span>.
+    </p>
+
+    <!-- FORM -->
+    <form method="POST" class="space-y-6">
+      {% csrf_token %}
+
+      <!-- CAMPOS -->
+      <div class="space-y-5">
+
+        {% for field in form_alumno %}
+        <div class="space-y-2">
+
+          <!-- LABEL -->
+          <label class="block text-[11px] font-black uppercase tracking-widest text-slate-500">
+            {{ field.label }}
+          </label>
+
+          <!-- INPUT WRAPPER -->
+          <div class="relative">
+            {{ field }}
+          </div>
+
+          <!-- ERRORES -->
+          {% if field.errors %}
+          <p class="text-xs text-red-500 font-semibold">
+            {{ field.errors|striptags }}
+          </p>
+          {% endif %}
+
+        </div>
+        {% endfor %}
+
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="pt-8 flex flex-col gap-4">
+
+        <button
+          type="submit"
+          name="btn_inscribir"
+          class="w-full bg-{{ color }}-600 hover:bg-{{ color }}-700
+                 text-white py-4 rounded-2xl
+                 font-black text-[11px] uppercase tracking-widest
+                 transition shadow-lg hover:shadow-xl">
+          Confirmar inscripción
+        </button>
+
+        <button
+          type="button"
+          onclick="document.getElementById('modal-alumno').classList.add('hidden')"
+          class="w-full py-3 text-slate-400 hover:text-slate-600
+                 font-black text-[11px] uppercase tracking-widest transition">
+          Cancelar
+        </button>
+
+      </div>
+    </form>
+  </div>
+</div>

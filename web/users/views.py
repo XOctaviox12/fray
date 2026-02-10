@@ -222,9 +222,9 @@ def get_campus_theme(user):
         'color': 'purple' if es_uni else 'blue',
         'labels': {
             'docente': 'Catedrático' if es_uni else 'Docente',
-            'docentes': 'Catedráticos' if es_uni else 'Docentes', # Plural listo
+            'docentes': 'Catedráticos' if es_uni else 'Docentes', 
             'grupo': 'Facultad/Carrera' if es_uni else 'Grupo Escolar',
-            'grupos': 'Facultades/Carreras' if es_uni else 'Grupos', # Plural listo
+            'grupos': 'Facultades/Carreras' if es_uni else 'Grupos', 
             'alumnos': 'Universitarios' if es_uni else 'Alumnos'
         }
     }

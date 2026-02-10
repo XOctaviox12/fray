@@ -5,7 +5,6 @@ class Plantel(models.Model):
     nombre = models.CharField(max_length=100)
     direccion = models.TextField(blank=True, null=True)
     
-    # ESTOS SON LOS CAMPOS QUE FALTAN EN TU BASE DE DATOS:
     nivel_educativo = models.CharField(
         max_length=50, 
         choices=[('BASICA', 'Básica (Sec/Prepa)'), ('SUPERIOR', 'Superior (Universidad)')],

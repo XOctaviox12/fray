@@ -1,6 +1,19 @@
 from django import forms
 from .models import Grupo, Asignatura, Carrera, Periodo
-from users.models import User
+from users.models import User, Tutor
+
+INPUT_CLASSES = (
+    "w-full px-4 py-3 rounded-xl "
+    "border border-slate-300 "
+    "bg-slate-50 "
+    "text-sm text-slate-900 "
+    "placeholder-slate-400 "
+    "focus:bg-white "
+    "focus:border-indigo-500 "
+    "focus:ring-2 focus:ring-indigo-500 "
+    "focus:outline-none "
+    "transition"
+)
 
 class GrupoForm(forms.ModelForm):
     # Selector de docentes (Mantenemos la cuadrícula y filtros)
@@ -120,3 +133,69 @@ class AsignaturaForm(forms.ModelForm):
                 if 'creditos' in self.fields:
                     self.fields['creditos'].widget = forms.HiddenInput()
                     self.fields['creditos'].required = False
+
+class AlumnoForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = [
+            'first_name',
+            'last_name',
+            'username',
+            'email',
+            'telefono',
+            'direccion',
+            'fecha_nacimiento',
+        ]
+
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'class': INPUT_CLASSES,
+                'placeholder': 'Nombre del alumno'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': INPUT_CLASSES,
+                'placeholder': 'Apellido del alumno'
+            }),
+            'username': forms.TextInput(attrs={
+                'class': INPUT_CLASSES,
+                'placeholder': 'Nombre de usuario'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': INPUT_CLASSES,
+                'placeholder': 'correo@ejemplo.com'
+            }),
+            'telefono': forms.TextInput(attrs={
+                'class': INPUT_CLASSES,
+                'placeholder': 'Teléfono de contacto'
+            }),
+            'direccion': forms.TextInput(attrs={
+                'class': INPUT_CLASSES,
+                'placeholder': 'Dirección completa'
+            }),
+            'fecha_nacimiento': forms.DateInput(attrs={
+                'class': INPUT_CLASSES,
+                'type': 'date'
+            }),
+        }
+
+    def save(self, commit=True, creador=None, grupo=None):
+        alumno = super().save(commit=False)
+        alumno.rol = 'ALUMNO'
+
+        if creador:
+            alumno.plantel = creador.plantel
+
+        if grupo:
+            alumno.alumno_grupo = grupo
+
+        alumno.set_password('12345678')
+
+        if commit:
+            alumno.save()
+
+        return alumno
+    
+class TutorForm(forms.ModelForm):
+    class Meta:
+        model = Tutor
+        fields = ['nombre', 'telefono']

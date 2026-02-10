@@ -78,7 +78,7 @@ def dashboard_view(request):
     asignaturas_sin_notas = Asignatura.objects.filter(
         grupo__plantel=plantel, 
         calificaciones__isnull=True
-    ).values_list('docentes', flat=True).distinct() # 💡 Corregido a 'docentes' (plural)
+    ).values_list('docentes', flat=True).distinct() 
     
     docentes_pendientes = User.objects.filter(id__in=asignaturas_sin_notas).count()
 

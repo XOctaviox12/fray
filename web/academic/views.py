@@ -3,10 +3,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import F, Q, Avg
 import datetime
-
+import json
+from django.http import JsonResponse
 from .models import Grupo, Periodo, Asignatura, Calificacion, Asistencia, Carrera
-from users.models import User
-from .forms import GrupoForm, AsignaturaForm
+from users.models import User, Tutor
+from .forms import GrupoForm, AsignaturaForm, AlumnoForm, TutorForm
 from users.views import get_campus_theme
 
 def get_plantel_context(user):
@@ -22,7 +23,7 @@ def get_plantel_context(user):
         }
     }
 
-# --- NUEVA VISTA PARA GUARDAR LA CAPACIDAD DE AULAS ---
+
 @login_required
 def actualizar_aulas(request):
     if request.method == 'POST':
@@ -49,8 +50,8 @@ def lista_grupos(request):
     plantel = request.user.plantel
     grupos_base = Grupo.objects.filter(plantel=plantel).prefetch_related('docentes', 'alumnos')
 
-    # --- LÓGICA DE AULAS (Calculada aquí para usarla en ambos templates) ---
-    total_aulas = getattr(plantel, 'total_aulas', 20) # Usa 20 si no existe el campo aún
+    
+    total_aulas = getattr(plantel, 'total_aulas', 20) 
     aulas_ocupadas = grupos_base.count()
     
     if total_aulas > 0:
@@ -93,7 +94,7 @@ def lista_grupos(request):
         return render(request, 'academic/grupos_list_uni.html', {
             'carreras': carreras_dict, 
             'kpis': get_kpis(grupos_base),
-            'info_aulas': info_aulas, # <--- Enviamos info_aulas
+            'info_aulas': info_aulas, 
             **theme
         })
     else: # Básica (Separado)
@@ -105,28 +106,78 @@ def lista_grupos(request):
             'grupos_prepa': grupos_prepa,
             'kpis_sec': get_kpis(grupos_sec),
             'kpis_prepa': get_kpis(grupos_prepa),
-            'info_aulas': info_aulas, # <--- Enviamos info_aulas
+            'info_aulas': info_aulas,
             **theme
         })
 @login_required
 def detalle_grupo(request, pk):
+    # ─────────────────────────────────────────────
+    # Contexto base (colores, labels, etc.)
+    # ─────────────────────────────────────────────
     ctx = get_plantel_context(request.user)
-    grupo = get_object_or_404(Grupo, pk=pk, plantel=request.user.plantel)
-    
+    promedio = 0
+    asistencia = 0
+    alumnos_riesgo = 0
+
+    # ─────────────────────────────────────────────
+    # Grupo (blindado por plantel)
+    # ─────────────────────────────────────────────
+    grupo = get_object_or_404(
+        Grupo,
+        pk=pk,
+        plantel=request.user.plantel
+    )
+
+    # ─────────────────────────────────────────────
+    # Métricas del grupo
+    # ─────────────────────────────────────────────
     promedio = grupo.promedio_general
     asistencia = grupo.asistencia_mensual
     ocupacion = grupo.ocupacion_porcentaje
+ # ─────────────────────────────────────────────
+    # Alumnos (solo del grupo y plantel)
+    # ─────────────────────────────────────────────
+   
+    alumnos_base = User.objects.filter(
+        rol='ALUMNO',
+        alumno_grupo=grupo,
+        plantel=request.user.plantel
+    )
 
-    alumnos_base = User.objects.filter(alumno_grupo=grupo, rol='ALUMNO')
-    alumnos_riesgo = alumnos_base.filter(notas__nota__lt=6.0).distinct().count()
+    alumnos_riesgo = alumnos_base.filter(
+        notas__nota__lt=6.0
+    ).distinct().count()
 
     query = request.GET.get('q', '')
-    alumnos = alumnos_base.filter(Q(first_name__icontains=query)|Q(last_name__icontains=query)) if query else alumnos_base
+    alumnos = (
+        alumnos_base.filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query)
+        ) if query else alumnos_base
+    )
 
+    # ─────────────────────────────────────────────
+    # FORMULARIO INSCRIPCIÓN ALUMNO
+    # ─────────────────────────────────────────────
+    form_alumno = AlumnoForm()
+
+    if request.method == 'POST' and 'btn_inscribir' in request.POST:
+        form_alumno = AlumnoForm(request.POST)
+        if form_alumno.is_valid():
+            form_alumno.save(
+                creador=request.user,
+                grupo=grupo
+            )
+            messages.success(request, "Alumno inscrito correctamente.")
+            return redirect('detalle_grupo', pk=pk)
+
+    # ─────────────────────────────────────────────
+    # FORMULARIO ASIGNAR MATERIA
+    # ─────────────────────────────────────────────
     if request.method == 'POST' and 'btn_materia' in request.POST:
-        form = AsignaturaForm(request.POST, plantel=request.user.plantel)
-        if form.is_valid():
-            mat = form.save(commit=False)
+        form_mat = AsignaturaForm(request.POST, plantel=request.user.plantel)
+        if form_mat.is_valid():
+            mat = form_mat.save(commit=False)
             mat.grupo = grupo
             mat.save()
             messages.success(request, "Materia asignada.")
@@ -134,14 +185,34 @@ def detalle_grupo(request, pk):
     else:
         form_mat = AsignaturaForm(plantel=request.user.plantel)
 
+    # ─────────────────────────────────────────────
+    # Alertas visuales
+    # ─────────────────────────────────────────────
     alertas = []
-    if not grupo.asignaturas.exists(): alertas.append("Falta asignar docentes/materias.")
-    if grupo.capacidad_maxima > 0 and alumnos_base.count() >= grupo.capacidad_maxima: alertas.append("Aula llena.")
+    if not grupo.asignaturas.exists():
+        alertas.append("Falta asignar docentes/materias.")
+    if grupo.capacidad_maxima > 0 and alumnos_base.count() >= grupo.capacidad_maxima:
+        alertas.append("Aula llena.")
 
+    # ─────────────────────────────────────────────
+    # Render final
+    # ─────────────────────────────────────────────
     return render(request, 'academic/grupo_detail.html', {
-        'grupo': grupo, 'alumnos': alumnos, 'asignaturas': grupo.asignaturas.all(),
-        'form_mat': form_mat, 'promedio_general': promedio, 'asistencia_mes': asistencia,
-        'alumnos_riesgo': alumnos_riesgo, 'ocupacion': ocupacion, 'alertas': alertas, 'query': query, **ctx
+        'grupo': grupo,
+        'alumnos': alumnos,
+        'asignaturas': grupo.asignaturas.all(),
+        'form_mat': form_mat,
+        'form_alumno': form_alumno,
+        'promedio_general': promedio,
+        'asistencia_mes': asistencia,
+        'alumnos_riesgo': alumnos_riesgo,
+        'ocupacion': ocupacion,
+        'alertas': alertas,
+        'promedio': promedio,
+        'asistencia': asistencia,
+        'alumnos_riesgo': alumnos_riesgo,
+        'query': query,
+        **ctx
     })
 
 @login_required
@@ -247,3 +318,41 @@ def crear_materia(request):
         form = AsignaturaForm(plantel=plantel)
     
     return render(request, 'academic/materia_form.html', {'form': form})
+
+def alumnos_view(request):
+    alumnos = User.objects.filter(rol='ALUMNO')
+    alumno_seleccionado = None
+
+    form_tutor = TutorForm()
+
+    if request.method == 'POST' and 'btn_tutor' in request.POST:
+        alumno_id = request.POST.get('alumno_id')
+        alumno_seleccionado = User.objects.get(id=alumno_id)
+
+        form_tutor = TutorForm(request.POST)
+        if form_tutor.is_valid():
+            tutor = form_tutor.save(commit=False)
+            tutor.alumno = alumno_seleccionado
+            tutor.save()
+
+    context = {
+        'alumnos': alumnos,
+        'alumno': alumno_seleccionado,
+        'form_tutor': form_tutor,
+    }
+    return render(request, 'alumnos.html', context)
+
+@login_required
+def agregar_tutor(request):
+    if request.method == "POST":
+        alumno = get_object_or_404(User, id=request.POST.get("alumno_id"))
+
+        Tutor.objects.create(
+            alumno=alumno,
+            nombre=request.POST.get("nombre"),
+            parentesco=request.POST.get("parentesco"),
+            telefono=request.POST.get("telefono"),
+            correo=request.POST.get("correo") or None
+        )
+
+    return redirect(request.META.get("HTTP_REFERER", "/"))

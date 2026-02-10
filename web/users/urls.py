@@ -3,7 +3,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Se debe especificar views.perfil_view, no solo views
+    
     path('perfil/', views.perfil_view, name='perfil'), 
     
     # Rutas para la gestión de coordinadores

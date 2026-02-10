@@ -56,7 +56,6 @@ class PlantelForm(forms.ModelForm):
         }
 
 class DirectorCreationForm(forms.ModelForm):
-    # Campo para elegir el plantel de una lista existente
     plantel = forms.ModelChoiceField(
         queryset=Plantel.objects.all(),
         empty_label="Selecciona un plantel",
@@ -137,7 +136,7 @@ class CoordinadorForm(forms.ModelForm):
     def clean_username(self):
         """Prevención de XSS: Limpia caracteres especiales en el usuario."""
         username = self.cleaned_data.get('username')
-        # Django ya escapa HTML, pero aquí forzamos que sea alfanumérico
+        
         if not username.isalnum():
             raise ValidationError("El nombre de usuario solo debe contener letras y números.")
         return username

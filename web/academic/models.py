@@ -3,6 +3,7 @@ from django.conf import settings
 from django.db.models import Avg
 from django.utils import timezone
 from users.models import Plantel 
+from django.core.exceptions import ValidationError
 
 # ==========================================
 # 1. CATALOGOS Y ESTRUCTURA
@@ -72,8 +73,15 @@ class Grupo(models.Model):
 
     @property
     def promedio_general(self):
-        val = Calificacion.objects.filter(asignatura__grupo=self).aggregate(Avg('nota'))['nota__avg']
-        return round(val, 1) if val else 0.0
+        from .models import Calificacion
+        from django.db.models import Avg
+
+        # CAMBIO: Usamos 'asignatura__grupos' (en plural) y agregamos .distinct()
+        val = Calificacion.objects.filter(
+            asignatura__grupos=self 
+        ).distinct().aggregate(Avg('nota'))['nota__avg']
+        
+        return val or 0.0
 
     @property
     def asistencia_mensual(self):
@@ -94,10 +102,21 @@ class Grupo(models.Model):
 # ==========================================
 
 class Asignatura(models.Model):
-    # Relación con el grupo (mantenemos esto para la instancia específica)
-    grupo = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='asignaturas')
+    # Relación ManyToMany con Grupo (usamos 'asignaturas' para el template)
+    grupos = models.ManyToManyField(
+        Grupo, 
+        related_name='asignaturas', 
+        verbose_name="Grupos"
+    )
     
-    # CAMBIO: De ForeignKey a ManyToManyField para múltiples docentes
+    # Relación con Carrera (Cambiamos el related_name para que no choque)
+    carrera = models.ForeignKey(
+        Carrera, 
+        on_delete=models.CASCADE, 
+        related_name='asignaturas_de_carrera'
+    )
+    
+    # Docentes (ManyToMany)
     docentes = models.ManyToManyField(
         settings.AUTH_USER_MODEL, 
         blank=True, 
@@ -105,14 +124,13 @@ class Asignatura(models.Model):
         related_name='materias_impartidas'
     )
     
-    carrera = models.ForeignKey(Carrera, on_delete=models.CASCADE, related_name='asignaturas')
     nombre = models.CharField(max_length=100)
     clave = models.CharField(max_length=20, blank=True, null=True)
     creditos = models.IntegerField(default=0, blank=True, null=True)
     seriacion = models.ForeignKey('self', on_delete=models.SET_NULL, blank=True, null=True)
 
     def __str__(self): 
-        return f"{self.nombre} - {self.grupo.grado}º{self.grupo.nombre}"
+        return self.nombre
 
 class Calificacion(models.Model):
     alumno = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notas')
@@ -130,3 +148,81 @@ class Asistencia(models.Model):
     presente = models.BooleanField(default=True)
 
 
+class HorarioClase(models.Model):
+    DIAS_SEMANA = [
+        ('LU', 'Lunes'),
+        ('MA', 'Martes'),
+        ('MI', 'Miércoles'),
+        ('JU', 'Jueves'),
+        ('VI', 'Viernes'),
+        ('SA', 'Sábado'),
+    ]
+
+    asignatura = models.ForeignKey('Asignatura', on_delete=models.CASCADE, related_name='horarios')
+    maestro = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={'rol': 'MAESTRO'})
+    grupo = models.ForeignKey('Grupo', on_delete=models.CASCADE, related_name='horarios')
+    dia = models.CharField(max_length=2, choices=DIAS_SEMANA)
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
+    aula = models.CharField(max_length=50, default="Por definir")
+    
+    # Nuevo: Para controlar ciclos escolares
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Horario de Clase"
+        verbose_name_plural = "Horarios de Clases"
+        ordering = ['dia', 'hora_inicio']
+
+    def __str__(self):
+        return f"{self.asignatura.nombre} | {self.get_dia_display()} {self.hora_inicio}"
+
+    def clean(self):
+        """Validaciones de integridad de horarios"""
+        
+        # 1. Validar que la hora de fin sea después de la de inicio
+        if self.hora_inicio and self.hora_fin:
+            if self.hora_inicio >= self.hora_fin:
+                raise ValidationError({'hora_fin': 'La hora de fin debe ser posterior a la de inicio.'})
+
+        # 2. Validar colisión de MAESTRO (¿El maestro ya tiene clase a esa hora?)
+        maestro_ocupado = HorarioClase.objects.filter(
+            dia=self.dia,
+            maestro=self.maestro,
+            activo=True,
+            hora_inicio__lt=self.hora_fin,
+            hora_fin__gt=self.hora_inicio
+        ).exclude(pk=self.pk)
+        
+        if maestro_ocupado.exists():
+            clase = maestro_ocupado.first()
+            raise ValidationError(f'El maestro ya tiene la clase de {clase.asignatura} asignada en este horario.')
+
+        # 3. Validar colisión de GRUPO (¿El grupo ya tiene otra materia a esa hora?)
+        grupo_ocupado = HorarioClase.objects.filter(
+            dia=self.dia,
+            grupo=self.grupo,
+            activo=True,
+            hora_inicio__lt=self.hora_fin,
+            hora_fin__gt=self.hora_inicio
+        ).exclude(pk=self.pk)
+
+        if grupo_ocupado.exists():
+            raise ValidationError(f'Este grupo ya tiene una materia asignada los {self.get_dia_display()} a esta hora.')
+
+        # 4. Validar colisión de AULA (¿El salón está ocupado?)
+        if self.aula != "Por definir":
+            aula_ocupada = HorarioClase.objects.filter(
+                dia=self.dia,
+                aula=self.aula,
+                activo=True,
+                hora_inicio__lt=self.hora_fin,
+                hora_fin__gt=self.hora_inicio
+            ).exclude(pk=self.pk)
+
+            if aula_ocupada.exists():
+                raise ValidationError(f'El aula {self.aula} ya está ocupada en este horario.')
+
+    def save(self, *args, **kwargs):
+        self.full_clean() # Forzar validaciones antes de guardar
+        super().save(*args, **kwargs)

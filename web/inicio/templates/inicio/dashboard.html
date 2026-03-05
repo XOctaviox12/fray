@@ -309,7 +309,7 @@
                 </div>
             </a>
 
-            <a href="{% url 'lista_asignatura' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-purple-200 hover:shadow-xl transition-all duration-300 h-full">
+            <a href="{% url 'lista_asignaturas' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-purple-200 hover:shadow-xl transition-all duration-300 h-full">
                 <div class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
                     <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
                 </div>
@@ -320,6 +320,20 @@
                     <div>
                         <h4 class="text-xl font-bold text-slate-800">Materias</h4>
                         <p class="text-xs text-slate-500 mt-1">Retícula.</p>
+                    </div>
+                </div>
+            </a>
+            <a href="{% url 'carga_horaria' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-amber-200 hover:shadow-xl transition-all duration-300 h-full">
+                <div class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-white text-amber-600 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-slate-800">Carga horaria</h4>
+                        <p class="text-xs text-slate-500 mt-1">horarios.</p>
                     </div>
                 </div>
             </a>

@@ -5,10 +5,14 @@ from django.db.models import F, Q, Avg
 import datetime
 import json
 from django.http import JsonResponse
-from .models import Grupo, Periodo, Asignatura, Calificacion, Asistencia, Carrera
+from .models import Grupo, Periodo, Asignatura, Calificacion, Asistencia, Carrera, HorarioClase
 from users.models import User, Tutor
 from .forms import GrupoForm, AsignaturaForm, AlumnoForm, TutorForm
 from users.views import get_campus_theme
+from django.views.generic import DetailView
+import random
+import string
+from django.core.exceptions import ValidationError
 
 def get_plantel_context(user):
     es_uni = user.plantel.id == 2 
@@ -22,7 +26,6 @@ def get_plantel_context(user):
             'dashboard_btn': 'Regresar a Grupos',
         }
     }
-
 
 @login_required
 def actualizar_aulas(request):
@@ -48,18 +51,14 @@ def actualizar_aulas(request):
 def lista_grupos(request):
     theme = get_campus_theme(request.user)
     plantel = request.user.plantel
+    # Prefetch optimizado para ManyToMany
     grupos_base = Grupo.objects.filter(plantel=plantel).prefetch_related('docentes', 'alumnos')
 
-    
     total_aulas = getattr(plantel, 'total_aulas', 20) 
     aulas_ocupadas = grupos_base.count()
     
-    if total_aulas > 0:
-        porcentaje_ocupacion = int((aulas_ocupadas / total_aulas) * 100)
-        disponibles = total_aulas - aulas_ocupadas
-    else:
-        porcentaje_ocupacion = 100
-        disponibles = 0
+    porcentaje_ocupacion = int((aulas_ocupadas / total_aulas) * 100) if total_aulas > 0 else 100
+    disponibles = max(0, total_aulas - aulas_ocupadas)
 
     info_aulas = {
         'total': total_aulas,
@@ -69,20 +68,22 @@ def lista_grupos(request):
         'estado': 'CRÍTICO' if porcentaje_ocupacion >= 90 else 'NORMAL'
     }
 
-    # --- FUNCIÓN PARA CALCULAR KPIs POR NIVEL ---
     def get_kpis(queryset):
         total = queryset.count()
         if total == 0: return {'total': 0, 'promedio': 0.0, 'asistencia': 0, 'alertas': 0}
         
-        # 1. Promedio Real
-        avg = Calificacion.objects.filter(asignatura__grupo__in=queryset).aggregate(Avg('nota'))['nota__avg']
+        # 1. Promedio Real (Usando 'grupos' en plural y distinct)
+        avg = Calificacion.objects.filter(
+            asignatura__grupos__in=queryset
+        ).distinct().aggregate(Avg('nota'))['nota__avg']
+        
         promedio = round(avg, 1) if avg else 0.0
         
-        # 2. Asistencia Real (Promedio simple)
+        # 2. Asistencia Real
         asistencias = [g.asistencia_mensual for g in queryset]
         asistencia = round(sum(asistencias) / len(asistencias)) if asistencias else 0
         
-        # 3. Alertas (Sin docente o Sobrepoblación)
+        # 3. Alertas (Basado en la relación inversa de asignatura_set o el related_name)
         alertas = sum(1 for g in queryset if not g.asignaturas.exists() or (g.capacidad_maxima > 0 and g.alumnos.count() >= g.capacidad_maxima))
         
         return {'total': total, 'promedio': promedio, 'asistencia': asistencia, 'alertas': alertas}
@@ -97,7 +98,7 @@ def lista_grupos(request):
             'info_aulas': info_aulas, 
             **theme
         })
-    else: # Básica (Separado)
+    else: # Básica
         grupos_sec = grupos_base.filter(carrera__nivel='SECUNDARIA')
         grupos_prepa = grupos_base.filter(carrera__nivel='PREPARATORIA')
         
@@ -111,92 +112,46 @@ def lista_grupos(request):
         })
 @login_required
 def detalle_grupo(request, pk):
-    # ─────────────────────────────────────────────
-    # Contexto base (colores, labels, etc.)
-    # ─────────────────────────────────────────────
     ctx = get_plantel_context(request.user)
-    promedio = 0
-    asistencia = 0
-    alumnos_riesgo = 0
+    grupo = get_object_or_404(Grupo, pk=pk, plantel=request.user.plantel)
 
-    # ─────────────────────────────────────────────
-    # Grupo (blindado por plantel)
-    # ─────────────────────────────────────────────
-    grupo = get_object_or_404(
-        Grupo,
-        pk=pk,
-        plantel=request.user.plantel
-    )
-
-    # ─────────────────────────────────────────────
-    # Métricas del grupo
-    # ─────────────────────────────────────────────
+    # Métricas
     promedio = grupo.promedio_general
     asistencia = grupo.asistencia_mensual
     ocupacion = grupo.ocupacion_porcentaje
- # ─────────────────────────────────────────────
-    # Alumnos (solo del grupo y plantel)
-    # ─────────────────────────────────────────────
-   
-    alumnos_base = User.objects.filter(
-        rol='ALUMNO',
-        alumno_grupo=grupo,
-        plantel=request.user.plantel
-    )
 
-    alumnos_riesgo = alumnos_base.filter(
-        notas__nota__lt=6.0
-    ).distinct().count()
+    alumnos_base = User.objects.filter(rol='ALUMNO', alumno_grupo=grupo, plantel=request.user.plantel)
+
+    # Corregido: Alertas de riesgo por notas (Usando distinct para no contar doble si un alumno tiene varias notas bajas)
+    alumnos_riesgo = alumnos_base.filter(notas__nota__lt=6.0).distinct().count()
 
     query = request.GET.get('q', '')
-    alumnos = (
-        alumnos_base.filter(
-            Q(first_name__icontains=query) |
-            Q(last_name__icontains=query)
-        ) if query else alumnos_base
-    )
+    alumnos = alumnos_base.filter(Q(first_name__icontains=query) | Q(last_name__icontains=query)) if query else alumnos_base
 
-    # ─────────────────────────────────────────────
-    # FORMULARIO INSCRIPCIÓN ALUMNO
-    # ─────────────────────────────────────────────
-    form_alumno = AlumnoForm()
-
+    # Formulario Alumno
+    form_alumno = AlumnoForm(request.POST or None)
     if request.method == 'POST' and 'btn_inscribir' in request.POST:
-        form_alumno = AlumnoForm(request.POST)
         if form_alumno.is_valid():
-            form_alumno.save(
-                creador=request.user,
-                grupo=grupo
-            )
-            messages.success(request, "Alumno inscrito correctamente.")
+            nuevo_alumno = form_alumno.save(creador=request.user, grupo=grupo)
+            messages.success(request, f"Inscrito: {nuevo_alumno.username} | Pass: {nuevo_alumno._password_temporal}")
             return redirect('detalle_grupo', pk=pk)
 
-    # ─────────────────────────────────────────────
-    # FORMULARIO ASIGNAR MATERIA
-    # ─────────────────────────────────────────────
+    # Formulario Materia
+    form_mat = AsignaturaForm(request.POST or None, plantel=request.user.plantel)
     if request.method == 'POST' and 'btn_materia' in request.POST:
-        form_mat = AsignaturaForm(request.POST, plantel=request.user.plantel)
         if form_mat.is_valid():
             mat = form_mat.save(commit=False)
-            mat.grupo = grupo
             mat.save()
-            messages.success(request, "Materia asignada.")
+            mat.grupos.add(grupo) # IMPORTANTE: Al ser M2M se usa .add()
+            messages.success(request, "Materia asignada al grupo.")
             return redirect('detalle_grupo', pk=pk)
-    else:
-        form_mat = AsignaturaForm(plantel=request.user.plantel)
 
-    # ─────────────────────────────────────────────
-    # Alertas visuales
-    # ─────────────────────────────────────────────
     alertas = []
     if not grupo.asignaturas.exists():
         alertas.append("Falta asignar docentes/materias.")
     if grupo.capacidad_maxima > 0 and alumnos_base.count() >= grupo.capacidad_maxima:
         alertas.append("Aula llena.")
 
-    # ─────────────────────────────────────────────
-    # Render final
-    # ─────────────────────────────────────────────
     return render(request, 'academic/grupo_detail.html', {
         'grupo': grupo,
         'alumnos': alumnos,
@@ -208,9 +163,6 @@ def detalle_grupo(request, pk):
         'alumnos_riesgo': alumnos_riesgo,
         'ocupacion': ocupacion,
         'alertas': alertas,
-        'promedio': promedio,
-        'asistencia': asistencia,
-        'alumnos_riesgo': alumnos_riesgo,
         'query': query,
         **ctx
     })
@@ -268,16 +220,13 @@ def promocion_masiva(request):
 @login_required
 def lista_asignaturas(request):
     ctx = get_plantel_context(request.user)
-    # FILTRO AUTOMÁTICO DE SEGURIDAD
-    plantel_usuario = request.user.plantel
     
-    # Solo traigo las carreras DE ESTE PLANTEL
-    carreras = Carrera.objects.filter(plantel=plantel_usuario).prefetch_related('asignaturas')
-    
+    # Traemos las carreras y pre-cargamos las asignaturas vinculadas a sus grupos
+    # Así es como debe quedar:
+    carreras = Carrera.objects.prefetch_related('grupos__asignaturas').all()
     context = {
         'carreras': carreras,
         **ctx,
-        'es_universidad': request.user.plantel.id == 2 # Asumo que tienes un campo tipo
     }
     return render(request, 'academic/lista_asignaturas.html', context)
 def crear_materia(request):
@@ -285,7 +234,7 @@ def crear_materia(request):
     if request.method == 'POST':
         form = AsignaturaForm(request.POST, plantel=plantel)
         if form.is_valid():
-            # 1. Obtenemos los datos del formulario
+            # 1. Extraemos los datos del formulario
             nombre = form.cleaned_data['nombre']
             clave = form.cleaned_data['clave']
             creditos = form.cleaned_data['creditos']
@@ -293,26 +242,37 @@ def crear_materia(request):
             nivel = form.cleaned_data['nivel_academico']
             docentes_seleccionados = form.cleaned_data['docentes']
 
-            # 2. Buscamos TODOS los grupos que coincidan
+            # 2. Buscamos TODOS los grupos (A, B, etc.) que coincidan con el grado y nivel
+            # Esto traerá al Grupo A y al Grupo B automáticamente
             grupos_coincidentes = Grupo.objects.filter(
                 plantel=plantel,
                 grado=grado,
                 carrera__nivel=nivel
             )
 
-            # 3. Creamos la materia para cada grupo
-            for grupo in grupos_coincidentes:
+            if grupos_coincidentes.exists():
+                # 3. Creamos la asignatura una sola vez
+                # Usamos la carrera del primer grupo encontrado
                 nueva_asignatura = Asignatura.objects.create(
-                    grupo=grupo,
-                    carrera=grupo.carrera,
+                    carrera=grupos_coincidentes.first().carrera,
                     nombre=nombre,
                     clave=clave,
                     creditos=creditos
                 )
-                # Asignamos los múltiples docentes
-                nueva_asignatura.docentes.set(docentes_seleccionados)
 
-            messages.success(request, f"Materia agregada a {grupos_coincidentes.count()} grupos correctamente.")
+                # 4. LA MAGIA: Vinculamos todos los grupos encontrados a esta materia
+                nueva_asignatura.grupos.set(grupos_coincidentes)
+
+                # 5. Vinculamos los docentes seleccionados
+                if docentes_seleccionados:
+                    nueva_asignatura.docentes.set(docentes_seleccionados)
+
+                # Creamos un mensaje informativo con los nombres de los grupos (A, B...)
+                nombres_grupos = ", ".join([g.nombre for g in grupos_coincidentes])
+                messages.success(request, f"Materia '{nombre}' vinculada a los grupos: {nombres_grupos}")
+            else:
+                messages.error(request, f"No se encontraron grupos para {grado}º de {nivel}.")
+
             return redirect('lista_asignaturas')
     else:
         form = AsignaturaForm(plantel=plantel)
@@ -356,3 +316,230 @@ def agregar_tutor(request):
         )
 
     return redirect(request.META.get("HTTP_REFERER", "/"))
+
+class AlumnoDetalleView(DetailView):
+    model = User
+    template_name = 'academic/alumno_detalle.html'
+    context_object_name = 'alumno'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['color'] = 'indigo' # O el color dinámico que uses
+        # Aquí podrás agregar en el futuro:
+        # context['calificaciones'] = Calificacion.objects.filter(alumno=self.object)
+        return context
+def regenerar_password(request, pk):
+    alumno = get_object_or_404(User, pk=pk)
+    nueva_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    
+    alumno.set_password(nueva_pass)
+    alumno.password_plana = nueva_pass # Aquí actualizamos el campo vacío
+    alumno.save()
+    
+    return redirect('detalle_alumno', pk=pk)
+
+
+def gestionar_horario_grupo(request, grupo_id):
+    grupo = get_object_or_404(Grupo, id=grupo_id)
+
+    dias_lista = [
+        ('LU', 'Lunes'), ('MA', 'Martes'), ('MI', 'Miércoles'),
+        ('JU', 'Jueves'), ('VI', 'Viernes'),
+    ]
+    horas = [
+        "07:00", "08:00", "09:00", "10:00",
+        "11:00", "12:00", "13:00", "14:00",
+    ]
+
+    horarios_qs = (
+        HorarioClase.objects
+        .filter(grupo=grupo, activo=True)
+        .select_related('asignatura', 'maestro')
+    )
+
+    # Construimos la matriz: { "07:00": { "LU": clase_o_None, ... } }
+    # Usamos hora_inicio__hour para comparar de forma robusta
+    from datetime import time as dtime
+
+    def hora_str_a_time(h: str) -> dtime:
+        hh, mm = h.split(":")
+        return dtime(int(hh), int(mm))
+
+    matriz = {}
+    for hora in horas:
+        t = hora_str_a_time(hora)
+        matriz[hora] = {}
+        for dia_code, _ in dias_lista:
+            clase = horarios_qs.filter(
+                dia=dia_code,
+                hora_inicio__hour=t.hour,
+                hora_inicio__minute=t.minute,
+            ).first()
+            matriz[hora][dia_code] = clase
+
+    context = {
+        'grupo': grupo,
+        'dias_lista': dias_lista,
+        'matriz': matriz,
+    }
+    return render(request, 'academic/gestionar_horario.html', context)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CREAR CLASE (Formulario de alta de horario)
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required
+def crear_clase(request):
+    plantel_usuario = request.user.plantel
+    theme = get_campus_theme(request.user)
+    
+
+    # Recuperamos el grupo de GET o POST
+    grupo_id = request.GET.get('grupo') or request.POST.get('grupo')
+
+    if request.method == 'POST':
+        asignatura_id    = request.POST.get('asignatura')
+        maestro_id       = request.POST.get('maestro')
+        dias_seleccionados = request.POST.getlist('dias')
+        hora_inicio      = request.POST.get('hora_inicio')
+        hora_fin         = request.POST.get('hora_fin')
+        aula             = request.POST.get('aula', '').strip() or 'Por definir'
+        grupo_id_post    = request.POST.get('grupo')
+
+        # ── Validaciones básicas ──────────────────────────────────────────
+        if not grupo_id_post:
+            messages.error(request, "Debes seleccionar un grupo.")
+        elif not asignatura_id:
+            messages.error(request, "Debes seleccionar una asignatura.")
+        elif not maestro_id:
+            messages.error(request, "Debes seleccionar un docente.")
+        elif not dias_seleccionados:
+            messages.warning(request, "Selecciona al menos un día.")
+        elif not hora_inicio or not hora_fin:
+            messages.error(request, "Las horas de inicio y fin son obligatorias.")
+        else:
+            try:
+                grupo      = get_object_or_404(Grupo,      id=grupo_id_post, plantel=plantel_usuario)
+                asignatura = get_object_or_404(Asignatura, id=asignatura_id)
+                maestro    = get_object_or_404(User,       id=maestro_id)
+
+                creados  = 0
+                errores  = []
+
+                for dia_code in dias_seleccionados:
+                    try:
+                        HorarioClase.objects.create(
+                            grupo=grupo,
+                            asignatura=asignatura,
+                            maestro=maestro,
+                            dia=dia_code,
+                            hora_inicio=hora_inicio,
+                            hora_fin=hora_fin,
+                            aula=aula,
+                        )
+                        creados += 1
+                    except ValidationError as ve:
+                        # Extraemos el mensaje limpio del ValidationError
+                        errores.append(_extraer_mensaje_ve(ve))
+
+                if creados:
+                    messages.success(
+                        request,
+                        f"✅ {creados} bloque(s) guardados para {grupo.nombre}."
+                    )
+                for err in errores:
+                    messages.error(request, f"⚠️ {err}")
+
+                # Redirigimos si al menos algo se guardó
+                if creados:
+                    return redirect('gestionar_horario', grupo_id=grupo.id)
+
+            except Exception as e:
+                messages.error(request, f"Error inesperado: {e}")
+
+    # ── Preparación del contexto (GET y POST fallido) ──────────────────────
+    grupo_seleccionado = None
+    if grupo_id:
+        grupo_seleccionado = (
+            Grupo.objects
+            .filter(id=grupo_id, plantel=plantel_usuario)
+            .first()
+        )
+
+    context = {
+        'grupo_seleccionado': grupo_seleccionado,
+        'grupos':      Grupo.objects.filter(plantel=plantel_usuario).order_by('grado', 'nombre'),
+        'asignaturas': Asignatura.objects.filter(carrera__plantel=plantel_usuario).distinct(),
+        # ✅ CORRECCIÓN: filtrar por rol='DOCENTE', no por is_staff
+        'maestros':    User.objects.filter(plantel=plantel_usuario, rol='DOCENTE').order_by('first_name'),
+        'dia_preselect':  request.GET.get('dia', ''),
+        'hora_preselect': request.GET.get('hora', ''),
+        'dias_opciones': [
+            ('LU', 'Lunes'), ('MA', 'Martes'), ('MI', 'Miércoles'),
+            ('JU', 'Jueves'), ('VI', 'Viernes'), ('SA', 'Sábado'),
+        ],
+        **theme
+    }
+    return render(request, 'academic/form_clase.html', context)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ELIMINAR CLASE
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required
+def eliminar_clase(request, clase_id):
+    clase = get_object_or_404(HorarioClase, id=clase_id)
+
+    if request.method == 'POST':
+        grupo_id = clase.grupo_id
+        clase.delete()
+        messages.success(request, "Clase eliminada correctamente.")
+        return redirect('gestionar_horario', grupo_id=grupo_id)
+
+    # Si alguien llega por GET, lo mandamos de vuelta
+    return redirect('gestionar_horario', grupo_id=clase.grupo_id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CARGA HORARIA DEL ALUMNO
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required
+def carga_horaria_alumno(request):
+    alumno = request.user
+    theme = get_campus_theme(request.user)
+
+    grupo = getattr(alumno, 'alumno_grupo', None)
+
+    if grupo:
+        horarios = (
+            HorarioClase.objects
+            .filter(grupo=grupo, activo=True)
+            .select_related('asignatura', 'maestro')
+            .order_by('dia', 'hora_inicio')
+        )
+    else:
+        horarios = HorarioClase.objects.none()
+        messages.info(request, "Aún no tienes un grupo asignado.")
+
+    context = {
+        'alumno':   alumno,
+        'horarios': horarios,
+        'color':    'indigo',
+        **theme
+    }
+    return render(request, 'academic/carga_horaria.html', context)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# UTILIDADES INTERNAS
+# ─────────────────────────────────────────────────────────────────────────────
+def _extraer_mensaje_ve(ve: ValidationError) -> str:
+    """Convierte un ValidationError en un string legible."""
+    if hasattr(ve, 'message_dict'):
+        partes = []
+        for campo, errores in ve.message_dict.items():
+            partes.append(f"{campo}: {' '.join(errores)}")
+        return " | ".join(partes)
+    if hasattr(ve, 'messages'):
+        return " ".join(ve.messages)
+    return str(ve)

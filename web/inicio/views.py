@@ -76,9 +76,9 @@ def dashboard_view(request):
     # --- 5. PENDIENTES DE DOCENTES (Carga de Notas) ---
     # Buscamos asignaturas que aún no tienen ninguna calificación registrada
     asignaturas_sin_notas = Asignatura.objects.filter(
-        grupo__plantel=plantel, 
-        calificaciones__isnull=True
-    ).values_list('docentes', flat=True).distinct() 
+    calificaciones__isnull=True, 
+    carrera__plantel=plantel
+).distinct() # Añadimos distinct() por si una materia tiene muchos grupos, no salga repetida
     
     docentes_pendientes = User.objects.filter(id__in=asignaturas_sin_notas).count()
 

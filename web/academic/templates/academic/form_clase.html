@@ -1,0 +1,519 @@
+{% extends 'inicio/base.html' %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto pb-28 px-4 space-y-6">
+
+    <!-- ── FORMULARIO ─────────────────────────────────────────────── -->
+    <div class="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+        <div class="bg-slate-900 p-8 text-white relative overflow-hidden">
+            <div class="absolute inset-0 opacity-10"
+                 style="background-image: linear-gradient(rgba(255,255,255,.15) 1px, transparent 1px),
+                                          linear-gradient(90deg, rgba(255,255,255,.15) 1px, transparent 1px);
+                        background-size: 28px 28px;"></div>
+            <div class="relative">
+                <div class="flex items-center gap-3 mb-1">
+                    <span class="w-2 h-8 bg-indigo-500 rounded-full inline-block"></span>
+                    <h2 class="text-2xl font-black uppercase tracking-tighter">Configurar Horario</h2>
+                </div>
+                <p class="text-slate-400 text-xs uppercase tracking-widest ml-5">Asignación de Materias y Docentes</p>
+            </div>
+        </div>
+
+        <form method="POST" id="horario-form" class="p-8 space-y-6">
+            {% csrf_token %}
+
+            <!-- Grupo -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Grupo Destino</label>
+                {% if grupo_seleccionado %}
+                    <div class="flex items-center justify-between bg-indigo-50 border border-indigo-100 p-4 rounded-2xl">
+                        <div class="flex flex-col">
+                            <span class="text-indigo-700 font-bold">{{ grupo_seleccionado.nombre }}</span>
+                            <span class="text-[10px] text-indigo-400">{{ grupo_seleccionado.carrera.nombre }}</span>
+                        </div>
+                        <input type="hidden" name="grupo" value="{{ grupo_seleccionado.id }}">
+                        <span class="text-[9px] bg-indigo-600 text-white px-2 py-1 rounded-lg font-black uppercase">Fijado</span>
+                    </div>
+                {% else %}
+                    <select name="grupo" required class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 appearance-none">
+                        <option value="" disabled selected>Selecciona un grupo registrado...</option>
+                        {% for g in grupos %}
+                            <option value="{{ g.id }}">{{ g.nombre }} - {{ g.carrera.nombre }}</option>
+                        {% empty %}
+                            <option value="">No hay grupos disponibles</option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+            </div>
+
+            <!-- Asignatura + Docente -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Asignatura</label>
+                    <select id="sel-asignatura" name="asignatura" required
+                            class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500">
+                        <option value="" disabled selected>Elegir materia...</option>
+                        {% for a in asignaturas %}
+                            <option value="{{ a.id }}">{{ a.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Docente</label>
+                    <select id="sel-maestro" name="maestro" required
+                            class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500">
+                        <option value="" disabled selected>Elegir docente...</option>
+                        {% for m in maestros %}
+                            <option value="{{ m.id }}">{{ m.get_full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Días -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Días de Clase</label>
+                <div class="flex flex-wrap gap-2" id="dias-container">
+                    {% for cod, nombre in dias_opciones %}
+                    <label class="cursor-pointer">
+                        <input type="checkbox" name="dias" value="{{ cod }}" class="hidden peer dia-check"
+                               {% if dia_preselect == cod %}checked{% endif %}>
+                        <div class="px-4 py-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-400 font-bold text-xs
+                                    peer-checked:bg-indigo-600 peer-checked:text-white peer-checked:border-indigo-600
+                                    hover:border-indigo-300 hover:text-indigo-500 transition-all select-none">
+                            {{ nombre }}
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Horas + Aula -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Hora Inicio</label>
+                    <input type="time" id="hora-inicio" name="hora_inicio" value="{{ hora_preselect }}" required
+                           class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-bold text-slate-700">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Hora Fin</label>
+                    <input type="time" id="hora-fin" name="hora_fin" required
+                           class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-bold text-slate-700">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Aula</label>
+                    <input type="text" id="inp-aula" name="aula" placeholder="Ej: Aula 102" required
+                           class="w-full bg-slate-50 border-none rounded-2xl p-4 text-sm font-bold text-slate-700">
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="pt-6 flex gap-3">
+                <button type="submit" id="btn-guardar"
+                        class="flex-1 bg-indigo-600 text-white font-black uppercase text-xs tracking-[0.2em] py-4 rounded-2xl
+                               hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 relative overflow-hidden">
+                    <span id="btn-texto">Guardar Horario</span>
+                    <span id="btn-loader" class="hidden absolute inset-0 flex items-center justify-center gap-2">
+                        <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <circle cx="12" cy="12" r="10" stroke-width="3" stroke-dasharray="40" stroke-dashoffset="10"/>
+                        </svg>
+                        Guardando…
+                    </span>
+                </button>
+                <a href="javascript:history.back()"
+                   class="px-8 bg-slate-100 text-slate-500 font-black uppercase text-xs tracking-widest py-4 rounded-2xl
+                          hover:bg-slate-200 transition-all flex items-center">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- ── VISTA PREVIA ─────────────────────────────────────────── -->
+    <div id="preview-panel" class="rounded-[2.5rem] border border-slate-200 bg-white shadow-2xl shadow-slate-200/60 overflow-hidden">
+
+        <div class="px-8 pt-7 pb-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <p class="text-[9px] uppercase tracking-[0.25em] text-slate-400 font-black mb-0.5">Vista previa en tiempo real</p>
+                <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight">Horario Configurado</h3>
+            </div>
+            <div id="preview-badge"
+                 class="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border
+                        bg-amber-50 text-amber-600 border-amber-200 transition-all">
+                Sin configurar
+            </div>
+        </div>
+
+        <div class="p-6 overflow-x-auto">
+
+            <!-- Estado vacío -->
+            <div id="preview-empty" class="py-12 flex flex-col items-center justify-center text-center gap-3">
+                <div class="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center">
+                    <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    Selecciona días y horas para<br>ver la vista previa
+                </p>
+            </div>
+
+            <!-- Calendario -->
+            <div id="cal-wrap" class="hidden" style="min-width:460px;">
+
+                <!-- Encabezados de días — fijos, fuera del scroll -->
+                <div class="flex mb-2" style="padding-left:52px;">
+                    <div id="cal-headers" class="flex flex-1 gap-1.5"></div>
+                </div>
+
+                <!-- Zona scrollable -->
+                <div id="cal-scroll"
+                     style="max-height:320px; overflow-y:auto; scroll-behavior:smooth;
+                            border-radius:16px; border:1px solid #f1f5f9;">
+                    <div class="flex">
+                        <div id="cal-hour-labels" style="width:52px; flex-shrink:0; position:relative;"></div>
+                        <div id="cal-columns" class="flex flex-1 gap-1.5"></div>
+                    </div>
+                </div>
+
+                <!-- Píldora de duración -->
+                <div id="cal-duracion" class="hidden mt-3 flex items-center justify-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block"></span>
+                    <span id="cal-dur-txt" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest"></span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ── ESTILOS ────────────────────────────────────────────────────── -->
+<style>
+    #cal-scroll::-webkit-scrollbar { width: 4px; }
+    #cal-scroll::-webkit-scrollbar-track { background: #f8fafc; border-radius: 99px; }
+    #cal-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 99px; }
+    #cal-scroll::-webkit-scrollbar-thumb:hover { background: #c7d2fe; }
+
+    @keyframes bloqueEntrada {
+        0%   { opacity:0; transform:scaleY(.7) translateY(8px); }
+        70%  { transform:scaleY(1.02) translateY(-2px); }
+        100% { opacity:1; transform:scaleY(1) translateY(0); }
+    }
+    .bloque-evento { animation: bloqueEntrada .4s cubic-bezier(.34,1.56,.64,1) both; }
+
+    @keyframes shimmer {
+        0%   { background-position: -200% center; }
+        100% { background-position:  200% center; }
+    }
+    .btn-shimmer {
+        background: linear-gradient(90deg, #4f46e5 25%, #818cf8 50%, #4f46e5 75%);
+        background-size: 200% auto;
+        animation: shimmer 1.4s linear infinite;
+    }
+</style>
+
+<!-- ── JAVASCRIPT ─────────────────────────────────────────────────── -->
+<script>
+(function () {
+    /* ── DOM ── */
+    const selAsignatura = document.getElementById('sel-asignatura');
+    const selMaestro    = document.getElementById('sel-maestro');
+    const horaInicio    = document.getElementById('hora-inicio');
+    const horaFin       = document.getElementById('hora-fin');
+    const inpAula       = document.getElementById('inp-aula');
+    const diasChecks    = document.querySelectorAll('.dia-check');
+    const previewEmpty  = document.getElementById('preview-empty');
+    const previewBadge  = document.getElementById('preview-badge');
+    const calWrap       = document.getElementById('cal-wrap');
+    const calHeaders    = document.getElementById('cal-headers');
+    const calHourLabels = document.getElementById('cal-hour-labels');
+    const calColumns    = document.getElementById('cal-columns');
+    const calScroll     = document.getElementById('cal-scroll');
+    const calDuracion   = document.getElementById('cal-duracion');
+    const calDurTxt     = document.getElementById('cal-dur-txt');
+    const btnGuardar    = document.getElementById('btn-guardar');
+    const btnTexto      = document.getElementById('btn-texto');
+    const btnLoader     = document.getElementById('btn-loader');
+    const form          = document.getElementById('horario-form');
+
+    /* ── Configuración ── */
+    const DIAS = [
+        { cod: 'LU', nombre: 'Lunes'     },
+        { cod: 'MA', nombre: 'Martes'    },
+        { cod: 'MI', nombre: 'Miércoles' },
+        { cod: 'JU', nombre: 'Jueves'    },
+        { cod: 'VI', nombre: 'Viernes'   },
+        { cod: 'SA', nombre: 'Sábado'    },
+    ];
+
+    const HORA_INI_CAL = 6;    // el calendario empieza en 06:00
+    const HORA_FIN_CAL = 23;   // y termina en 23:00
+    const CELL_H       = 56;   // píxeles por hora — generoso para visibilidad
+    const TOTAL_H      = (HORA_FIN_CAL - HORA_INI_CAL) * CELL_H;
+    const SCROLL_PAD   = 56;   // margen extra arriba del bloque al hacer scroll
+
+    /* ── Construir la estructura fija del calendario (solo una vez) ── */
+    function construirCalendario() {
+        /* Encabezados de días */
+        DIAS.forEach(({ cod, nombre }) => {
+            const d = document.createElement('div');
+            d.style.cssText = 'flex:1; text-align:center; padding:4px 2px;';
+            d.innerHTML = `<span id="dh-${cod}" style="
+                font-size:9px; font-weight:900; letter-spacing:.15em;
+                text-transform:uppercase; color:#cbd5e1; transition:color .25s, background .25s;
+                display:inline-block; padding:3px 8px; border-radius:99px;">
+                ${nombre.slice(0,3)}
+            </span>`;
+            calHeaders.appendChild(d);
+        });
+
+        /* Altura de la columna de etiquetas */
+        calHourLabels.style.height = TOTAL_H + 'px';
+
+        /* Etiquetas de hora */
+        for (let h = HORA_INI_CAL; h <= HORA_FIN_CAL; h++) {
+            const lbl = document.createElement('div');
+            lbl.style.cssText = `
+                position:absolute;
+                top:${(h - HORA_INI_CAL) * CELL_H}px;
+                right:8px;
+                transform:translateY(-50%);
+                font-size:9px; font-weight:700; color:#cbd5e1;
+                white-space:nowrap;`;
+            lbl.textContent = `${String(h).padStart(2,'0')}:00`;
+            calHourLabels.appendChild(lbl);
+        }
+
+        /* Una columna por día */
+        DIAS.forEach(({ cod }) => {
+            const col = document.createElement('div');
+            col.id = `col-${cod}`;
+            col.style.cssText = `
+                flex:1; position:relative;
+                height:${TOTAL_H}px;
+                border-radius:12px;
+                overflow:hidden;`;
+
+            /* Franjas alternas por hora como fondo de grilla */
+            for (let h = HORA_INI_CAL; h < HORA_FIN_CAL; h++) {
+                const franja = document.createElement('div');
+                franja.style.cssText = `
+                    position:absolute; left:0; right:0;
+                    top:${(h - HORA_INI_CAL) * CELL_H}px;
+                    height:${CELL_H}px;
+                    background:${h % 2 === 0 ? 'rgba(248,250,252,1)' : 'rgba(241,245,249,.6)'};
+                    border-bottom:1px dashed #e2e8f0;`;
+                col.appendChild(franja);
+            }
+
+            calColumns.appendChild(col);
+        });
+    }
+
+    /* ── Limpiar solo los bloques de eventos (no la grilla) ── */
+    function limpiarBloques() {
+        DIAS.forEach(({ cod }) => {
+            document.getElementById(`col-${cod}`)
+                    ?.querySelectorAll('.bloque-evento')
+                    .forEach(b => b.remove());
+        });
+    }
+
+    /* Convierte "HH:MM" → número decimal de horas */
+    function toDecimal(str) {
+        if (!str) return 0;
+        const [h, m] = str.split(':').map(Number);
+        return h + m / 60;
+    }
+
+    /* Formatea horas decimales → "08:30" */
+    function fmtHora(dec) {
+        const h = Math.floor(dec);
+        const m = Math.round((dec % 1) * 60);
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+
+    /* ── Dibuja UN bloque de evento en la columna del día indicado ── */
+    function dibujarBloque(cod, iniDec, finDec, materia, docente, aula, delay) {
+        const col = document.getElementById(`col-${cod}`);
+        if (!col) return;
+
+        const top    = (iniDec - HORA_INI_CAL) * CELL_H;
+        const height = (finDec - iniDec)       * CELL_H;
+
+        const bloque = document.createElement('div');
+        bloque.className = 'bloque-evento';
+        bloque.style.cssText = `
+            position:absolute;
+            top:${top}px;
+            height:${height}px;
+            left:3px; right:3px;
+            background:linear-gradient(160deg, #eef2ff 0%, #e0e7ff 100%);
+            border:1.5px solid #a5b4fc;
+            border-radius:12px;
+            overflow:hidden;
+            z-index:10;
+            display:flex;
+            animation-delay:${delay}ms;
+            box-shadow:0 2px 12px rgba(79,70,229,.12);`;
+
+        /* Barra de acento vertical */
+        const barra = document.createElement('div');
+        barra.style.cssText = `
+            width:5px; flex-shrink:0;
+            background:linear-gradient(180deg,#4f46e5,#818cf8);
+            border-radius:12px 0 0 12px;`;
+        bloque.appendChild(barra);
+
+        /* Contenido */
+        const cnt = document.createElement('div');
+        cnt.style.cssText = `
+            padding:6px 8px; overflow:hidden;
+            display:flex; flex-direction:column;
+            justify-content:${height < 70 ? 'center' : 'flex-start'};
+            gap:3px;`;
+
+        /* Rango horario */
+        const rango = document.createElement('p');
+        rango.style.cssText = 'font-size:8px; font-weight:700; color:#818cf8; margin:0; letter-spacing:.06em;';
+        rango.textContent = `${fmtHora(iniDec)} – ${fmtHora(finDec)}`;
+        cnt.appendChild(rango);
+
+        /* Nombre de materia — siempre visible */
+        if (materia) {
+            const mat = document.createElement('p');
+            mat.style.cssText = `
+                font-size:${height >= 80 ? '10' : '9'}px;
+                font-weight:900; color:#3730a3;
+                text-transform:uppercase; letter-spacing:.04em;
+                margin:0; overflow:hidden;
+                display:-webkit-box; -webkit-line-clamp:${height >= 100 ? 2 : 1};
+                -webkit-box-orient:vertical;`;
+            mat.textContent = materia;
+            cnt.appendChild(mat);
+        }
+
+        /* Docente — aparece si hay espacio (≥ 80px) */
+        if (docente && height >= 80) {
+            const doc = document.createElement('p');
+            doc.style.cssText = 'font-size:8px; font-weight:600; color:#6366f1; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+            doc.textContent = '👨‍🏫 ' + docente;
+            cnt.appendChild(doc);
+        }
+
+        /* Aula — aparece si hay mucho espacio (≥ 110px) */
+        if (aula && height >= 110) {
+            const au = document.createElement('p');
+            au.style.cssText = 'font-size:7px; font-weight:600; color:#a5b4fc; margin:0;';
+            au.textContent = '📍 ' + aula;
+            cnt.appendChild(au);
+        }
+
+        bloque.appendChild(cnt);
+        col.appendChild(bloque);
+    }
+
+    /* ── Actualizar preview completo ── */
+    function actualizarPreview() {
+        const diasActivos = [...diasChecks].filter(c => c.checked).map(c => c.value);
+        const hIni    = horaInicio.value;
+        const hFin    = horaFin.value;
+        const materia = selAsignatura.selectedIndex > 0
+                            ? selAsignatura.options[selAsignatura.selectedIndex].text : '';
+        const docente = selMaestro.selectedIndex > 0
+                            ? selMaestro.options[selMaestro.selectedIndex].text : '';
+        const aula    = inpAula.value.trim();
+
+        limpiarBloques();
+
+        /* Actualizar colores en encabezados de días */
+        DIAS.forEach(({ cod }) => {
+            const span = document.getElementById(`dh-${cod}`);
+            if (!span) return;
+            if (diasActivos.includes(cod)) {
+                span.style.color = '#4f46e5';
+                span.style.background = '#eef2ff';
+            } else {
+                span.style.color = '#cbd5e1';
+                span.style.background = 'transparent';
+            }
+        });
+
+        const hayDatos = diasActivos.length > 0 && hIni && hFin;
+
+        if (!hayDatos) {
+            previewEmpty.style.display = 'flex';
+            calWrap.classList.add('hidden');
+            calDuracion.classList.add('hidden');
+            setBadge('Sin configurar', 'amber');
+            return;
+        }
+
+        previewEmpty.style.display = 'none';
+        calWrap.classList.remove('hidden');
+
+        const iniDec = toDecimal(hIni);
+        const finDec = toDecimal(hFin);
+
+        if (finDec <= iniDec) {
+            setBadge('⚠ Hora fin inválida', 'red');
+            calDuracion.classList.add('hidden');
+            return;
+        }
+
+        /* Dibujamos el bloque en cada día activo */
+        diasActivos.forEach((cod, i) => {
+            dibujarBloque(cod, iniDec, finDec, materia, docente, aula, i * 60);
+        });
+
+        /* Scroll automático al rango seleccionado */
+        const scrollTarget = (iniDec - HORA_INI_CAL) * CELL_H - SCROLL_PAD;
+        calScroll.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' });
+
+        /* Duración legible */
+        const durMin = Math.round((finDec - iniDec) * 60);
+        const horas  = Math.floor(durMin / 60);
+        const mins   = durMin % 60;
+        const durTxt = horas > 0
+            ? `${horas} hora${horas > 1 ? 's' : ''}${mins ? ` ${mins} min` : ''}`
+            : `${mins} min`;
+
+        calDurTxt.textContent = `${durTxt} por sesión · ${hIni} a ${hFin}`;
+        calDuracion.classList.remove('hidden');
+
+        setBadge(`${diasActivos.length} día${diasActivos.length > 1 ? 's' : ''} · ${durTxt}`, 'indigo');
+    }
+
+    /* ── Badge helper ── */
+    const BADGE = {
+        amber:  'bg-amber-50 text-amber-600 border-amber-200',
+        indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200',
+        red:    'bg-rose-50 text-rose-600 border-rose-200',
+    };
+    function setBadge(txt, color) {
+        previewBadge.textContent = txt;
+        previewBadge.className = `text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border transition-all ${BADGE[color] || BADGE.amber}`;
+    }
+
+    /* ── Shimmer al enviar ── */
+    form.addEventListener('submit', () => {
+        btnTexto.classList.add('hidden');
+        btnLoader.classList.remove('hidden');
+        btnGuardar.classList.add('btn-shimmer');
+        btnGuardar.disabled = true;
+    });
+
+    /* ── Listeners ── */
+    [selAsignatura, selMaestro, horaInicio, horaFin, inpAula].forEach(el => {
+        el.addEventListener('change', actualizarPreview);
+        el.addEventListener('input',  actualizarPreview);
+    });
+    diasChecks.forEach(c => c.addEventListener('change', actualizarPreview));
+
+    /* ── Inicializar ── */
+    construirCalendario();
+    actualizarPreview();
+})();
+</script>
+{% endblock %}

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Grupo, Asignatura, Calificacion, Asistencia, Carrera, Periodo
+from .models import Grupo, Asignatura, Calificacion, Asistencia, Carrera, Periodo, HorarioClase
 
 # --- 1. NUEVOS MODELOS (CARRERA Y PERIODO) ---
 @admin.register(Carrera)
@@ -28,16 +28,22 @@ class GrupoAdmin(admin.ModelAdmin):
 # --- 3. ASIGNATURA ---
 @admin.register(Asignatura)
 class AsignaturaAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'grupo', 'mostrar_docentes', 'creditos')
-    list_filter = ('grupo__plantel', 'grupo__carrera')
-    search_fields = ('nombre', 'docente__first_name', 'docente__last_name')
-    def mostrar_docentes(self, obj):
-        # Une los nombres de usuario (o nombres completos) con comas
-        return ", ".join([user.username for user in obj.docentes.all()])
+    # 'grupo' ya no existe, usamos 'carrera' o una función personalizada
+    list_display = ('nombre', 'carrera', 'mostrar_grupos', 'clave') 
     
-    # Le damos un nombre bonito a la columna en el Admin
-    mostrar_docentes.short_description = 'Docentes'
+    # 'grupo__plantel' ya no funciona porque la relación es ManyToMany
+    # Filtramos por carrera o directamente por el plantel de la carrera
+    list_filter = ('carrera__plantel', 'carrera', 'docentes')
+    
+    search_fields = ('nombre', 'clave')
+
+    # Función para mostrar los grupos en la lista del admin
+    def mostrar_grupos(self, obj):
+        return ", ".join([str(g.nombre) for g in obj.grupos.all()])
+    mostrar_grupos.short_description = 'Grupos'
 
 # --- 4. OTROS ---
 admin.site.register(Calificacion)
 admin.site.register(Asistencia)
+
+admin.site.register(HorarioClase)

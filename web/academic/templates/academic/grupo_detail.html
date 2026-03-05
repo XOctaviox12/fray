@@ -209,31 +209,13 @@
         </td>
 
         <td class="px-6 py-4 text-right">
-          <button
-  onclick="abrirModalAlumno(this)"
-  data-id="{{ alumno.id }}"
-  data-first="{{ alumno.first_name }}"
-  data-last="{{ alumno.last_name }}"
-  data-username="{{ alumno.username }}"
-  data-email="{{ alumno.email }}"
-  data-telefono="{{ alumno.telefono|default:'No registrado' }}"
-  data-direccion="{{ alumno.direccion|default:'No registrada' }}"
-  data-fecha="{{ alumno.fecha_nacimiento|date:'Y-m-d'|default:'No registrada' }}"
-  data-rol="{{ alumno.get_rol_display }}"
-  data-estatus="{{ alumno.get_estatus_display }}"
-  data-activo="{% if alumno.status %}Activo{% else %}Inactivo{% endif %}"
-  data-tutores='[
-    {% for tutor in alumno.tutores.all %}
-      {
-        "nombre":"{{ tutor.nombre }}",
-        "telefono":"{{ tutor.telefono }}"
-      }{% if not forloop.last %},{% endif %}
-    {% endfor %}
-  ]'
-  class="text-{{ color }}-600 text-[10px] font-black uppercase hover:underline"
->
-  Ver detalles
-</button>
+          <td class="px-6 py-4 text-right">
+    <a href="{% url 'detalle_alumno' alumno.id %}" 
+       class="text-{{ color }}-600 text-[10px] font-black uppercase hover:underline">
+       Ver detalles
+      
+    </a>
+</td>
         </td>
 
       </tr>

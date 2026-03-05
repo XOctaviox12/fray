@@ -40,6 +40,7 @@ class User(AbstractUser):
     direccion = models.TextField(blank=True, null=True)
     foto_perfil = models.ImageField(upload_to='perfiles/', null=True, blank=True)
     fecha_nacimiento = models.DateField(blank=True, null=True)
+    password_plana = models.CharField(max_length=100, blank=True, null=True)
 
     def __str__(self):
         return f"{self.username} - {self.get_rol_display()}"

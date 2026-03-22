@@ -1,29 +1,32 @@
-<div class="bg-white rounded-[2.5rem] border border-slate-200 p-6 shadow-sm">
-  <div class="flex items-center justify-between mb-4">
-    <h4 class="text-sm font-black uppercase text-slate-700">
-      Materias
-    </h4>
+<div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+        <h4 class="text-sm font-black text-slate-700 uppercase tracking-wider">Materias</h4>
+        <span class="text-[9px] font-black bg-{{ color }}-50 text-{{ color }}-600 px-2 py-1 rounded-full uppercase">
+            {{ grupo.asignaturas.count }} asignadas
+        </span>
+    </div>
 
-    <button onclick="document.getElementById('modal-materia').classList.remove('hidden')"
-            class="text-{{ color }}-600 text-[10px] font-black uppercase hover:underline">
-      + Agregar
-    </button>
-  </div>
-
-  <ul class="space-y-3">
-    {% for materia in materias %}
-    <li class="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">
-      <span class="text-xs font-bold text-slate-700">
-        {{ materia.nombre }}
-      </span>
-      <span class="text-[10px] text-slate-400">
-        {{ materia.docente.get_full_name|default:"Sin docente" }}
-      </span>
-    </li>
-    {% empty %}
-    <li class="text-center text-xs italic text-slate-400">
-      No hay materias registradas
-    </li>
-    {% endfor %}
-  </ul>
+    <div class="divide-y divide-slate-50">
+        {% for materia in grupo.asignaturas.all %}
+        <div class="p-4 flex items-start gap-3 hover:bg-slate-50 transition-colors">
+            <div class="w-2 h-2 rounded-full bg-{{ color }}-500 mt-1.5 flex-shrink-0"></div>
+            <div class="min-w-0">
+                <p class="text-xs font-black text-slate-800 truncate">{{ materia.nombre }}</p>
+                {% if materia.clave %}
+                    <p class="text-[9px] font-mono text-slate-400">{{ materia.clave }}</p>
+                {% endif %}
+                {% for docente in materia.docentes.all|slice:":1" %}
+                    <p class="text-[9px] text-slate-500 mt-0.5">👨‍🏫 {{ docente.get_full_name }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="p-8 text-center">
+            <p class="text-xs text-slate-400 italic">Sin materias asignadas</p>
+            <a href="{% url 'crear_materia' %}" class="text-[9px] font-black text-{{ color }}-600 uppercase mt-2 inline-block hover:underline">
+                + Agregar materia
+            </a>
+        </div>
+        {% endfor %}
+    </div>
 </div>

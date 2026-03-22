@@ -1,434 +1,440 @@
 {% extends 'inicio/base.html' %}
 
+{% block nav_dashboard %}active{% endblock %}
+
 {% block content %}
-<div class="w-full px-4 md:px-6 lg:px-8 pb-12 space-y-6">
-    
-    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-        <div class="min-w-fit">
-            <h2 class="text-3xl font-extrabold text-slate-800 tracking-tight">Panel de Control</h2>
-            <div class="flex items-center gap-2 mt-1">
-                <span class="px-3 py-1 rounded-full text-xs font-bold bg-{{ color }}-50 text-{{ color }}-700 border border-{{ color }}-100">
-                    {{ user.plantel.nombre }}
-                </span>
-                <span class="text-slate-400 text-sm font-medium italic hidden sm:inline">Ciclo Activo &bull; {% now "Y" %}</span>
-            </div>
-        </div>
+<style>
+  :root {
+    --ink:    #0d1117;
+    --muted:  #6b7280;
+    --border: #e5e9f0;
+    --bg:     #f6f7fb;
+    --white:  #ffffff;
+    --accent: #4361ee;
+    --accent-light: #eef1fd;
+    --danger: #e63946;
+    --warn:   #f4a261;
+    --ok:     #2ec4b6;
+    --radius: 20px;
+  }
 
-        <div class="flex-1 w-full mx-0 xl:mx-8">
-            <div class="relative group w-full">
-                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <svg class="h-5 w-5 text-slate-400 group-hover:text-{{ color }}-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </div>
-                <input type="text" list="search-suggestions" class="block w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-{{ color }}-500 focus:bg-white transition-all" placeholder="Buscar alumno, docente o grupo...">
-                
-                <datalist id="search-suggestions">
-                    <option value="Roberto Gómez (Alumno - 3A)">
-                    <option value="Roberto Díaz (Docente)">
-                    <option value="Grupo 501 (Ingeniería)">
-                </datalist>
-            </div>
+  .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+  .kpi { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 22px; position: relative; overflow: hidden; transition: box-shadow .2s, transform .2s; }
+  .kpi:hover { box-shadow: 0 8px 30px rgba(0,0,0,.07); transform: translateY(-2px); }
+  .kpi-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+  .kpi-num { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; letter-spacing: -.03em; line-height: 1; color: var(--ink); }
+  .kpi-label { font-size: 11px; font-weight: 600; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: .08em; }
+  .kpi-tag { margin-top: 10px; display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 99px; }
+  .kpi-stripe { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
+
+  .content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+
+  .card { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .card-header { padding: 20px 24px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .card-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
+  .card-body { padding: 20px 24px; }
+  .card-link { font-size: 11px; font-weight: 700; color: var(--accent); text-decoration: none; }
+  .card-link:hover { text-decoration: underline; }
+
+  .quick-strip { display: flex; align-items: center; gap: 6px; background: var(--accent); border-radius: 14px; padding: 12px 18px; color: #fff; }
+  .qs-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  .qs-num { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; line-height: 1; }
+  .qs-label { font-size: 9px; font-weight: 700; opacity: .65; text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
+  .qs-div { width: 1px; height: 32px; background: rgba(255,255,255,.2); }
+  .live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: var(--ok); background: #f0fdf9; border: 1px solid #a7f3d0; border-radius: 99px; padding: 3px 8px; }
+  .live-badge span { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); animation: livepulse 1.5s infinite; }
+  @keyframes livepulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.4)} }
+
+  .dash-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .dash-topbar h1 { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); }
+  .dash-topbar p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .btn-danger { display: flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 14px; background: #fff0f0; border: 1.5px solid #fecdcd; color: var(--danger); font-size: 12px; font-weight: 700; cursor: pointer; transition: all .18s; }
+  .btn-danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  .riesgo-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid transparent; transition: all .18s; cursor: pointer; margin-bottom: 8px; }
+  .riesgo-item:hover { background: #fff5f5; border-color: #fecdcd; }
+  .riesgo-avatar { width: 38px; height: 38px; border-radius: 10px; background: #fef2f2; color: var(--danger); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .riesgo-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .riesgo-sub { font-size: 10px; font-weight: 600; color: var(--danger); text-transform: uppercase; letter-spacing: .06em; }
+  .riesgo-arrow { margin-left: auto; color: #e5e9f0; transition: color .18s; }
+  .riesgo-item:hover .riesgo-arrow { color: var(--danger); }
+
+  .activity-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+  .activity-item:last-child { border-bottom: none; }
+  .activity-dot { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; margin-top: 2px; }
+  .activity-action { display: inline-block; padding: 1px 6px; border-radius: 5px; font-size: 10px; font-weight: 700; }
+  .activity-time { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .hero-action { background: var(--ink); border-radius: var(--radius); padding: 24px; cursor: pointer; border: none; width: 100%; text-align: left; position: relative; overflow: hidden; transition: transform .2s, box-shadow .2s; }
+  .hero-action:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(13,17,23,.25); }
+  .hero-action-glow { position: absolute; width: 120px; height: 120px; background: var(--accent); border-radius: 50%; top: -30px; right: -30px; opacity: .25; filter: blur(30px); }
+  .hero-action-icon { width: 46px; height: 46px; border-radius: 14px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.15); display: flex; align-items: center; justify-content: center; color: #fff; margin-bottom: 14px; }
+  .hero-action h3 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: #fff; letter-spacing: -.02em; }
+  .hero-action p { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 4px; }
+
+  .agenda-item { display: flex; gap: 12px; padding: 10px 0; align-items: flex-start; }
+  .agenda-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .agenda-time { font-size: 10px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+  .agenda-event { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+
+  .dir-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; }
+  .dir-item { background: var(--white); border: 1.5px solid var(--border); border-radius: 18px; padding: 20px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-decoration: none; transition: all .2s; text-align: center; }
+  .dir-item:hover { border-color: var(--accent); background: var(--accent-light); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(67,97,238,.12); }
+  .dir-icon { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; transition: transform .2s; }
+  .dir-item:hover .dir-icon { transform: scale(1.1); }
+  .dir-name { font-size: 12px; font-weight: 700; color: var(--ink); }
+  .dir-desc { font-size: 10px; color: var(--muted); }
+  .aulas-bar { height: 4px; background: #e9ecf5; border-radius: 99px; margin-top: 6px; overflow: hidden; }
+  .aulas-fill { height: 100%; background: var(--accent); border-radius: 99px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; z-index: 300; background: rgba(13,17,23,.75); backdrop-filter: blur(6px); align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--white); border-radius: 28px; max-width: 520px; width: 100%; padding: 36px; position: relative; animation: fadeUp .3s ease both; }
+  .modal-close { position: absolute; top: 16px; right: 16px; width: 34px; height: 34px; border-radius: 10px; background: var(--bg); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--muted); transition: all .18s; }
+  .modal-close:hover { background: var(--border); color: var(--ink); }
+  .modal-title { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .form-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); display: block; margin-bottom: 6px; }
+  .form-input { width: 100%; padding: 12px 16px; border: 1.5px solid var(--border); border-radius: 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 500; color: var(--ink); background: var(--bg); outline: none; transition: border .2s, box-shadow .2s; box-sizing: border-box; }
+  .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(67,97,238,.1); background: #fff; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .btn-primary { width: 100%; padding: 14px; background: var(--ink); color: #fff; border: none; border-radius: 14px; font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; cursor: pointer; transition: all .2s; }
+  .btn-primary:hover { background: var(--accent); box-shadow: 0 6px 20px rgba(67,97,238,.35); }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+  .fade-up { animation: fadeUp .45s ease both; }
+  .d1{animation-delay:.05s} .d2{animation-delay:.1s} .d3{animation-delay:.15s}
+  .d4{animation-delay:.2s} .d5{animation-delay:.25s}
+
+  @media (max-width: 1200px) {
+    .kpi-row { grid-template-columns: repeat(2,1fr); }
+    .content-grid { grid-template-columns: 1fr; }
+    .dir-grid { grid-template-columns: repeat(3,1fr); }
+  }
+  @media (max-width: 640px) {
+    .dir-grid { grid-template-columns: repeat(2,1fr); }
+    .quick-strip { flex-wrap: wrap; gap: 12px; }
+  }
+</style>
+
+<div style="display:flex; flex-direction:column; gap:24px;">
+
+  <div class="dash-topbar fade-up d1">
+    <div>
+      <h1>Panel de Control</h1>
+      <p><span style="font-weight:700;color:var(--ink)">{{ user.plantel.nombre }}</span> &nbsp;·&nbsp; Ciclo activo {% now "Y" %}</p>
+    </div>
+    <button class="btn-danger" onclick="toggleModal('modal-promocion')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      Cerrar Ciclo
+    </button>
+  </div>
+
+  <div class="quick-strip fade-up d2">
+    <div class="qs-item"><span class="qs-num">{{ total_alumnos }}</span><span class="qs-label">{{ labels.alumnos }}</span></div>
+    <div class="qs-div"></div>
+    <div class="qs-item"><span class="qs-num">{{ total_docentes }}</span><span class="qs-label">{{ labels.docentes }}</span></div>
+    <div class="qs-div"></div>
+    <div class="qs-item"><span class="qs-num">{{ total_coordinadores }}</span><span class="qs-label">Coordinadores</span></div>
+    <div class="qs-div"></div>
+    <div class="qs-item"><span class="qs-num">{{ asistencia_global }}</span><span class="qs-label">Asistencia hoy</span></div>
+    <div class="qs-div"></div>
+    <div class="qs-item" style="flex-direction:row;gap:8px;align-items:center;justify-content:center;">
+      <div class="live-badge"><span></span> En vivo</div>
+    </div>
+  </div>
+
+  <div class="kpi-row fade-up d3">
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#eef1fd;color:var(--accent);"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+      <div class="kpi-num">{{ total_alumnos }}</div>
+      <div class="kpi-label">{{ labels.alumnos }}</div>
+      <div class="kpi-tag" style="background:#eef1fd;color:var(--accent);">Inscripciones abiertas</div>
+      <div class="kpi-stripe" style="background:var(--accent);"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#f5f3ff;color:#7c3aed;"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="kpi-num">{{ total_docentes }}</div>
+      <div class="kpi-label">{{ labels.docentes }}</div>
+      {% if docentes_pendientes > 0 %}
+        <div class="kpi-tag" style="background:#fff0f0;color:var(--danger);">{{ docentes_pendientes }} pendientes</div>
+      {% else %}
+        <div class="kpi-tag" style="background:#f0fdf9;color:var(--ok);">✓ Al día</div>
+      {% endif %}
+      <div class="kpi-stripe" style="background:#7c3aed;"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#fffbeb;color:#d97706;"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div class="kpi-num">{{ total_coordinadores }}</div>
+      <div class="kpi-label">Coordinadores</div>
+      <div class="kpi-tag" style="background:#fffbeb;color:#d97706;">Admin activo</div>
+      <div class="kpi-stripe" style="background:#f59e0b;"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon" style="background:#f0fdf9;color:var(--ok);"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+      <div class="kpi-num">{{ asistencia_global }}</div>
+      <div class="kpi-label">Asistencia Hoy</div>
+      <div class="kpi-tag" style="background:#f0fdf9;color:var(--ok);">Registro en vivo</div>
+      <div class="kpi-stripe" style="background:var(--ok);"></div>
+    </div>
+  </div>
+
+  <div class="content-grid fade-up d4">
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="card">
+        <div class="card-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="width:10px;height:10px;border-radius:50%;background:var(--danger);display:inline-block;animation:livepulse 1.5s infinite;"></span>
+            <span class="card-title">Radar de Riesgo</span>
+          </div>
+          <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">Promedios Críticos</span>
         </div>
-        
-        <button onclick="toggleModal('modal-promocion')" class="shrink-0 group flex items-center gap-3 px-5 py-3 rounded-2xl border border-rose-100 text-rose-500 hover:bg-rose-600 hover:text-white transition-all bg-rose-50">
-            <div class="flex flex-col items-end">
-                <span class="text-[9px] font-black uppercase tracking-widest leading-none mb-1">Gestión Anual</span>
-                <span class="text-xs font-bold leading-none">Cerrar Ciclo</span>
+        <div class="card-body">
+          {% if alumnos_riesgo %}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              {% for alumno in alumnos_riesgo %}
+              <a href="{% url 'detalle_alumno' alumno.pk %}" class="riesgo-item" style="text-decoration:none;">
+                <div class="riesgo-avatar">{{ alumno.first_name|slice:":1" }}{{ alumno.last_name|slice:":1" }}</div>
+                <div>
+                  <div class="riesgo-name">{{ alumno.get_full_name|title }}</div>
+                  <div class="riesgo-sub">Atención requerida</div>
+                </div>
+                <svg class="riesgo-arrow" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+              </a>
+              {% endfor %}
             </div>
-            <div class="w-8 h-8 rounded-xl bg-white/50 group-hover:bg-white/20 flex items-center justify-center transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          {% else %}
+            <div style="padding:40px 20px;text-align:center;background:var(--bg);border-radius:16px;">
+              <div style="width:48px;height:48px;background:#d1fae5;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:#059669;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <p style="font-size:13px;font-weight:700;color:var(--ink);">Sin alumnos en riesgo</p>
+              <p style="font-size:11px;color:var(--muted);margin-top:4px;">El sistema no detectó casos críticos hoy.</p>
             </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Actividad Reciente</span>
+          <a href="#" class="card-link">Ver historial →</a>
+        </div>
+        <div class="card-body" style="padding-top:8px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;">
+            {% for log in actividad_reciente %}
+            <div class="activity-item">
+              <div class="activity-dot" style="background:{% if log.action_flag == 1 %}#d1fae5{% elif log.action_flag == 2 %}#fef3c7{% else %}#fee2e2{% endif %};color:{% if log.action_flag == 1 %}#059669{% elif log.action_flag == 2 %}#d97706{% else %}#dc2626{% endif %};">
+                {% if log.action_flag == 1 %}+{% elif log.action_flag == 2 %}~{% else %}✕{% endif %}
+              </div>
+              <div>
+                <div style="font-size:12px;line-height:1.6;color:#374151;">
+                  <strong>{{ log.user.get_full_name }}</strong>
+                  <span class="activity-action" style="{% if log.action_flag == 1 %}background:#d1fae5;color:#059669{% elif log.action_flag == 2 %}background:#fef3c7;color:#d97706{% else %}background:#fee2e2;color:#dc2626{% endif %};">
+                    {% if log.action_flag == 1 %}creó{% elif log.action_flag == 2 %}editó{% else %}eliminó{% endif %}
+                  </span>
+                  {{ log.content_type.name }}
+                </div>
+                <div class="activity-time">{{ log.action_time|timesince }} atrás</div>
+              </div>
+            </div>
+            {% empty %}
+            <p style="font-size:12px;color:var(--muted);font-style:italic;">Sin actividad reciente.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <button class="hero-action" onclick="toggleModal('modal-inscripcion')">
+        <div class="hero-action-glow"></div>
+        <div style="position:relative;z-index:1;">
+          <div class="hero-action-icon">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          </div>
+          <h3>Inscribir Alumno</h3>
+          <p>Alta rápida de expediente escolar</p>
+        </div>
+      </button>
+
+      <div class="card" style="flex:1;">
+        <div class="card-header">
+          <span class="card-title">Agenda del Día</span>
+          <span style="font-size:11px;font-weight:700;background:var(--bg);padding:4px 10px;border-radius:8px;color:var(--muted);">{% now "d M" %}</span>
+        </div>
+        <div class="card-body">
+          {% if agenda %}
+            {% for item in agenda %}
+            <div class="agenda-item">
+              <div class="agenda-dot" style="background:{% if item.tipo == 'alerta' %}var(--danger){% elif item.tipo == 'rutina' %}#94a3b8{% else %}var(--warn){% endif %};{% if item.tipo == 'alerta' %}box-shadow:0 0 0 4px #fee2e2{% endif %}"></div>
+              <div>
+                <div class="agenda-time">{{ item.hora }}</div>
+                <div class="agenda-event">{{ item.evento }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p style="font-size:12px;color:var(--muted);font-style:italic;padding:12px 0;">Sin pendientes para hoy.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <a href="{% url 'crear_grupo' %}" style="text-decoration:none;" class="dir-item">
+          <div class="dir-icon" style="background:#eef1fd;color:var(--accent);"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+          <div class="dir-name">Nuevo Grupo</div>
+          <div class="dir-desc">
+            Aulas: {{ aulas_reales.ocupadas }}/{{ aulas_reales.total }}
+            <div class="aulas-bar"><div class="aulas-fill" style="width:{% widthratio aulas_reales.ocupadas aulas_reales.total 100 %}%"></div></div>
+          </div>
+        </a>
+        <a href="{% url 'lista_grupos' %}" class="dir-item" style="text-decoration:none;">
+          <div class="dir-icon" style="background:#f0fdf9;color:var(--ok);"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+          <div class="dir-name">Kárdex</div>
+        </a>
+        <button onclick="alert('Módulo de comunicados próximamente')"
+                style="grid-column:span 2;background:var(--bg);border:1.5px solid var(--border);border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);transition:all .2s;"
+                onmouseover="this.style.borderColor='var(--ink)';this.style.color='var(--ink)'"
+                onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+          Crear Comunicado General
         </button>
+      </div>
     </div>
+  </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-24 h-24 bg-{{ color }}-50 rounded-full -mr-8 -mt-8 opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
-            <div class="relative z-10">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-{{ color }}-50 rounded-2xl text-{{ color }}-600 shadow-sm">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                    </div>
-                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Total Activos</span>
-                </div>
-                <p class="text-4xl font-black text-slate-800">{{ total_alumnos }}</p>
-                <div class="flex items-center justify-between mt-2">
-                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">{{ labels.alumnos }}</p>
-                    <span class="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-lg">+ Inscripciones</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full -mr-8 -mt-8 opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
-            <div class="relative z-10">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-indigo-50 rounded-2xl text-indigo-600 shadow-sm">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                    </div>
-                    {% if docentes_pendientes > 0 %}
-                        <span class="px-2.5 py-1 bg-rose-100 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-widest animate-pulse">Pendientes</span>
-                    {% else %}
-                        <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Al día</span>
-                    {% endif %}
-                </div>
-                <p class="text-4xl font-black text-slate-800">{{ total_docentes }}</p>
-                <p class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">{{ labels.docentes }}</p>
-            </div>
-        </div>
-
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-full -mr-8 -mt-8 opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
-            <div class="relative z-10">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-amber-50 rounded-2xl text-amber-600 shadow-sm">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                    </div>
-                    <span class="text-[10px] font-black text-slate-300 uppercase tracking-widest">Admin</span>
-                </div>
-                <p class="text-4xl font-black text-slate-800">{{ total_coordinadores }}</p>
-                <p class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">Coordinadores</p>
-            </div>
-        </div>
-
-        <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-            <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-full -mr-8 -mt-8 opacity-50 group-hover:scale-150 transition-transform duration-500"></div>
-            <div class="relative z-10">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-emerald-50 rounded-2xl text-emerald-600 shadow-sm">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </div>
-                    <span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Hoy</span>
-                </div>
-                <p class="text-4xl font-black text-slate-800">{{ asistencia_global }}</p>
-                
-                <div class="flex items-center gap-2 mt-2">
-                    <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Asistencia</p>
-                    <div class="flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
-                        <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                        <span class="text-[10px] font-black text-emerald-600">3% vs Ayer</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="card fade-up d5">
+    <div class="card-header">
+      <span class="card-title">Directorios del Sistema</span>
+      <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;">Acceso Rápido</span>
     </div>
-
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 md:gap-8 h-full">
-        <div class="xl:col-span-2 flex flex-col gap-6 md:gap-8 h-full">
-            <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-6 md:p-8 relative overflow-hidden flex-1">
-                <div class="absolute top-0 right-0 w-40 h-40 bg-rose-50 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -mr-10 -mt-10"></div>
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 relative z-10">
-                    <h3 class="text-xl font-black text-slate-800 flex items-center gap-3">
-                        <span class="relative flex h-3 w-3">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
-                        </span>
-                        Radar de Riesgo
-                    </h3>
-                    <div class="flex items-center gap-2 mt-2 sm:mt-0 bg-white/50 px-3 py-1 rounded-full border border-slate-100">
-                        <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Promedios Críticos</span>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-                    {% for alumno in alumnos_riesgo %}
-                    <div class="flex items-center justify-between p-4 bg-white border border-rose-100 rounded-2xl shadow-sm hover:shadow-md hover:border-rose-200 transition-all group cursor-pointer">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-sm font-black text-rose-600 border border-rose-100 group-hover:bg-rose-600 group-hover:text-white transition-colors">
-                                {{ alumno.first_name|slice:":1" }}{{ alumno.last_name|slice:":1" }}
-                            </div>
-                            <div>
-                                <p class="text-sm font-bold text-slate-800 group-hover:text-rose-700 transition-colors">{{ alumno.get_full_name|title }}</p>
-                                <p class="text-[9px] font-bold text-rose-400 uppercase tracking-wide">Atención Requerida</p>
-                            </div>
-                        </div>
-                        <button class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-                        </button>
-                    </div>
-                    {% empty %}
-                    <div class="col-span-1 md:col-span-2 py-12 text-center bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
-                        <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                        </div>
-                        <p class="text-slate-500 font-bold text-sm">Todo bajo control</p>
-                        <p class="text-xs text-slate-400 mt-1">El sistema no detectó riesgos hoy.</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="bg-slate-50 rounded-[2.5rem] border border-slate-200 p-6 md:p-8 flex-1">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        Actividad Reciente
-                    </h3>
-                    <a href="#" class="text-[10px] font-bold text-{{ color }}-600 hover:underline uppercase tracking-widest">Ver Historial Completo</a>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-0">
-                    {% for log in actividad_reciente %}
-                    <div class="relative pl-8 pb-6 border-l border-slate-200 last:pb-0 last:border-0 hover:bg-white/50 transition-colors rounded-r-xl pr-2">
-                        <div class="absolute left-[-17px] top-0 w-8 h-8 rounded-full bg-white border-2 border-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 shadow-sm z-10">
-                            {{ log.user.first_name|slice:":1" }}
-                        </div>
-                        <div>
-                            <p class="text-xs text-slate-600 leading-relaxed">
-                                <span class="font-bold text-slate-900">{{ log.user.get_full_name }}</span> 
-                                {% if log.action_flag == 1 %}<span class="text-emerald-600 font-bold bg-emerald-50 px-1 rounded">creó</span>{% elif log.action_flag == 2 %}<span class="text-amber-600 font-bold bg-amber-50 px-1 rounded">editó</span>{% else %}<span class="text-rose-600 font-bold bg-rose-50 px-1 rounded">eliminó</span>{% endif %}
-                                <span class="font-bold text-slate-700">{{ log.content_type.name }}</span>
-                            </p>
-                            <p class="text-[10px] text-slate-400 font-bold mt-1 flex items-center gap-1">
-                                <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                                {{ log.action_time|timesince }}
-                            </p>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <p class="text-xs text-slate-400 italic">No hay registros recientes.</p>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <div class="space-y-6 h-full flex flex-col">
-            <button onclick="toggleModal('modal-inscripcion')" class="w-full bg-slate-900 group hover:bg-slate-800 transition-all p-8 rounded-[2.5rem] shadow-xl shadow-slate-200 relative overflow-hidden text-left border border-slate-800 flex-none">
-                <div class="absolute right-0 top-0 w-40 h-40 bg-white opacity-5 rounded-full -mr-12 -mt-12 group-hover:scale-110 transition-transform duration-500"></div>
-                <div class="relative z-10">
-                    <div class="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-white backdrop-blur-sm mb-6 border border-white/10 group-hover:bg-white/20 transition-colors">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
-                    </div>
-                    <h3 class="text-2xl font-black text-white mb-2">Inscribir Alumno</h3>
-                    <p class="text-slate-400 text-sm font-medium">Alta rápida de expediente</p>
-                </div>
-            </button>
-
-            <div class="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm flex-1">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xs font-black uppercase tracking-widest text-slate-400">Agenda del Día</h3>
-                    <span class="text-[10px] font-bold bg-slate-100 px-2 py-1 rounded-md text-slate-500">{% now "d M" %}</span>
-                </div>
-                
-                {% if agenda %}
-                <div class="space-y-5">
-                    {% for item in agenda %}
-                    <div class="flex gap-4 items-start group">
-                        <div class="mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 ring-4 ring-slate-50 shadow-sm 
-                            {% if item.tipo == 'alerta' %}bg-rose-500 animate-pulse{% elif item.tipo == 'rutina' %}bg-slate-300{% else %}bg-amber-400{% endif %}"></div>
-                        <div>
-                            <p class="text-[10px] font-black text-slate-400 mb-0.5">{{ item.hora }}</p>
-                            <p class="text-sm font-bold text-slate-700 leading-snug group-hover:text-{{ color }}-600 transition-colors">{{ item.evento }}</p>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                {% else %}
-                    <div class="h-full flex items-center justify-center text-center">
-                        <p class="text-slate-400 text-xs italic">Sin pendientes urgentes.</p>
-                    </div>
-                {% endif %}
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 flex-none">
-                <a href="{% url 'crear_grupo' %}" class="bg-white p-5 rounded-[2rem] border border-slate-100 hover:border-{{ color }}-200 hover:shadow-md transition-all text-center flex flex-col items-center justify-center gap-3 group relative overflow-hidden">
-                    <div class="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-{{ color }}-50 group-hover:text-{{ color }}-600 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                    </div>
-                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Nuevo Grupo</span>
-                    
-                    <div class="absolute top-3 right-3 bg-{{ color }}-50 px-2 py-0.5 rounded-full border border-{{ color }}-100">
-                         <p class="text-[8px] font-black text-{{ color }}-600">AULAS: {{ aulas_reales.ocupadas }}/{{ aulas_reales.total }}</p>
-                    </div>
-                </a>
-                
-                <button class="bg-white p-5 rounded-[2rem] border border-slate-100 hover:border-emerald-200 hover:shadow-md transition-all text-center flex flex-col items-center justify-center gap-3 group">
-                    <div class="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    </div>
-                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Kárdex</span>
-                </button>
-
-                <button class="col-span-2 bg-slate-100 p-4 rounded-[2rem] border border-slate-200 hover:bg-slate-200 hover:border-slate-300 transition-all text-center flex items-center justify-center gap-3 group">
-                    <svg class="w-5 h-5 text-slate-400 group-hover:text-slate-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
-                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-700">Crear Comunicado General</span>
-                </button>
-            </div>
-        </div>
+    <div class="card-body">
+      <div class="dir-grid">
+        <a href="{% url 'lista_docentes' %}" class="dir-item">
+          <div class="dir-icon" style="background:#eef1fd;color:var(--accent);"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+          <div class="dir-name">{{ labels.docentes }}</div>
+          <div class="dir-desc">Gestión de plantilla</div>
+        </a>
+        <a href="{% url 'lista_grupos' %}" class="dir-item">
+          <div class="dir-icon" style="background:#eff6ff;color:#3b82f6;"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg></div>
+          <div class="dir-name">{{ labels.grupos }}</div>
+          <div class="dir-desc">Gestión académica</div>
+        </a>
+        <a href="{% url 'lista_coordinadores' %}" class="dir-item">
+          <div class="dir-icon" style="background:#fffbeb;color:#d97706;"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+          <div class="dir-name">Coordinadores</div>
+          <div class="dir-desc">Permisos y roles</div>
+        </a>
+        <a href="{% url 'lista_asignaturas' %}" class="dir-item">
+          <div class="dir-icon" style="background:#faf5ff;color:#9333ea;"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg></div>
+          <div class="dir-name">Materias</div>
+          <div class="dir-desc">Retícula curricular</div>
+        </a>
+        <a href="{% url 'carga_horaria' %}" class="dir-item">
+          <div class="dir-icon" style="background:#f0fdf9;color:var(--ok);"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+          <div class="dir-name">Horarios</div>
+          <div class="dir-desc">Carga horaria</div>
+        </a>
+      </div>
     </div>
+  </div>
 
-    <div class="bg-white rounded-[2.5rem] p-6 md:p-10 border border-slate-100 shadow-sm">
-        <div class="flex justify-between items-center mb-8">
-            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Directorios del Sistema</h3>
-            <div class="h-px bg-slate-100 flex-1 ml-6"></div>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <a href="{% url 'lista_docentes' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-{{ color }}-200 hover:shadow-xl transition-all duration-300 h-full">
-                <div class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg class="w-5 h-5 text-{{ color }}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 bg-white text-{{ color }}-600 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                    </div>
-                    <div>
-                        <h4 class="text-xl font-bold text-slate-800">{{ labels.docentes }}</h4>
-                        <p class="text-xs text-slate-500 mt-1">Gestión de plantilla.</p>
-                    </div>
-                </div>
-            </a>
-
-            <a href="{% url 'lista_grupos' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-blue-200 hover:shadow-xl transition-all duration-300 h-full">
-                <div class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 bg-white text-blue-600 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-                    </div>
-                    <div>
-                        <h4 class="text-xl font-bold text-slate-800">{{ labels.grupos }}</h4>
-                        <p class="text-xs text-slate-500 mt-1">Gestión académica.</p>
-                    </div>
-                </div>
-            </a>
-
-            <a href="{% url 'lista_coordinadores' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-amber-200 hover:shadow-xl transition-all duration-300 h-full">
-                <div class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 bg-white text-amber-600 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                    </div>
-                    <div>
-                        <h4 class="text-xl font-bold text-slate-800">Coordinadores</h4>
-                        <p class="text-xs text-slate-500 mt-1">Permisos.</p>
-                    </div>
-                </div>
-            </a>
-
-            <a href="{% url 'lista_asignaturas' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-purple-200 hover:shadow-xl transition-all duration-300 h-full">
-                <div class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 bg-white text-purple-600 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                    </div>
-                    <div>
-                        <h4 class="text-xl font-bold text-slate-800">Materias</h4>
-                        <p class="text-xs text-slate-500 mt-1">Retícula.</p>
-                    </div>
-                </div>
-            </a>
-            <a href="{% url 'carga_horaria' %}" class="group relative bg-slate-50 p-6 rounded-[2rem] border border-slate-100 hover:bg-white hover:border-amber-200 hover:shadow-xl transition-all duration-300 h-full">
-                <div class="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 bg-white text-amber-600 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                    </div>
-                    <div>
-                        <h4 class="text-xl font-bold text-slate-800">Carga horaria</h4>
-                        <p class="text-xs text-slate-500 mt-1">horarios.</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-    </div>
 </div>
 
-<div id="modal-inscripcion" class="hidden fixed inset-0 z-[200] bg-slate-900/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity">
-    <div class="bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] max-w-2xl w-full p-8 shadow-2xl animate-in fade-in slide-in-from-bottom duration-300 relative max-h-[90vh] overflow-y-auto">
-        <button onclick="toggleModal('modal-inscripcion')" class="absolute top-6 right-6 p-2 bg-slate-50 rounded-full hover:bg-slate-100 text-slate-400 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-
-        <div class="text-center mb-8">
-            <div class="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-slate-200">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
-            </div>
-            <h3 class="text-2xl font-black text-slate-800 tracking-tight">Nuevo Ingreso</h3>
-            <p class="text-slate-500 text-sm">Complete los datos básicos para crear el expediente.</p>
-        </div>
-
-        <form class="space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Nombre(s)</label>
-                    <input type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none transition-all" placeholder="Ej. Roberto">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Apellidos</label>
-                    <input type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none transition-all" placeholder="Ej. Gómez Pérez">
-                </div>
-            </div>
-            <div class="space-y-1">
-                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">CURP</label>
-                <input type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none transition-all" placeholder="Clave Única de Registro">
-            </div>
-            
-            <div class="pt-4 pb-4 sm:pb-0">
-                <button type="button" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-lg hover:shadow-xl transform active:scale-95">
-                    Guardar y Generar Matrícula
-                </button>
-            </div>
-        </form>
+<!-- ══ MODAL INSCRIPCIÓN FUNCIONAL ══════════════════════════════════ -->
+<div id="modal-inscripcion" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="toggleModal('modal-inscripcion')">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div style="width:50px;height:50px;background:var(--ink);border-radius:16px;display:flex;align-items:center;justify-content:center;color:#fff;margin-bottom:16px;">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
     </div>
+    <div class="modal-title">Nuevo Ingreso</div>
+    <div class="modal-sub">Los datos básicos. La matrícula y contraseña se generan automáticamente.</div>
+
+    {% if inscripcion_errors %}
+    <div style="background:#fff0f0;border-left:3px solid #e63946;padding:10px 14px;border-radius:8px;
+                font-size:11px;font-weight:700;color:#e63946;margin-bottom:16px;">
+      {% for error in inscripcion_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+
+    <form action="{% url 'dashboard' %}" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="inscribir">
+      <div class="form-grid">
+        <div><label class="form-label">Nombre(s)</label><input class="form-input" type="text" name="first_name" value="{{ inscripcion_data.first_name|default:'' }}" placeholder="Ej. Roberto" required></div>
+        <div><label class="form-label">Apellidos</label><input class="form-input" type="text" name="last_name" value="{{ inscripcion_data.last_name|default:'' }}" placeholder="Ej. Gómez Pérez" required></div>
+      </div>
+      <div><label class="form-label">Correo electrónico</label><input class="form-input" type="email" name="email" value="{{ inscripcion_data.email|default:'' }}" placeholder="correo@ejemplo.com"></div>
+      <div>
+        <label class="form-label">Grupo de ingreso</label>
+        <select class="form-input" name="grupo" required>
+          <option value="">Seleccionar grupo…</option>
+          {% for g in grupos_disponibles %}
+          <option value="{{ g.id }}" {% if inscripcion_data.grupo == g.id|stringformat:"s" %}selected{% endif %}>
+            {{ g }} — ({{ g.alumnos.count }}/{{ g.capacidad_maxima }} alumnos)
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-grid">
+        <div><label class="form-label">Teléfono</label><input class="form-input" type="text" name="telefono" placeholder="5512345678"></div>
+        <div><label class="form-label">Fecha de Nacimiento</label><input class="form-input" type="date" name="fecha_nacimiento"></div>
+      </div>
+      <button type="submit" class="btn-primary" style="margin-top:6px;">Guardar y Generar Matrícula</button>
+    </form>
+  </div>
 </div>
 
-<div id="modal-promocion" class="hidden fixed inset-0 z-[200] bg-slate-900/90 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-[2.5rem] sm:rounded-[3rem] max-w-lg w-full p-10 shadow-2xl animate-in fade-in slide-in-from-bottom duration-300">
-        <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </div>
-            <h3 class="text-2xl font-black text-slate-800">¿Cerrar Ciclo Escolar?</h3>
-            <p class="text-slate-500 text-sm mt-2 font-medium">Esta acción moverá a TODOS los grupos al siguiente grado. <br><span class="text-rose-500">Es irreversible.</span></p>
-        </div>
-
-        <form action="{% url 'promocion_masiva' %}" method="POST" class="space-y-6">
-            {% csrf_token %}
-            <div class="space-y-2">
-                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Selecciona el Nuevo Periodo</label>
-                <select name="nuevo_periodo" class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-sm text-slate-700 focus:ring-2 focus:ring-rose-500 outline-none">
-                    {% for p in periodos %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}
-                </select>
-            </div>
-            
-            <div class="flex flex-col gap-3 pt-2 pb-6 sm:pb-0">
-                <button type="submit" class="bg-rose-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-700 shadow-lg shadow-rose-200 transition-all">
-                    Confirmar Cierre
-                </button>
-                <button type="button" onclick="toggleModal('modal-promocion')" class="text-slate-400 font-bold text-xs uppercase tracking-widest py-3 hover:text-slate-600">
-                    Cancelar
-                </button>
-            </div>
-        </form>
-    </div>
+<!-- ══ MODAL CERRAR CICLO ════════════════════════════════════════════ -->
+<div id="modal-promocion" class="modal-overlay">
+  <div class="modal-box" style="max-width:440px;">
+    <button class="modal-close" onclick="toggleModal('modal-promocion')"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    <div style="width:50px;height:50px;background:#fff0f0;border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--danger);margin-bottom:16px;"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+    <div class="modal-title" style="color:var(--danger);">¿Cerrar Ciclo Escolar?</div>
+    <div class="modal-sub">Esta acción mueve a <strong>todos</strong> los grupos al siguiente grado. <span style="color:var(--danger);font-weight:700;">Es irreversible.</span></div>
+    <form action="{% url 'promocion_masiva' %}" method="POST" style="display:flex;flex-direction:column;gap:16px;">
+      {% csrf_token %}
+      <div><label class="form-label">Nuevo Periodo</label><select name="nuevo_periodo" class="form-input">{% for p in periodos %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}</select></div>
+      <button type="submit" style="width:100%;padding:14px;background:var(--danger);color:#fff;border:none;border-radius:14px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;">Confirmar Cierre de Ciclo</button>
+      <button type="button" onclick="toggleModal('modal-promocion')" style="background:none;border:none;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;padding:6px;text-transform:uppercase;letter-spacing:.08em;">Cancelar</button>
+    </form>
+  </div>
 </div>
 
 <script>
-    function toggleModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.classList.toggle('hidden');
-            document.body.classList.toggle('overflow-hidden');
-        }
-    }
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') { 
-            ['modal-promocion', 'modal-inscripcion'].forEach(id => {
-                const m = document.getElementById(id);
-                if (!m.classList.contains('hidden')) {
-                    m.classList.add('hidden');
-                    document.body.classList.remove('overflow-hidden');
-                }
-            });
-        }
+function toggleModal(id) {
+  const m = document.getElementById(id);
+  m.classList.toggle('open');
+  document.body.style.overflow = m.classList.contains('open') ? 'hidden' : '';
+  // Reabrir automáticamente si hubo errores de inscripción
+  if (id === 'modal-inscripcion' && document.querySelector('#modal-inscripcion .form-input[name="first_name"]')?.value) {
+    m.classList.add('open');
+  }
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['modal-inscripcion','modal-promocion'].forEach(id => {
+      document.getElementById(id)?.classList.remove('open');
+      document.body.style.overflow = '';
     });
+  }
+});
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => {
+    if (e.target === o) { o.classList.remove('open'); document.body.style.overflow = ''; }
+  });
+});
+
+// Reabrir modal de inscripción si hay errores
+{% if inscripcion_errors %}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('modal-inscripcion').classList.add('open');
+  document.body.style.overflow = 'hidden';
+});
+{% endif %}
 </script>
 {% endblock %}

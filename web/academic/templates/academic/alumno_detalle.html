@@ -11,10 +11,10 @@
             Volver al grupo
         </a>
         <div class="flex gap-3">
-            <button class="bg-white border border-slate-200 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase text-slate-500 hover:bg-slate-50 transition-all">
+            <button onclick="openEditModal()" class="bg-white border border-slate-200 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase text-slate-500 hover:bg-slate-50 transition-all">
                 Editar Perfil
             </button>
-            <button class="bg-{{ color }}-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-{{ color }}-600/20 hover:scale-105 transition-all">
+            <button onclick="descargarExpediente()" class="bg-{{ color }}-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-{{ color }}-600/20 hover:scale-105 transition-all">
                 Descargar Expediente
             </button>
         </div>
@@ -22,8 +22,10 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
+        <!-- COLUMNA IZQUIERDA -->
         <div class="lg:col-span-1 space-y-6">
             
+            <!-- Seguridad -->
             <div class="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
                 <div class="flex items-center justify-between mb-4">
                     <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Seguridad de Acceso</p>
@@ -36,17 +38,30 @@
                     <div class="flex justify-between items-center">
                         <div>
                             <p class="text-[8px] font-bold text-slate-400 uppercase">Contraseña Actual</p>
-                            <p class="text-sm font-mono font-bold text-indigo-600">
-                                {{ alumno.password_plana|default:"No disponible" }}
+                            <!-- Contraseña oculta por seguridad, solo se muestra con acción explícita -->
+                            <p class="text-sm font-mono font-bold text-indigo-600" id="pass-display">
+                                ••••••••
                             </p>
                         </div>
-                        {% if alumno.password_plana %}
-                        <button onclick="copyToClipboard('{{ alumno.password_plana }}')" class="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-indigo-600 transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                            </svg>
-                        </button>
-                        {% endif %}
+                        <div class="flex gap-1">
+                            {% if alumno.password_plana %}
+                            <button onclick="togglePassword()" id="btn-show-pass"
+                                    title="Mostrar contraseña"
+                                    class="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-indigo-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </button>
+                            <button onclick="copyToClipboard('{{ alumno.password_plana }}')"
+                                    title="Copiar al portapapeles"
+                                    class="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-indigo-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                            </button>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 
@@ -59,6 +74,7 @@
                 </a>
             </div>
 
+            <!-- Avatar y datos -->
             <div class="bg-white rounded-[2.5rem] border border-slate-200 p-8 text-center shadow-sm">
                 <div class="relative w-32 h-32 mx-auto mb-6">
                     <div class="w-full h-full bg-slate-100 rounded-full flex items-center justify-center border-4 border-white shadow-inner">
@@ -83,12 +99,13 @@
                     <div>
                         <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Estatus Académico</p>
                         <span class="inline-flex px-3 py-1 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-700 uppercase tracking-tighter">
-                            {{ alumno.get_status_display|default:"Regular" }}
+                            {{ alumno.get_estatus_display|default:"Activo" }}
                         </span>
                     </div>
                 </div>
             </div>
 
+            <!-- Tutores -->
             <div class="bg-slate-900 rounded-[2rem] p-6 text-white shadow-xl">
                 <h4 class="text-[10px] font-black uppercase tracking-[0.2em] mb-4 text-slate-400">Padres / Tutores</h4>
                 <div class="space-y-3">
@@ -107,23 +124,29 @@
             </div>
         </div>
 
+        <!-- COLUMNA DERECHA -->
         <div class="lg:col-span-3 space-y-6">
             
             <div class="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
-                <div class="flex border-b border-slate-100 bg-slate-50/50 px-8">
-                    <button class="px-6 py-5 text-[10px] font-black uppercase border-b-2 border-{{ color }}-600 text-{{ color }}-600">
+                <!-- PESTAÑAS -->
+                <div class="flex border-b border-slate-100 bg-slate-50/50 px-8" role="tablist">
+                    <button role="tab" data-tab="info"
+                            class="tab-btn px-6 py-5 text-[10px] font-black uppercase border-b-2 border-{{ color }}-600 text-{{ color }}-600 transition">
                         Información General
                     </button>
-                    <button class="px-6 py-5 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 transition">
+                    <button role="tab" data-tab="historial"
+                            class="tab-btn px-6 py-5 text-[10px] font-black uppercase border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition">
                         Historial Académico
                     </button>
-                    <button class="px-6 py-5 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 transition">
+                    <button role="tab" data-tab="asistencias"
+                            class="tab-btn px-6 py-5 text-[10px] font-black uppercase border-b-2 border-transparent text-slate-400 hover:text-slate-600 transition">
                         Asistencias
                     </button>
                 </div>
 
-                <div class="p-10">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <!-- PANEL: Información General -->
+                <div id="tab-info" class="tab-panel p-10">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10 mb-10">
                         <div class="space-y-2">
                             <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Dirección de Vivienda</label>
                             <p class="text-sm font-semibold text-slate-700 italic border-l-2 border-slate-100 pl-4">
@@ -133,47 +156,288 @@
                         <div class="space-y-2">
                             <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha de Nacimiento</label>
                             <p class="text-sm font-semibold text-slate-700 border-l-2 border-slate-100 pl-4">
-                                {{ alumno.fecha_nacimiento|date:"d F, Y" }}
+                                {{ alumno.fecha_nacimiento|date:"d F, Y"|default:"No registrada" }}
                             </p>
                         </div>
-                    </div>
-
-                    <div class="mt-16 p-16 border-2 border-dashed border-slate-100 rounded-[3rem] text-center bg-slate-50/30">
-                        <div class="bg-white w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-slate-100 rotate-3">
-                            <svg class="w-10 h-10 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
+                        <div class="space-y-2">
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Correo Electrónico</label>
+                            <p class="text-sm font-semibold text-slate-700 border-l-2 border-slate-100 pl-4">
+                                {{ alumno.email|default:"No registrado" }}
+                            </p>
                         </div>
-                        <h4 class="text-slate-500 text-sm font-black uppercase tracking-widest mb-2">Módulo en Construcción</h4>
-                        <p class="text-slate-400 text-xs font-bold italic">
-                            El historial académico se activará automáticamente al finalizar el periodo actual.
-                        </p>
+                        <div class="space-y-2">
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Teléfono</label>
+                            <p class="text-sm font-semibold text-slate-700 border-l-2 border-slate-100 pl-4">
+                                {{ alumno.telefono|default:"No registrado" }}
+                            </p>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Grupo Asignado</label>
+                            <p class="text-sm font-semibold text-slate-700 border-l-2 border-slate-100 pl-4">
+                                {{ alumno.alumno_grupo|default:"Sin grupo" }}
+                            </p>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Estatus</label>
+                            <div class="border-l-2 border-slate-100 pl-4">
+                                <span class="inline-flex px-3 py-1 rounded-full text-[9px] font-black
+                                    {% if alumno.is_active %}bg-emerald-100 text-emerald-700{% else %}bg-red-100 text-red-700{% endif %}
+                                    uppercase">
+                                    {% if alumno.is_active %}Activo{% else %}Baja{% endif %}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- PANEL: Historial Académico -->
+                <div id="tab-historial" class="tab-panel p-10 hidden">
+                    {% if calificaciones %}
+                    <div class="overflow-x-auto rounded-2xl border border-slate-100">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-widest">
+                                <tr>
+                                    <th class="px-6 py-4 text-left">Materia</th>
+                                    <th class="px-6 py-4 text-center">Calificación</th>
+                                    <th class="px-6 py-4 text-center">Fecha</th>
+                                    <th class="px-6 py-4 text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                {% for cal in calificaciones %}
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="px-6 py-4 font-bold text-slate-800">{{ cal.asignatura.nombre }}</td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="text-lg font-black
+                                            {% if cal.nota >= 7 %}text-emerald-600
+                                            {% elif cal.nota >= 6 %}text-amber-600
+                                            {% else %}text-red-600{% endif %}">
+                                            {{ cal.nota }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center text-slate-500">{{ cal.fecha|date:"d/m/Y" }}</td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="px-2 py-1 rounded-full text-[9px] font-black uppercase
+                                            {% if cal.nota >= 6 %}bg-emerald-100 text-emerald-700
+                                            {% else %}bg-red-100 text-red-700{% endif %}">
+                                            {% if cal.nota >= 6 %}Aprobado{% else %}Reprobado{% endif %}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Promedio general -->
+                    <div class="mt-6 flex items-center justify-end gap-4">
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Promedio General</span>
+                        <span class="text-2xl font-black 
+                            {% if promedio_alumno >= 7 %}text-emerald-600
+                            {% elif promedio_alumno >= 6 %}text-amber-600
+                            {% else %}text-red-600{% endif %}">
+                            {{ promedio_alumno|floatformat:1 }}
+                        </span>
+                    </div>
+                    {% else %}
+                    <div class="py-16 text-center">
+                        <div class="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                            <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <p class="text-sm font-black text-slate-400 uppercase tracking-widest">Sin calificaciones registradas</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- PANEL: Asistencias -->
+                <div id="tab-asistencias" class="tab-panel p-10 hidden">
+                    {% if asistencias %}
+                    <!-- Resumen -->
+                    <div class="grid grid-cols-3 gap-4 mb-8">
+                        <div class="bg-emerald-50 rounded-2xl p-4 text-center border border-emerald-100">
+                            <p class="text-2xl font-black text-emerald-700">{{ total_presentes }}</p>
+                            <p class="text-[9px] font-black text-emerald-500 uppercase mt-1">Presentes</p>
+                        </div>
+                        <div class="bg-red-50 rounded-2xl p-4 text-center border border-red-100">
+                            <p class="text-2xl font-black text-red-700">{{ total_faltas }}</p>
+                            <p class="text-[9px] font-black text-red-500 uppercase mt-1">Faltas</p>
+                        </div>
+                        <div class="bg-indigo-50 rounded-2xl p-4 text-center border border-indigo-100">
+                            <p class="text-2xl font-black text-indigo-700">{{ porcentaje_asistencia }}%</p>
+                            <p class="text-[9px] font-black text-indigo-500 uppercase mt-1">Asistencia</p>
+                        </div>
+                    </div>
+                    <!-- Lista -->
+                    <div class="overflow-x-auto rounded-2xl border border-slate-100">
+                        <table class="w-full text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-widest">
+                                <tr>
+                                    <th class="px-6 py-4 text-left">Fecha</th>
+                                    <th class="px-6 py-4 text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                {% for asistencia in asistencias %}
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="px-6 py-4 font-bold text-slate-700">{{ asistencia.fecha|date:"l d F, Y" }}</td>
+                                    <td class="px-6 py-4 text-center">
+                                        {% if asistencia.presente %}
+                                        <span class="px-3 py-1 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-700 uppercase">Presente</span>
+                                        {% else %}
+                                        <span class="px-3 py-1 rounded-full text-[9px] font-black bg-red-100 text-red-700 uppercase">Falta</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="py-16 text-center">
+                        <div class="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                            <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <p class="text-sm font-black text-slate-400 uppercase tracking-widest">Sin registros de asistencia</p>
+                    </div>
+                    {% endif %}
+                </div>
+
             </div>
         </div>
     </div>
 </div>
 
+<!-- MODAL EDITAR ALUMNO -->
+<div id="modal-edit" class="hidden fixed inset-0 z-[300] bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-[2.5rem] max-w-lg w-full p-8 shadow-2xl">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-black text-slate-800">Editar Perfil</h3>
+            <button onclick="closeEditModal()" class="p-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-slate-400 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+        <form method="POST" action="{% url 'detalle_alumno' alumno.pk %}" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="editar">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nombre(s)</label>
+                    <input type="text" name="first_name" value="{{ alumno.first_name }}"
+                           class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Apellidos</label>
+                    <input type="text" name="last_name" value="{{ alumno.last_name }}"
+                           class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Correo</label>
+                <input type="email" name="email" value="{{ alumno.email }}"
+                       class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Teléfono</label>
+                <input type="text" name="telefono" value="{{ alumno.telefono|default:'' }}"
+                       class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Dirección</label>
+                <input type="text" name="direccion" value="{{ alumno.direccion|default:'' }}"
+                       class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div class="pt-4 flex gap-3">
+                <button type="submit" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition">
+                    Guardar Cambios
+                </button>
+                <button type="button" onclick="closeEditModal()" class="px-6 bg-slate-100 text-slate-500 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
-function copyToClipboard(text) {
-    if(!text || text === 'None' || text === 'No disponible') return;
-    
-    navigator.clipboard.writeText(text).then(() => {
-        // Un pequeño feedback visual es mejor que un alert
-        const btn = event.currentTarget;
-        const originalColor = btn.style.color;
-        btn.style.color = '#10b981'; // Color verde esmeralda
-        
-        setTimeout(() => {
-            btn.style.color = originalColor;
-        }, 2000);
-        
-        // Opcional: Toast o alert discreto
-        console.log("Copiado al portapapeles");
-    }).catch(err => {
-        console.error('Error al copiar: ', err);
+/* ── PESTAÑAS ── */
+const COLOR = '{{ color }}';
+const tabs = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.tab-panel');
+
+tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const target = btn.dataset.tab;
+
+        // Desactivar todos
+        tabs.forEach(t => {
+            t.classList.remove(`border-${COLOR}-600`, `text-${COLOR}-600`);
+            t.classList.add('border-transparent', 'text-slate-400');
+        });
+        panels.forEach(p => p.classList.add('hidden'));
+
+        // Activar seleccionado
+        btn.classList.remove('border-transparent', 'text-slate-400');
+        btn.classList.add(`border-${COLOR}-600`, `text-${COLOR}-600`);
+        document.getElementById(`tab-${target}`).classList.remove('hidden');
     });
+});
+
+/* ── CONTRASEÑA ── */
+let passVisible = false;
+const passDisplay = document.getElementById('pass-display');
+const realPass = '{{ alumno.password_plana|default:"" }}';
+
+function togglePassword() {
+    passVisible = !passVisible;
+    passDisplay.textContent = passVisible ? (realPass || 'No disponible') : '••••••••';
+    // Ocultar automáticamente después de 10 segundos
+    if (passVisible) {
+        setTimeout(() => {
+            passVisible = false;
+            if (passDisplay) passDisplay.textContent = '••••••••';
+        }, 10000);
+    }
+}
+
+function copyToClipboard(text) {
+    if (!text || text === 'None' || text === 'No disponible') return;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('Contraseña copiada al portapapeles');
+    }).catch(() => {
+        showToast('No se pudo copiar', true);
+    });
+}
+
+/* ── MODAL EDITAR ── */
+function openEditModal() {
+    document.getElementById('modal-edit').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function closeEditModal() {
+    document.getElementById('modal-edit').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+document.getElementById('modal-edit').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeEditModal();
+});
+
+/* ── DESCARGAR EXPEDIENTE (print básico) ── */
+function descargarExpediente() {
+    window.print();
+}
+
+/* ── TOAST ── */
+function showToast(msg, isError = false) {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-6 right-6 z-[999] px-5 py-3 rounded-2xl text-white text-xs font-black uppercase tracking-widest shadow-xl transition-all
+        ${isError ? 'bg-red-600' : 'bg-emerald-600'}`;
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.style.opacity = '0', 2500);
+    setTimeout(() => toast.remove(), 3000);
 }
 </script>
 {% endblock %}

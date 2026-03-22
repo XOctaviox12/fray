@@ -13,6 +13,7 @@ from django.views.generic import DetailView
 import random
 import string
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 
 def get_plantel_context(user):
     es_uni = user.plantel.id == 2 
@@ -112,58 +113,71 @@ def lista_grupos(request):
         })
 @login_required
 def detalle_grupo(request, pk):
-    ctx = get_plantel_context(request.user)
+    ctx   = get_plantel_context(request.user)
     grupo = get_object_or_404(Grupo, pk=pk, plantel=request.user.plantel)
-
-    # Métricas
-    promedio = grupo.promedio_general
+ 
+    promedio   = grupo.promedio_general
     asistencia = grupo.asistencia_mensual
-    ocupacion = grupo.ocupacion_porcentaje
-
-    alumnos_base = User.objects.filter(rol='ALUMNO', alumno_grupo=grupo, plantel=request.user.plantel)
-
-    # Corregido: Alertas de riesgo por notas (Usando distinct para no contar doble si un alumno tiene varias notas bajas)
+    ocupacion  = grupo.ocupacion_porcentaje
+ 
+    alumnos_base = User.objects.filter(
+        rol='ALUMNO', alumno_grupo=grupo, plantel=request.user.plantel
+    )
     alumnos_riesgo = alumnos_base.filter(notas__nota__lt=6.0).distinct().count()
-
+ 
     query = request.GET.get('q', '')
-    alumnos = alumnos_base.filter(Q(first_name__icontains=query) | Q(last_name__icontains=query)) if query else alumnos_base
-
-    # Formulario Alumno
+    if query:
+        alumnos_qs = alumnos_base.filter(
+            Q(first_name__icontains=query) | Q(last_name__icontains=query)
+        )
+    else:
+        alumnos_qs = alumnos_base
+ 
+    # ── Paginación: 20 alumnos por página ────────────────────────────
+    paginator  = Paginator(alumnos_qs, 20)
+    page_num   = request.GET.get('page', 1)
+    page_obj   = paginator.get_page(page_num)
+ 
+    # ── Formulario Alumno ─────────────────────────────────────────────
     form_alumno = AlumnoForm(request.POST or None)
     if request.method == 'POST' and 'btn_inscribir' in request.POST:
         if form_alumno.is_valid():
             nuevo_alumno = form_alumno.save(creador=request.user, grupo=grupo)
-            messages.success(request, f"Inscrito: {nuevo_alumno.username} | Pass: {nuevo_alumno._password_temporal}")
+            messages.success(
+                request,
+                f"Inscrito: {nuevo_alumno.username} | Pass: {nuevo_alumno.password_plana}"
+            )
             return redirect('detalle_grupo', pk=pk)
-
-    # Formulario Materia
+ 
+    # ── Formulario Materia ────────────────────────────────────────────
     form_mat = AsignaturaForm(request.POST or None, plantel=request.user.plantel)
     if request.method == 'POST' and 'btn_materia' in request.POST:
         if form_mat.is_valid():
             mat = form_mat.save(commit=False)
             mat.save()
-            mat.grupos.add(grupo) # IMPORTANTE: Al ser M2M se usa .add()
+            mat.grupos.add(grupo)
             messages.success(request, "Materia asignada al grupo.")
             return redirect('detalle_grupo', pk=pk)
-
+ 
     alertas = []
     if not grupo.asignaturas.exists():
         alertas.append("Falta asignar docentes/materias.")
     if grupo.capacidad_maxima > 0 and alumnos_base.count() >= grupo.capacidad_maxima:
         alertas.append("Aula llena.")
-
+ 
     return render(request, 'academic/grupo_detail.html', {
-        'grupo': grupo,
-        'alumnos': alumnos,
-        'asignaturas': grupo.asignaturas.all(),
-        'form_mat': form_mat,
-        'form_alumno': form_alumno,
+        'grupo':            grupo,
+        'alumnos':          page_obj,       # ahora es page_obj, compatible con {% for %}
+        'page_obj':         page_obj,       # para el include de paginación
+        'asignaturas':      grupo.asignaturas.all(),
+        'form_mat':         form_mat,
+        'form_alumno':      form_alumno,
         'promedio_general': promedio,
-        'asistencia_mes': asistencia,
-        'alumnos_riesgo': alumnos_riesgo,
-        'ocupacion': ocupacion,
-        'alertas': alertas,
-        'query': query,
+        'asistencia_mes':   asistencia,
+        'alumnos_riesgo':   alumnos_riesgo,
+        'ocupacion':        ocupacion,
+        'alertas':          alertas,
+        'query':            query,
         **ctx
     })
 
@@ -317,17 +331,48 @@ def agregar_tutor(request):
 
     return redirect(request.META.get("HTTP_REFERER", "/"))
 
-class AlumnoDetalleView(DetailView):
-    model = User
-    template_name = 'academic/alumno_detalle.html'
-    context_object_name = 'alumno'
+@login_required
+def detalle_alumno(request, pk):
+    alumno = get_object_or_404(User, pk=pk, plantel=request.user.plantel, rol='ALUMNO')
+    ctx = get_plantel_context(request.user)
+ 
+    # --- Manejar edición inline desde el modal ---
+    if request.method == 'POST' and request.POST.get('accion') == 'editar':
+        alumno.first_name  = request.POST.get('first_name', alumno.first_name).strip()
+        alumno.last_name   = request.POST.get('last_name',  alumno.last_name).strip()
+        alumno.email       = request.POST.get('email',      alumno.email).strip()
+        alumno.telefono    = request.POST.get('telefono',   '').strip() or None
+        alumno.direccion   = request.POST.get('direccion',  '').strip() or None
+        alumno.save()
+        messages.success(request, f"Perfil de {alumno.get_full_name()} actualizado.")
+        return redirect('detalle_alumno', pk=pk)
+ 
+    # --- Calificaciones ---
+    from .models import Calificacion, Asistencia
+    calificaciones = Calificacion.objects.filter(alumno=alumno).select_related('asignatura').order_by('-fecha')
+    promedio_alumno = calificaciones.aggregate(Avg('nota'))['nota__avg'] or 0.0
+ 
+    # --- Asistencias ---
+    asistencias = Asistencia.objects.filter(alumno=alumno).order_by('-fecha')
+    total_presentes = asistencias.filter(presente=True).count()
+    total_faltas    = asistencias.filter(presente=False).count()
+    total_registros = asistencias.count()
+    porcentaje_asistencia = (
+        round((total_presentes / total_registros) * 100)
+        if total_registros > 0 else 0
+    )
+ 
+    return render(request, 'academic/alumno_detalle.html', {
+        'alumno': alumno,
+        'calificaciones': calificaciones,
+        'promedio_alumno': round(promedio_alumno, 1),
+        'asistencias': asistencias,
+        'total_presentes': total_presentes,
+        'total_faltas': total_faltas,
+        'porcentaje_asistencia': porcentaje_asistencia,
+        **ctx,
+    })
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['color'] = 'indigo' # O el color dinámico que uses
-        # Aquí podrás agregar en el futuro:
-        # context['calificaciones'] = Calificacion.objects.filter(alumno=self.object)
-        return context
 def regenerar_password(request, pk):
     alumno = get_object_or_404(User, pk=pk)
     nueva_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
@@ -338,7 +383,7 @@ def regenerar_password(request, pk):
     
     return redirect('detalle_alumno', pk=pk)
 
-
+@login_required
 def gestionar_horario_grupo(request, grupo_id):
     grupo = get_object_or_404(Grupo, id=grupo_id)
 
@@ -543,3 +588,32 @@ def _extraer_mensaje_ve(ve: ValidationError) -> str:
     if hasattr(ve, 'messages'):
         return " ".join(ve.messages)
     return str(ve)
+
+@login_required
+def editar_alumno(request, pk):
+    ctx = get_plantel_context(request.user)
+    alumno = get_object_or_404(
+        User,
+        pk=pk,
+        plantel=request.user.plantel,
+        rol='ALUMNO'
+    )
+ 
+    # Reutilizamos AlumnoForm pero sin regenerar contraseña
+    from .forms import AlumnoForm
+    if request.method == 'POST':
+        form = AlumnoForm(request.POST, instance=alumno)
+        if form.is_valid():
+            alumno = form.save(commit=False)
+            alumno.save()
+            messages.success(request, "Datos del alumno actualizados.")
+            return redirect('detalle_alumno', pk=pk)
+    else:
+        form = AlumnoForm(instance=alumno)
+ 
+    return render(request, 'academic/editar_alumno.html', {
+        'form': form,
+        'alumno': alumno,
+        **ctx,
+    })
+ 

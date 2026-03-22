@@ -1,22 +1,24 @@
-<div class="bg-white rounded-[2.5rem] border border-slate-200 p-6 shadow-sm">
-  <h4 class="text-sm font-black uppercase text-slate-700 mb-4">
-    Comunicados
-  </h4>
+<div class="bg-slate-900 rounded-[2rem] p-6 text-white">
+    <div class="flex items-center justify-between mb-5">
+        <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Comunicados</h4>
+        <span class="text-[8px] bg-white/10 text-slate-300 px-2 py-1 rounded-full font-bold uppercase">
+            Recientes
+        </span>
+    </div>
 
-  <ul class="space-y-3">
-    {% for comunicado in comunicados %}
-    <li class="p-4 rounded-xl bg-slate-50 border border-slate-100">
-      <p class="font-bold text-xs text-slate-800">
-        {{ comunicado.titulo }}
-      </p>
-      <p class="text-[10px] text-slate-400 mt-1">
-        {{ comunicado.fecha }}
-      </p>
-    </li>
-    {% empty %}
-    <li class="text-center text-xs italic text-slate-400">
-      No hay comunicados disponibles
-    </li>
-    {% endfor %}
-  </ul>
+    <div class="space-y-3">
+        {# Cuando exista el modelo Comunicado, reemplaza este bloque con el queryset real #}
+        <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+            <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Sin comunicados</p>
+            <p class="text-xs text-slate-500 italic">
+                Los comunicados del grupo aparecerán aquí.
+            </p>
+        </div>
+    </div>
+
+    <button class="mt-4 w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/10
+                   rounded-xl text-[9px] font-black uppercase tracking-widest text-slate-400
+                   hover:text-white transition-all">
+        + Nuevo comunicado
+    </button>
 </div>

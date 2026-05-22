@@ -1,323 +1,200 @@
 {% extends 'inicio/base.html' %}
-
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-12 pb-20">
-
-    <!-- HEADER -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-
-        <a href="{% url 'lista_grupos' %}"
-           class="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]
-                  hover:text-{{ color }}-600 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15 19l-7-7 7-7" />
-            </svg>
-            {{ labels.dashboard_btn }}
-        </a>
-
-        <div class="flex flex-wrap items-center gap-3">
-
-            <div class="flex bg-slate-100 p-1 rounded-xl">
-                <button class="px-4 py-2 text-[9px] font-black uppercase text-slate-500 hover:text-slate-800">
-                    Carga Masiva
-                </button>
-                <button class="px-4 py-2 text-[9px] font-black uppercase text-slate-500 hover:text-slate-800">
-                    Expedientes
-                </button>
-            </div>
-
-            <button class="bg-white border border-slate-200 px-5 py-2.5 rounded-xl
-                           text-[10px] font-black uppercase tracking-widest text-slate-500
-                           hover:bg-slate-50 flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
-                             a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                PDF Lista
-            </button>
-        </div>
-    </div>
-
-    <!-- HERO GRUPO -->
-    <div class="relative bg-slate-900 rounded-[3rem] p-12 md:p-16 text-white shadow-2xl overflow-hidden">
-
-        <div class="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-12">
-
-            <!-- INFO -->
-            <div class="space-y-6">
-
-                <div class="flex flex-wrap items-center gap-3">
-                    <span class="bg-{{ color }}-600 px-4 py-1.5 rounded-full
-                                 text-[10px] font-black uppercase tracking-widest italic">
-                        {% if grupo.nivel == 'UNIVERSIDAD' %}
-                            {{ grupo.carrera }}
-                        {% else %}
-                            {{ labels.seccion }} {{ grupo.nivel }}
-                        {% endif %}
-                    </span>
-
-                    <span class="flex items-center gap-2 bg-white/10 px-4 py-1.5 rounded-full
-                                 text-[10px] font-black uppercase tracking-widest border border-white/10">
-                        <svg class="w-3 h-3 text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75
-                                     7-13c0-3.87-3.13-7-7-7z"/>
-                        </svg>
-                        Aula: {{ grupo.aula|default:"Sin asignar" }}
-                    </span>
-                </div>
-
-                <h2 class="text-5xl md:text-6xl font-black tracking-tight">
-                    {{ grupo.grado }}º {{ grupo.nombre }}
-                </h2>
-
-                <div class="flex flex-wrap items-center gap-2 pt-2">
-                    <p class="text-slate-400 font-bold uppercase text-[10px] tracking-widest">
-                        Tutores responsables
-                    </p>
-                    {% for docente in grupo.docentes.all %}
-                        <span class="bg-white/10 px-3 py-1 rounded-lg text-xs font-bold border border-white/10">
-                            {{ docente.get_full_name }}
-                        </span>
-                    {% empty %}
-                        <span class="text-xs italic text-slate-500">
-                            No hay tutores asignados
-                        </span>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- CUPO -->
-            <div class="bg-white/5 backdrop-blur-md rounded-3xl p-6 border border-white/10
-                        text-center min-w-[220px]">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                    Cupo del aula
-                </p>
-
-                <div class="flex items-end justify-center gap-1">
-                    <p class="text-4xl font-black">{{ alumnos.count }}</p>
-                    <p class="text-lg font-bold text-slate-500 pb-1">
-                        / {{ grupo.capacidad_maxima }}
-                    </p>
-                </div>
-
-                <div class="w-full bg-white/10 h-1 mt-4 rounded-full overflow-hidden">
-                    <div class="bg-{{ color }}-400 h-full transition-all duration-700"
-                         style="width: {{ ocupacion }}%">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="absolute -bottom-24 -left-24 w-96 h-96
-                    bg-{{ color }}-600/20 rounded-full blur-[100px]"></div>
-    </div>
-
-    <!-- KPIs -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {% include "academic/includes/kpi_promedio.html" %}
-        {% include "academic/includes/kpi_asistencia.html" %}
-        {% include "academic/includes/kpi_riesgo.html" %}
-    </div>
-
-    <!-- CONTENIDO -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
-
-        <!-- ALUMNOS -->
-        <div class="lg:col-span-2 space-y-8">
-
-            {% if alertas %}
-            <div class="bg-amber-50 border-l-4 border-amber-400 p-6 rounded-2xl">
-                <h4 class="text-sm font-black uppercase text-amber-900 mb-2">
-                    Alertas activas
-                </h4>
-                <ul class="ml-6 list-disc text-xs italic text-amber-700 space-y-1">
-                    {% for alerta in alertas %}
-                        <li>{{ alerta }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-
-            <div class="bg-white rounded-[2.5rem] border border-slate-200
-                        overflow-hidden shadow-sm">
-
-                <div class="p-8 border-b border-slate-100 bg-slate-50/50
-                            flex flex-col md:flex-row gap-4 justify-between items-center">
-
-                    <form method="GET" class="relative w-full md:max-w-xs">
-                        <input type="text" name="q" value="{{ query|default:'' }}"
-                               placeholder="Buscar alumno..."
-                               class="w-full pl-10 pr-4 py-3 rounded-2xl text-xs
-                                      border border-slate-200
-                                      focus:ring-2 focus:ring-{{ color }}-500">
-                        <svg class="w-4 h-4 absolute left-4 top-3.5 text-slate-400"
-                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0
-                                     7 7 0 0114 0z"/>
-                        </svg>
-                    </form>
-
-                    <button onclick="document.getElementById('modal-alumno').classList.remove('hidden')"
-                            class="bg-{{ color }}-600 text-white px-6 py-3 rounded-2xl
-                                   text-[10px] font-black uppercase tracking-widest
-                                   shadow-lg hover:scale-105 transition">
-                        + Inscribir
-                    </button>
-                </div>
-
-                <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-  <table class="min-w-full text-xs">
-    <thead class="bg-slate-50 text-slate-600 uppercase tracking-widest text-[10px]">
-      <tr>
-        <th class="px-6 py-4 text-left">Alumno</th>
-        <th class="px-6 py-4 text-left">Usuario</th>
-        <th class="px-6 py-4 text-center">Estado</th>
-        <th class="px-6 py-4 text-right">Acciones</th>
-      </tr>
-    </thead>
-
-    <tbody class="divide-y divide-slate-100">
-      {% for alumno in alumnos %}
-      <tr class="hover:bg-slate-50 transition">
-
-        <td class="px-6 py-4">
-          <p class="font-bold text-slate-800">
-            {{ alumno.first_name }} {{ alumno.last_name }}
-          </p>
-          <p class="text-[11px] text-slate-400">
-            {{ alumno.email }}
-          </p>
-        </td>
-
-        <td class="px-6 py-4 text-slate-500">
-          {{ alumno.username }}
-        </td>
-
-        <td class="px-6 py-4 text-center">
-          {% if alumno.is_active %}
-            <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">
-              Activo
-            </span>
-          {% else %}
-            <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-red-100 text-red-700">
-              Baja
-            </span>
-          {% endif %}
-        </td>
-
-        <td class="px-6 py-4 text-right">
-          <td class="px-6 py-4 text-right">
-    <a href="{% url 'detalle_alumno' alumno.id %}" 
-       class="text-{{ color }}-600 text-[10px] font-black uppercase hover:underline">
-       Ver detalles
-      
-    </a>
-</td>
-        </td>
-
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="4" class="px-6 py-10 text-center text-slate-400 italic">
-          No hay alumnos registrados
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% if page_obj.has_other_pages %}
-<div class="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-    <p class="text-[10px] font-bold text-slate-400">
-        Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }}
-        de {{ page_obj.paginator.count }} alumnos
-    </p>
-    <div class="flex items-center gap-2">
-        {% if page_obj.has_previous %}
-        <a href="?{% if query %}q={{ query }}&{% endif %}page={{ page_obj.previous_page_number }}"
-           class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-500
-                  hover:border-{{ color }}-300 hover:text-{{ color }}-600 transition-all">
-            ←
-        </a>
-        {% endif %}
- 
-        <span class="px-3 py-1.5 bg-{{ color }}-600 text-white rounded-lg text-[10px] font-black">
-            {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
-        </span>
- 
-        {% if page_obj.has_next %}
-        <a href="?{% if query %}q={{ query }}&{% endif %}page={{ page_obj.next_page_number }}"
-           class="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-500
-                  hover:border-{{ color }}-300 hover:text-{{ color }}-600 transition-all">
-            →
-        </a>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
-</div>
-
-            </div>
-        </div>
-
-        <!-- LATERAL -->
-        <div class="space-y-8">
-            {% include "academic/includes/comunicados.html" %}
-            {% include "academic/includes/materias.html" %}
-        </div>
-    </div>
-</div>
-<script>
-function abrirModalAlumno(btn) {
-  document.getElementById('modal-alumno-id').value = btn.dataset.id;
-
-  document.getElementById('detalle-nombre').innerText =
-    btn.dataset.first + ' ' + btn.dataset.last;
-
-  document.getElementById('detalle-username').innerText = btn.dataset.username;
-  document.getElementById('detalle-email').innerText = btn.dataset.email;
-  document.getElementById('detalle-telefono').innerText = btn.dataset.telefono;
-  document.getElementById('detalle-direccion').innerText = btn.dataset.direccion;
-  document.getElementById('detalle-fecha').innerText = btn.dataset.fecha;
-  document.getElementById('detalle-rol').innerText = btn.dataset.rol;
-  document.getElementById('detalle-estatus').innerText = btn.dataset.estatus;
-
-  const estado = document.getElementById('detalle-activo');
-  estado.innerText = btn.dataset.activo;
-  estado.className = btn.dataset.activo === 'Activo'
-    ? 'inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700'
-    : 'inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-red-100 text-red-700';
-
-  const lista = document.getElementById('lista-tutores');
-  lista.innerHTML = '';
-
-  const tutores = JSON.parse(btn.dataset.tutores || '[]');
-  if (tutores.length === 0) {
-    lista.innerHTML = '<li class="italic text-xs text-slate-400">Sin tutores registrados</li>';
-  } else {
-    tutores.forEach(t => {
-      lista.innerHTML += `
-        <li class="flex justify-between bg-slate-50 px-4 py-2 rounded-xl">
-          <span class="font-semibold">${t.nombre}</span>
-          <span class="text-xs text-slate-500">${t.telefono}</span>
-        </li>`;
-    });
+<style>
+  :root {
+    --ink:#111318;--ink-2:#6b7280;--ink-3:#9ca3af;
+    --border:#e8eaf0;--bg:#f4f5f9;--white:#fff;
+    --accent:#4f6ef7;--ok:#10b981;--danger:#e53e3e;--warn:#f59e0b;
   }
+  .back-link { display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink-3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;transition:color .15s;margin-bottom:20px; }
+  .back-link:hover { color:var(--accent); }
+  .back-link svg { transition:transform .15s; }
+  .back-link:hover svg { transform:translateX(-2px); }
+  .back-icon { width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center; }
+  .hero-card { background:var(--ink);border-radius:20px;padding:28px;position:relative;overflow:hidden;box-shadow:0 6px 30px rgba(17,19,24,.18);margin-bottom:16px; }
+  .hero-glow { position:absolute;width:250px;height:250px;border-radius:50%;filter:blur(80px);bottom:-60px;left:-60px;pointer-events:none;background:rgba(79,110,247,.3); }
+  .hero-tags { display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px; }
+  .hero-tag { display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em; }
+  .hero-title { font-family:'Instrument Serif',serif;font-size:50px;font-weight:400;color:#fff;line-height:1;letter-spacing:-.03em;margin-bottom:14px; }
+  .hero-docentes-label { font-size:9px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.12em;margin-bottom:7px; }
+  .docente-pill { display:inline-flex;align-items:center;padding:4px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:7px;font-size:11px;font-weight:600;color:rgba(255,255,255,.7);margin-right:5px;margin-bottom:5px; }
+  .hero-actions { display:flex;flex-wrap:wrap;gap:8px;margin-top:18px; }
+  .hero-btn { display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:11px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;text-decoration:none;transition:all .16s;cursor:pointer;border:none;font-family:'Plus Jakarta Sans',sans-serif; }
+  .hero-btn-green { background:var(--ok);color:#fff; }
+  .hero-btn-green:hover { background:#059669; }
+  .hero-btn-amber { background:var(--warn);color:#fff; }
+  .hero-btn-amber:hover { background:#d97706; }
+  .hero-btn-ghost { background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.12); }
+  .hero-btn-ghost:hover { background:rgba(255,255,255,.15);color:#fff; }
+  .cupo-card { background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:18px;text-align:center;position:absolute;top:28px;right:28px;min-width:158px; }
+  .cupo-label { font-size:9px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px; }
+  .cupo-nums { font-family:'Instrument Serif',serif;font-size:30px;color:#fff;line-height:1; }
+  .cupo-total { font-size:13px;color:rgba(255,255,255,.4); }
+  .cupo-bar { height:3px;background:rgba(255,255,255,.12);border-radius:99px;margin-top:10px;overflow:hidden; }
+  .cupo-fill { height:100%;border-radius:99px;transition:width .6s; }
+  .cupo-pct { font-size:9.5px;color:rgba(255,255,255,.3);margin-top:6px;font-weight:700; }
+  .kpi-row { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px; }
+  .main-grid { display:grid;grid-template-columns:1fr 300px;gap:16px; }
+  .card { background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .card-head { padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; }
+  .search-input { padding:8px 12px;border:1px solid var(--border);border-radius:10px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;background:var(--bg);color:var(--ink);transition:border .15s;width:100%;max-width:260px;box-sizing:border-box; }
+  .search-input:focus { border-color:var(--accent); }
+  .btn-inscribir { display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif; }
+  .btn-inscribir:hover { background:#3b56e8;box-shadow:0 3px 12px rgba(79,110,247,.28); }
+  .pagination { display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);background:#fafbff; }
+  .pag-info { font-size:10px;font-weight:600;color:var(--ink-3); }
+  .pag-btns { display:flex;align-items:center;gap:6px; }
+  .pag-btn { padding:5px 11px;border-radius:8px;font-size:10.5px;font-weight:700;text-decoration:none;border:1px solid var(--border);color:var(--ink-2);background:var(--white);transition:all .14s; }
+  .pag-btn:hover { border-color:var(--accent);color:var(--accent); }
+  .pag-current { padding:5px 11px;border-radius:8px;font-size:10.5px;font-weight:700;background:var(--accent);color:#fff; }
+  .alert-card { background:#fffbeb;border:1px solid #fde68a;border-left:3px solid var(--warn);border-radius:14px;padding:14px 16px;margin-bottom:14px; }
+  .alert-title { font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px; }
+  .alert-list { margin:0;padding-left:16px; }
+  .alert-list li { font-size:11px;color:#78350f;margin-bottom:3px;font-style:italic; }
+  @media(max-width:1000px) { .main-grid { grid-template-columns:1fr; } .cupo-card { display:none; } .kpi-row { grid-template-columns:1fr 1fr; } }
+  @media(max-width:600px) { .kpi-row { grid-template-columns:1fr; } .hero-title { font-size:38px; } }
+</style>
 
-  document.getElementById('modal-alumno-detalle').classList.remove('hidden');
-}
+<div>
+  {# Botón volver a la lista de grupos #}
+  <a href="{% url 'lista_grupos' %}" class="back-link">
+    <div class="back-icon">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <path d="M15 19l-7-7 7-7"/>
+      </svg>
+    </div>
+    {{ labels.dashboard_btn }}
+  </a>
 
-function cerrarModalAlumno() {
-  document.getElementById('modal-alumno-detalle').classList.add('hidden');
-}
-</script>
+  <!-- Hero -->
+  <div class="hero-card">
+    <div class="hero-glow"></div>
+    <div class="cupo-card">
+      <div class="cupo-label">Cupo del Aula</div>
+      <div class="cupo-nums">{{ alumnos.count }}<span class="cupo-total"> / {{ grupo.capacidad_maxima }}</span></div>
+      <div class="cupo-bar">
+        <div class="cupo-fill" style="width:{{ ocupacion }}%;background:{% if ocupacion > 90 %}var(--danger){% elif ocupacion > 70 %}var(--warn){% else %}var(--ok){% endif %};"></div>
+      </div>
+      <div class="cupo-pct">{{ ocupacion|floatformat:0 }}% ocupado</div>
+    </div>
 
+    <div class="hero-tags">
+      <span class="hero-tag" style="background:rgba(79,110,247,.2);color:#8ba4fa;">
+        {{ labels.seccion }} · {{ grupo.carrera.nombre }}
+      </span>
+      <span class="hero-tag" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);">
+        📍 Aula: {{ grupo.aula|default:"Sin asignar" }}
+      </span>
+    </div>
 
+    <div class="hero-title">{{ grupo.grado }}º {{ grupo.nombre }}</div>
 
+    <div class="hero-docentes-label">Tutores responsables</div>
+    <div>
+      {% for docente in grupo.docentes.all %}
+      <span class="docente-pill">{{ docente.get_full_name }}</span>
+      {% empty %}
+      <span style="font-size:11px;color:rgba(255,255,255,.3);font-style:italic;">Sin tutores asignados</span>
+      {% endfor %}
+    </div>
 
+    <div class="hero-actions">
+      <a href="{% url 'pasar_lista' grupo.id %}" class="hero-btn hero-btn-green">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+        </svg>
+        Pasar Lista
+      </a>
+      <a href="{% url 'reporte_calificaciones' grupo.id %}" class="hero-btn hero-btn-amber">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        Calificaciones
+      </a>
+      <a href="{% url 'gestionar_horario' grupo.id %}" class="hero-btn hero-btn-ghost">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <path d="M16 2v4M8 2v4M3 10h18"/>
+        </svg>
+        Horario
+      </a>
+      <a href="{% url 'editar_grupo' grupo.id %}" class="hero-btn hero-btn-ghost">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+        </svg>
+        Editar Grupo
+      </a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    {% include "academic/includes/kpi_promedio.html" %}
+    {% include "academic/includes/kpi_asistencia.html" %}
+    {% include "academic/includes/kpi_riesgo.html" %}
+  </div>
+
+  <!-- Main content -->
+  <div class="main-grid">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      {% if alertas %}
+      <div class="alert-card">
+        <div class="alert-title">Alertas Activas</div>
+        <ul class="alert-list">
+          {% for alerta in alertas %}<li>{{ alerta }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <div class="card">
+        <div class="card-head">
+          <form method="GET" style="flex:1;">
+            <input type="text" name="q" value="{{ query|default:'' }}"
+                   placeholder="Buscar alumno…" class="search-input">
+          </form>
+          <button onclick="document.getElementById('modal-alumno').classList.remove('hidden')"
+                  class="btn-inscribir">
+            + Inscribir
+          </button>
+        </div>
+
+        {# Tabla con data-attributes para el modal de detalle #}
+        {% include "academic/includes/tabla_alumnos.html" %}
+
+        {# Paginación #}
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+          <span class="pag-info">
+            {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+          </span>
+          <div class="pag-btns">
+            {% if page_obj.has_previous %}
+            <a href="?{% if query %}q={{ query }}&{% endif %}page={{ page_obj.previous_page_number }}"
+               class="pag-btn">←</a>
+            {% endif %}
+            <span class="pag-current">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a href="?{% if query %}q={{ query }}&{% endif %}page={{ page_obj.next_page_number }}"
+               class="pag-btn">→</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Sidebar derecho #}
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      {% include "academic/includes/comunicados.html" %}
+      {% include "academic/includes/materias.html" %}
+    </div>
+  </div>
+</div>
+
+{# Modales — siempre al final del contenido #}
 {% include "academic/includes/modal_materia.html" %}
 {% include "academic/includes/modal_alumno.html" %}
 {% include "academic/includes/modal_detalle_alumno.html" %}
+
 {% endblock %}

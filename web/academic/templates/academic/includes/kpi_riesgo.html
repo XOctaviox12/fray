@@ -1,3 +1,5 @@
+{# academic/templates/academic/includes/kpi_riesgo.html #}
+{# Variables requeridas: alumnos_riesgo (int) #}
 <div class="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
     <div class="flex items-center justify-between mb-4">
         <div class="w-10 h-10 {% if alumnos_riesgo > 0 %}bg-rose-50{% else %}bg-emerald-50{% endif %} rounded-xl flex items-center justify-center">
@@ -9,14 +11,16 @@
         </div>
         <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">En Riesgo</span>
     </div>
+
     <p class="text-4xl font-black {% if alumnos_riesgo > 0 %}text-rose-600{% else %}text-slate-800{% endif %}">
         {{ alumnos_riesgo }}
     </p>
+
     <div class="mt-3">
         {% if alumnos_riesgo > 0 %}
             <span class="inline-flex items-center gap-1 text-[9px] font-black bg-rose-50 text-rose-700 px-2 py-1 rounded-full uppercase">
                 <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
-                Alumnos con promedio &lt; 6.0
+                Promedio &lt; 6.0
             </span>
         {% else %}
             <span class="inline-flex items-center gap-1 text-[9px] font-black bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full uppercase">

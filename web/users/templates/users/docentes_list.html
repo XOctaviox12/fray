@@ -1,58 +1,130 @@
 {% extends 'inicio/base.html' %}
+{% block nav_docentes %}active{% endblock %}
 
 {% block content %}
-<div class="space-y-8">
-    <div class="mb-4">
-        <a href="{% url 'dashboard' %}" class="inline-flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-colors group">
-            <div class="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center group-hover:border-blue-200 group-hover:bg-blue-50 transition-all">
-                <svg class="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-            </div>
-            <span class="text-[10px] font-black uppercase tracking-widest">Panel Principal</span>
-        </a>
-    </div>
+<style>
+  :root {
+    --ink: #111318; --ink-2: #6b7280; --ink-3: #9ca3af;
+    --border: #e8eaf0; --bg: #f4f5f9; --white: #fff;
+    --accent: #4f6ef7; --purple: #7c3aed; --r: 16px;
+  }
+  .back-row {
+    display: inline-flex; align-items: center; gap: 8px;
+    text-decoration: none; color: var(--ink-3);
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .1em; transition: color .15s; margin-bottom: 14px;
+  }
+  .back-row:hover { color: var(--accent); }
+  .back-row:hover .back-icon-inner { transform: translateX(-2px); }
+  .back-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .back-icon-inner { transition: transform .15s; }
 
-    <div class="flex justify-between items-center">
-        <div>
-            <h2 class="text-3xl font-black text-slate-800 tracking-tight">Cuerpo Docente</h2>
-            <p class="text-slate-500 font-medium italic">Profesores de {{ user.plantel.nombre }}</p>
-        </div>
-        <a href="{% url 'crear_docente' %}" class="bg-purple-600 text-white px-6 py-3 rounded-2xl font-bold shadow-xl shadow-purple-100 hover:bg-purple-700 transition-all">
-            + Nuevo Docente
-        </a>
-    </div>
+  .list-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+  .list-title { font-family: 'Instrument Serif', serif; font-size: 26px; font-weight: 400; color: var(--ink); margin: 0; letter-spacing: -.02em; }
+  .list-sub { font-size: 12px; color: var(--ink-2); margin: 2px 0 0; }
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {% for docente in docentes %}
-        <a href="{% url 'detalle_docente' docente.pk %}" class="block group bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl hover:border-purple-500 transition-all duration-300 transform hover:-translate-y-1">
-            <div class="flex items-center gap-4 mb-6">
-                <div class="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center overflow-hidden border border-purple-100 group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                    {% if docente.foto_perfil %}
-                        <img src="{{ docente.foto_perfil.url }}" class="w-full h-full object-cover">
-                    {% else %}
-                        <span class="text-2xl font-black text-purple-600 group-hover:text-white">{{ docente.first_name|first|upper }}</span>
-                    {% endif %}
-                </div>
-                <div>
-                    <h4 class="font-bold text-slate-800 group-hover:text-purple-700 transition-colors">{{ docente.get_full_name }}</h4>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: {{ docente.username }}</p>
-                </div>
-            </div>
+  .btn-add {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px; background: var(--purple); color: #fff;
+    border-radius: 10px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em;
+    text-decoration: none; transition: all .16s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  .btn-add:hover { background: #6d28d9; box-shadow: 0 4px 14px rgba(124,58,237,.28); }
 
-            <div class="space-y-2 mb-6 text-xs text-slate-500 font-medium">
-                <p>📧 {{ docente.email }}</p>
-                <p>📞 {{ docente.telefono }}</p>
-            </div>
-            
-            <div class="pt-4 border-t border-slate-50 flex justify-between items-center">
-                <span class="text-[9px] font-black text-purple-600 uppercase tracking-widest">Ver Expediente</span>
-                <svg class="w-4 h-4 text-purple-500 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-            </div>
-        </a>
-        {% empty %}
-        <div class="col-span-3 py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
-            <p class="text-slate-400 font-bold uppercase text-xs tracking-widest">No hay maestros registrados.</p>
-        </div>
-        {% endfor %}
+  .people-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+
+  .person-card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 18px; padding: 20px;
+    text-decoration: none; display: block;
+    transition: all .2s; position: relative; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .person-card:hover {
+    border-color: var(--purple);
+    box-shadow: 0 8px 28px rgba(124,58,237,.1);
+    transform: translateY(-3px);
+  }
+
+  .person-avatar {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; margin-bottom: 14px;
+    border: 1px solid var(--border); font-size: 20px; font-weight: 800;
+    background: #faf5ff; color: var(--purple);
+    transition: all .2s;
+  }
+  .person-card:hover .person-avatar { background: var(--purple); color: #fff; }
+
+  .person-name { font-size: 13.5px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+  .person-username { font-size: 10px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 12px; }
+
+  .person-detail { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-2); margin-bottom: 5px; }
+  .person-detail svg { flex-shrink: 0; opacity: .5; }
+
+  .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding-top: 14px; border-top: 1px solid #f3f4f6; }
+  .card-footer-label { font-size: 9.5px; font-weight: 700; color: var(--purple); text-transform: uppercase; letter-spacing: .1em; }
+  .card-footer-arrow { color: #ddd6fe; transition: all .18s; }
+  .person-card:hover .card-footer-arrow { color: var(--purple); transform: translateX(3px); }
+
+  .empty-state { grid-column: 1/-1; padding: 60px 20px; text-align: center; background: var(--white); border: 2px dashed var(--border); border-radius: 18px; }
+  .empty-state p { font-size: 12px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em; }
+
+  @media (max-width: 900px) { .people-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 580px) { .people-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div>
+  <a href="{% url 'dashboard' %}" class="back-row">
+    <div class="back-icon"><svg class="back-icon-inner" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></div>
+    Panel Principal
+  </a>
+
+  <div class="list-header">
+    <div>
+      <h2 class="list-title">Cuerpo Docente</h2>
+      <p class="list-sub">Profesores de {{ user.plantel.nombre }}</p>
     </div>
+    <a href="{% url 'crear_docente' %}" class="btn-add">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Nuevo Docente
+    </a>
+  </div>
+
+  <div class="people-grid">
+    {% for docente in docentes %}
+    <a href="{% url 'detalle_docente' docente.pk %}" class="person-card">
+      <div class="person-avatar">
+        {% if docente.foto_perfil %}
+          <img src="{{ docente.foto_perfil.url }}" style="width:100%;height:100%;object-fit:cover;">
+        {% else %}
+          {{ docente.first_name|first|upper }}
+        {% endif %}
+      </div>
+      <div class="person-name">{{ docente.get_full_name }}</div>
+      <div class="person-username">ID: {{ docente.username }}</div>
+      <div class="person-detail">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        {{ docente.email|default:"—" }}
+      </div>
+      <div class="person-detail">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+        {{ docente.telefono|default:"—" }}
+      </div>
+      <div class="card-footer">
+        <span class="card-footer-label">Ver Expediente</span>
+        <svg class="card-footer-arrow" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+      </div>
+    </a>
+    {% empty %}
+    <div class="empty-state"><p>No hay maestros registrados.</p></div>
+    {% endfor %}
+  </div>
 </div>
 {% endblock %}

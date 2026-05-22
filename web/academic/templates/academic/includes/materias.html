@@ -1,31 +1,45 @@
+{# academic/templates/academic/includes/materias.html #}
+{# Variables requeridas: grupo (Grupo obj), color (str) #}
+{# Requiere: modal_materia.html incluido en el template padre #}
 <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
-    <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+    <div class="p-5 border-b border-slate-100 flex items-center justify-between">
         <h4 class="text-sm font-black text-slate-700 uppercase tracking-wider">Materias</h4>
-        <span class="text-[9px] font-black bg-{{ color }}-50 text-{{ color }}-600 px-2 py-1 rounded-full uppercase">
-            {{ grupo.asignaturas.count }} asignadas
-        </span>
+        <div class="flex items-center gap-2">
+            <span class="text-[9px] font-black bg-{{ color }}-50 text-{{ color }}-600 px-2 py-1 rounded-full uppercase">
+                {{ grupo.asignaturas.count }} asignadas
+            </span>
+            <button onclick="document.getElementById('modal-materia').classList.remove('hidden')"
+                    class="text-[9px] font-black text-{{ color }}-600 hover:underline uppercase">
+                + Agregar
+            </button>
+        </div>
     </div>
 
-    <div class="divide-y divide-slate-50">
+    <div class="divide-y divide-slate-50 max-h-64 overflow-y-auto">
         {% for materia in grupo.asignaturas.all %}
         <div class="p-4 flex items-start gap-3 hover:bg-slate-50 transition-colors">
             <div class="w-2 h-2 rounded-full bg-{{ color }}-500 mt-1.5 flex-shrink-0"></div>
-            <div class="min-w-0">
+            <div class="min-w-0 flex-1">
                 <p class="text-xs font-black text-slate-800 truncate">{{ materia.nombre }}</p>
                 {% if materia.clave %}
                     <p class="text-[9px] font-mono text-slate-400">{{ materia.clave }}</p>
                 {% endif %}
                 {% for docente in materia.docentes.all|slice:":1" %}
-                    <p class="text-[9px] text-slate-500 mt-0.5">👨‍🏫 {{ docente.get_full_name }}</p>
+                    <p class="text-[9px] text-slate-500 mt-0.5">{{ docente.get_full_name }}</p>
                 {% endfor %}
             </div>
+            <a href="{% url 'registrar_calificaciones' grupo.id materia.id %}"
+               class="text-[8px] font-black text-{{ color }}-600 uppercase hover:underline whitespace-nowrap">
+               Notas
+            </a>
         </div>
         {% empty %}
         <div class="p-8 text-center">
             <p class="text-xs text-slate-400 italic">Sin materias asignadas</p>
-            <a href="{% url 'crear_materia' %}" class="text-[9px] font-black text-{{ color }}-600 uppercase mt-2 inline-block hover:underline">
+            <button onclick="document.getElementById('modal-materia').classList.remove('hidden')"
+                    class="text-[9px] font-black text-{{ color }}-600 uppercase mt-2 inline-block hover:underline">
                 + Agregar materia
-            </a>
+            </button>
         </div>
         {% endfor %}
     </div>

@@ -2,62 +2,181 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
     <title>Acceso FRAY</title>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .serif { font-family: 'Instrument Serif', serif; }
+
+        body {
+            background: #0d1020;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Ambient glow bg */
+        body::before {
+            content: '';
+            position: fixed;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(79,110,247,.18) 0%, transparent 70%);
+            top: -100px; left: -100px;
+            pointer-events: none;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(139,92,246,.12) 0%, transparent 70%);
+            bottom: -80px; right: -80px;
+            pointer-events: none;
+        }
+
+        .login-card {
+            width: 100%; max-width: 420px;
+            background: rgba(255,255,255,.97);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 24px 80px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.06);
+            position: relative;
+            animation: rise .5s cubic-bezier(.22,1,.36,1) both;
+        }
+
+        @keyframes rise {
+            from { opacity:0; transform: translateY(20px); }
+            to   { opacity:1; transform: translateY(0); }
+        }
+
+        .logo-mark {
+            width: 48px; height: 48px;
+            background: #111318;
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(79,110,247,.25);
+        }
+        .logo-mark span {
+            font-family: 'Instrument Serif', serif;
+            font-size: 22px; color: #fff; line-height: 1;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 9.5px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .12em;
+            color: #9ca3af; margin-bottom: 6px;
+        }
+        .field-input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #e8eaf0;
+            border-radius: 11px;
+            font-size: 13px; font-weight: 500;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #111318; background: #f8f9fc;
+            outline: none;
+            transition: border .18s, box-shadow .18s, background .18s;
+            box-sizing: border-box;
+        }
+        .field-input:focus {
+            border-color: #4f6ef7;
+            box-shadow: 0 0 0 3px rgba(79,110,247,.1);
+            background: #fff;
+        }
+
+        .btn-submit {
+            width: 100%; padding: 13px;
+            background: #111318; color: #fff;
+            border: none; border-radius: 12px;
+            font-size: 11.5px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: .1em;
+            cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background .18s, box-shadow .18s, transform .1s;
+            margin-top: 6px;
+        }
+        .btn-submit:hover {
+            background: #4f6ef7;
+            box-shadow: 0 8px 24px rgba(79,110,247,.3);
+        }
+        .btn-submit:active { transform: scale(.98); }
+
+        .error-box {
+            display: flex; align-items: flex-start; gap: 10px;
+            background: #fff5f5; border: 1px solid #fecaca;
+            border-left: 3px solid #e53e3e;
+            border-radius: 10px; padding: 12px 14px;
+            margin-bottom: 20px;
+        }
+        .error-box p {
+            font-size: 11.5px; font-weight: 700;
+            color: #e53e3e; margin: 0; line-height: 1.5;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 10px; font-weight: 600;
+            color: rgba(255,255,255,.2);
+            margin-top: 24px; letter-spacing: .04em;
+        }
+    </style>
 </head>
-<body class="bg-slate-900 flex items-center justify-center h-screen px-4">
-    <div class="w-full max-w-md">
-        <div class="bg-white rounded-[2.5rem] p-10 shadow-2xl">
-            <div class="text-center mb-8">
-                <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <span class="text-white text-3xl font-bold">F</span>
-                </div>
-                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Bienvenido</h1>
-                <p class="text-slate-400 text-sm mt-1">Ingresa tus credenciales para continuar</p>
+<body>
+    <div>
+        <div class="login-card">
+            <div class="logo-mark">
+                <span>F</span>
             </div>
 
+            <h1 class="serif" style="font-size:26px;color:#111318;margin:0 0 4px;letter-spacing:-.02em;">Bienvenido</h1>
+            <p style="font-size:12.5px;color:#9ca3af;margin:0 0 28px;font-weight:500;">Ingresa tus credenciales para continuar</p>
+
             {% if form.errors or form.non_field_errors %}
-            <div class="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3">
-                <svg class="w-5 h-5 text-red-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            <div class="error-box">
+                <svg width="15" height="15" fill="none" stroke="#e53e3e" stroke-width="2.5" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px;">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
-                <div class="text-[11px] font-bold text-red-600 uppercase tracking-wide leading-tight">
+                <div>
                     {% if form.non_field_errors %}
-                        {% for error in form.non_field_errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
+                        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
                     {% else %}
-                        <p>Usuario o contraseña incorrectos. Por favor, verifica tus datos.</p>
+                        <p>Usuario o contraseña incorrectos. Verifica tus datos.</p>
                     {% endif %}
                 </div>
             </div>
             {% endif %}
 
-            <form method="post" class="space-y-5">
+            <form method="post" style="display:flex;flex-direction:column;gap:16px;">
                 {% csrf_token %}
-                
+
                 <div>
-                    <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Usuario</label>
+                    <label class="field-label">Usuario</label>
                     {{ form.username }}
                     {% if form.username.errors %}
-                        <p class="text-[10px] text-red-500 font-bold mt-1 ml-1">{{ form.username.errors.0 }}</p>
+                        <p style="font-size:10px;color:#e53e3e;font-weight:700;margin:4px 0 0 2px;">{{ form.username.errors.0 }}</p>
                     {% endif %}
                 </div>
 
                 <div>
-                    <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Contraseña</label>
+                    <label class="field-label">Contraseña</label>
                     {{ form.password }}
                     {% if form.password.errors %}
-                        <p class="text-[10px] text-red-500 font-bold mt-1 ml-1">{{ form.password.errors.0 }}</p>
+                        <p style="font-size:10px;color:#e53e3e;font-weight:700;margin:4px 0 0 2px;">{{ form.password.errors.0 }}</p>
                     {% endif %}
                 </div>
 
-                <button type="submit" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98] mt-4">
-                    Entrar al Sistema
-                </button>
+                <button type="submit" class="btn-submit">Entrar al Sistema</button>
             </form>
         </div>
-        <p class="text-center text-slate-500 text-xs mt-8">FRAY &copy; 2026 - Kronerion Design</p>
+
+        <p class="footer-note">FRAY &copy; 2026 · Kronerion Design</p>
     </div>
 </body>
 </html>

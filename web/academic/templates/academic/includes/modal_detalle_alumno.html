@@ -1,165 +1,227 @@
-<div
-  id="modal-alumno-detalle"
-  class="fixed inset-0 z-50 hidden flex items-center justify-center
-         bg-slate-900/60 backdrop-blur-sm px-4"
->
-  <div class="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden">
+{# academic/templates/academic/includes/modal_detalle_alumno.html #}
+{# No requiere variables del contexto — se llena por JS con abrirModalAlumno(id) #}
+{# Requiere: script con abrirModalAlumno() definido abajo #}
+<div id="modal-alumno-detalle"
+     class="fixed inset-0 z-50 hidden items-center justify-center
+            bg-slate-900/60 backdrop-blur-sm px-4 flex">
+    <div class="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden">
 
-    <!-- HEADER -->
-    <div class="flex justify-between items-center px-8 py-6 border-b">
-      <h3 class="text-lg font-black text-slate-800">Detalle completo del alumno</h3>
-      <button onclick="cerrarModalAlumno()" class="text-xl text-slate-400 hover:text-red-500">✕</button>
+        <!-- HEADER -->
+        <div class="flex justify-between items-center px-8 py-6 border-b border-slate-100">
+            <h3 class="text-lg font-black text-slate-800">Detalle completo del alumno</h3>
+            <button onclick="cerrarModalAlumno()"
+                    class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors text-slate-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- BODY -->
+        <div class="p-8 space-y-6 text-sm overflow-y-auto max-h-[75vh]">
+
+            <!-- DATOS -->
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <p class="text-xs font-black uppercase text-slate-400 mb-1">Nombre completo</p>
+                    <p id="detalle-nombre" class="font-semibold text-slate-800"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-black uppercase text-slate-400 mb-1">Usuario / Matrícula</p>
+                    <p id="detalle-username" class="font-semibold text-slate-800 font-mono"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-black uppercase text-slate-400 mb-1">Correo</p>
+                    <p id="detalle-email" class="font-semibold text-slate-800"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-black uppercase text-slate-400 mb-1">Teléfono</p>
+                    <p id="detalle-telefono" class="font-semibold text-slate-800"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-black uppercase text-slate-400 mb-1">Dirección</p>
+                    <p id="detalle-direccion" class="font-semibold text-slate-800"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-black uppercase text-slate-400 mb-1">Fecha de nacimiento</p>
+                    <p id="detalle-fecha" class="font-semibold text-slate-800"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-black uppercase text-slate-400 mb-1">Estatus académico</p>
+                    <p id="detalle-estatus" class="font-semibold text-slate-800"></p>
+                </div>
+                <div>
+                    <p class="text-xs font-black uppercase text-slate-400 mb-1">Estado del sistema</p>
+                    <span id="detalle-activo"
+                          class="inline-flex px-3 py-1 rounded-full text-[10px] font-black">
+                    </span>
+                </div>
+            </div>
+
+            <!-- LINK PERFIL COMPLETO -->
+            <div class="pt-2">
+                <a id="detalle-link-perfil" href="#"
+                   class="inline-flex items-center gap-2 text-[10px] font-black text-indigo-600
+                          uppercase tracking-widest hover:underline">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    Ver expediente completo
+                </a>
+            </div>
+
+            <!-- TUTORES -->
+            <div class="border-t border-slate-100 pt-4">
+                <p class="text-xs font-black uppercase text-slate-400 mb-3">
+                    Tutores registrados
+                </p>
+                <ul id="lista-tutores" class="space-y-2"></ul>
+                <p id="sin-tutores" class="text-xs text-slate-400 italic hidden">Sin tutores registrados.</p>
+            </div>
+
+            <!-- BOTÓN AGREGAR TUTOR -->
+            <button onclick="mostrarFormularioTutor()"
+                    id="btn-agregar-tutor"
+                    class="bg-emerald-600 text-white px-4 py-2 rounded-xl
+                           text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">
+                + Agregar tutor
+            </button>
+
+            <!-- FORM AGREGAR TUTOR (OCULTO) -->
+            <form id="form-tutor"
+                  method="POST"
+                  action="{% url 'agregar_tutor' %}"
+                  class="space-y-4 hidden mt-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+                {% csrf_token %}
+                <input type="hidden" name="alumno_id" id="modal-alumno-id">
+
+                <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nuevo tutor</p>
+
+                <input type="text" name="nombre" placeholder="Nombre completo del tutor" required
+                       class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm
+                              focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white">
+
+                <select name="parentesco" required
+                        class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm
+                               focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="" disabled selected>Selecciona parentesco</option>
+                    <option value="Padre">Padre</option>
+                    <option value="Madre">Madre</option>
+                    <option value="Tutor legal">Tutor legal</option>
+                    <option value="Abuelo/a">Abuelo/a</option>
+                    <option value="Hermano/a">Hermano/a</option>
+                    <option value="Tío/a">Tío/a</option>
+                    <option value="Otro">Otro</option>
+                </select>
+
+                <input type="text" name="telefono" placeholder="Teléfono" required
+                       class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm
+                              focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white">
+
+                <input type="email" name="correo" placeholder="Correo (opcional)"
+                       class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm
+                              focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white">
+
+                <div class="flex gap-3">
+                    <button type="submit"
+                            class="flex-1 bg-indigo-600 text-white py-3 rounded-xl
+                                   text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
+                        Guardar tutor
+                    </button>
+                    <button type="button" onclick="ocultarFormularioTutor()"
+                            class="flex-1 bg-slate-200 text-slate-600 py-3 rounded-xl
+                                   text-[10px] font-black uppercase tracking-widest hover:bg-slate-300 transition-all">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+
+        </div>
     </div>
-
-    <!-- BODY -->
-    <div class="p-8 space-y-6 text-sm">
-
-      <!-- DATOS -->
-      <div class="grid grid-cols-2 gap-6">
-        <div>
-          <p class="text-xs font-black uppercase text-slate-400">Nombre completo</p>
-          <p id="detalle-nombre" class="font-semibold"></p>
-        </div>
-
-        <div>
-          <p class="text-xs font-black uppercase text-slate-400">Usuario</p>
-          <p id="detalle-username" class="font-semibold"></p>
-        </div>
-
-        <div>
-          <p class="text-xs font-black uppercase text-slate-400">Correo</p>
-          <p id="detalle-email" class="font-semibold"></p>
-        </div>
-
-        <div>
-          <p class="text-xs font-black uppercase text-slate-400">Teléfono</p>
-          <p id="detalle-telefono" class="font-semibold"></p>
-        </div>
-
-        <div>
-          <p class="text-xs font-black uppercase text-slate-400">Dirección</p>
-          <p id="detalle-direccion" class="font-semibold"></p>
-        </div>
-
-        <div>
-          <p class="text-xs font-black uppercase text-slate-400">Fecha de nacimiento</p>
-          <p id="detalle-fecha" class="font-semibold"></p>
-        </div>
-
-        <div>
-          <p class="text-xs font-black uppercase text-slate-400">Rol</p>
-          <p id="detalle-rol" class="font-semibold"></p>
-        </div>
-
-        <div>
-          <p class="text-xs font-black uppercase text-slate-400">Estatus académico</p>
-          <p id="detalle-estatus" class="font-semibold"></p>
-        </div>
-
-        <div>
-          <p class="text-xs font-black uppercase text-slate-400">Estado del sistema</p>
-          <span id="detalle-activo"
-                class="inline-flex px-3 py-1 rounded-full text-[10px] font-black">
-          </span>
-        </div>
-      </div>
-
-      <!-- TUTORES -->
-      <div>
-        <p class="text-xs font-black uppercase text-slate-400 mb-2">
-          Tutores registrados
-        </p>
-        <ul id="lista-tutores" class="space-y-2"></ul>
-      </div>
-
-      <!-- BOTÓN -->
-      <button
-        onclick="mostrarFormularioTutor()"
-        class="bg-emerald-600 text-white px-4 py-2 rounded-xl
-               text-xs font-black uppercase tracking-widest">
-        + Agregar tutor
-      </button>
-
-      <!-- FORM AGREGAR TUTOR (OCULTO) -->
-      <form
-        id="form-tutor"
-        method="POST"
-        action="{% url 'agregar_tutor' %}"
-        class="space-y-4 hidden mt-4"
-      >
-        {% csrf_token %}
-        <input type="hidden" name="alumno_id" id="modal-alumno-id">
-
-        <input
-          type="text"
-          name="nombre"
-          placeholder="Nombre del tutor"
-          required
-          class="w-full px-4 py-3 rounded-xl border"
-        >
-
-        <select
-  name="parentesco"
-  required
-  class="w-full px-4 py-3 rounded-xl border bg-white text-sm
-         focus:outline-none focus:ring-2 focus:ring-{{ color }}-500"
->
-  <option value="" disabled selected>
-    Selecciona parentesco
-  </option>
-  <option value="Padre">Padre</option>
-  <option value="Madre">Madre</option>
-  <option value="Tutor legal">Tutor legal</option>
-  <option value="Abuelo/a">Abuelo/a</option>
-  <option value="Hermano/a">Hermano/a</option>
-  <option value="Tío/a">Tío/a</option>
-  <option value="Otro">Otro</option>
-</select>
-
-
-        <input
-          type="text"
-          name="telefono"
-          placeholder="Teléfono"
-          required
-          class="w-full px-4 py-3 rounded-xl border"
-        >
-
-        <input
-          type="email"
-          name="correo"
-          placeholder="Correo (opcional)"
-          class="w-full px-4 py-3 rounded-xl border"
-        >
-
-        <div class="flex gap-3">
-          <button
-            type="submit"
-            class="flex-1 bg-{{ color }}-600 text-white py-3 rounded-xl
-                   text-[10px] font-black uppercase tracking-widest">
-            Guardar tutor
-          </button>
-
-          <button
-            type="button"
-            onclick="ocultarFormularioTutor()"
-            class="flex-1 bg-slate-200 py-3 rounded-xl
-                   text-[10px] font-black uppercase tracking-widest">
-            Cancelar
-          </button>
-        </div>
-      </form>
-
-    </div>
-  </div>
 </div>
 
 <script>
+// ─── Datos de alumnos inyectados desde Django para lookup por JS ───────────
+// El template padre (grupo_detail) debe pasar `alumnos_json` al contexto
+// o usar data-* en la tabla. Aquí usamos fetch para no depender del contexto.
+
+function abrirModalAlumno(alumnoId) {
+    // Obtiene datos vía fetch al endpoint de detalle (JSON parcial inline)
+    // Como alternativa simple: carga desde data-* atributos de la fila de la tabla
+    const fila = document.querySelector(`tr[data-alumno-id="${alumnoId}"]`);
+
+    if (fila) {
+        // Leer desde data-attributes de la fila
+        document.getElementById('detalle-nombre').textContent    = fila.dataset.nombre    || '—';
+        document.getElementById('detalle-username').textContent  = fila.dataset.username  || '—';
+        document.getElementById('detalle-email').textContent     = fila.dataset.email     || '—';
+        document.getElementById('detalle-telefono').textContent  = fila.dataset.telefono  || '—';
+        document.getElementById('detalle-direccion').textContent = fila.dataset.direccion || '—';
+        document.getElementById('detalle-fecha').textContent     = fila.dataset.fecha     || '—';
+        document.getElementById('detalle-estatus').textContent   = fila.dataset.estatus   || 'Activo';
+
+        const activo = fila.dataset.activo === 'true';
+        const badge = document.getElementById('detalle-activo');
+        badge.textContent = activo ? 'Activo' : 'Baja';
+        badge.className = 'inline-flex px-3 py-1 rounded-full text-[10px] font-black ' +
+            (activo ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700');
+
+        // Tutores embebidos en data-tutores como JSON
+        const listaTutores = document.getElementById('lista-tutores');
+        const sinTutores   = document.getElementById('sin-tutores');
+        listaTutores.innerHTML = '';
+        try {
+            const tutores = JSON.parse(fila.dataset.tutores || '[]');
+            if (tutores.length) {
+                sinTutores.classList.add('hidden');
+                tutores.forEach(t => {
+                    const li = document.createElement('li');
+                    li.className = 'bg-slate-50 border border-slate-100 rounded-xl px-4 py-3';
+                    li.innerHTML = `
+                        <p class="text-xs font-black text-slate-800">${t.nombre}</p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">${t.parentesco} · ${t.telefono}</p>`;
+                    listaTutores.appendChild(li);
+                });
+            } else {
+                sinTutores.classList.remove('hidden');
+            }
+        } catch(e) {
+            sinTutores.classList.remove('hidden');
+        }
+    }
+
+    // Guardar ID en el form de tutor
+    document.getElementById('modal-alumno-id').value = alumnoId;
+
+    // Link al perfil completo
+    document.getElementById('detalle-link-perfil').href = `/academic/alumno/${alumnoId}/detalle/`;
+
+    // Ocultar form de tutor al abrir
+    ocultarFormularioTutor();
+
+    // Mostrar modal
+    document.getElementById('modal-alumno-detalle').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalAlumno() {
+    document.getElementById('modal-alumno-detalle').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
 function mostrarFormularioTutor() {
-  document.getElementById('form-tutor').classList.remove('hidden')
+    document.getElementById('form-tutor').classList.remove('hidden');
+    document.getElementById('btn-agregar-tutor').classList.add('hidden');
 }
 
 function ocultarFormularioTutor() {
-  document.getElementById('form-tutor').classList.add('hidden')
+    document.getElementById('form-tutor').classList.add('hidden');
+    document.getElementById('btn-agregar-tutor').classList.remove('hidden');
 }
+
+// Cerrar al hacer clic en el backdrop
+document.getElementById('modal-alumno-detalle').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModalAlumno();
+});
 </script>

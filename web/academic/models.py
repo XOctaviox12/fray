@@ -193,8 +193,6 @@ class HorarioClase(models.Model):
         ('VI', 'Viernes'),
         ('SA', 'Sábado'),
     ]
-
-    # ✅ CORRECCIÓN: era 'MAESTRO', ahora 'DOCENTE' para coincidir con User.rol
     asignatura  = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='horarios')
     maestro     = models.ForeignKey(
         settings.AUTH_USER_MODEL,

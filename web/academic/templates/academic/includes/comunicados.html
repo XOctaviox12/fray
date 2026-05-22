@@ -7,13 +7,21 @@
     </div>
 
     <div class="space-y-3">
-        {# Cuando exista el modelo Comunicado, reemplaza este bloque con el queryset real #}
+        {% if comunicados %}
+            {% for c in comunicados %}
+            <div class="bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
+                <p class="text-xs font-bold text-white">{{ c.titulo }}</p>
+                <p class="text-[10px] text-slate-400 mt-1">{{ c.fecha|date:"d/m/Y" }}</p>
+            </div>
+            {% endfor %}
+        {% else %}
         <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
-            <p class="text-[9px] font-black text-slate-400 uppercase mb-1">Sin comunicados</p>
+            <p class="text-[9px] font-black text-slate-500 uppercase mb-1">Sin comunicados</p>
             <p class="text-xs text-slate-500 italic">
                 Los comunicados del grupo aparecerán aquí.
             </p>
         </div>
+        {% endif %}
     </div>
 
     <button class="mt-4 w-full py-2.5 bg-white/5 hover:bg-white/10 border border-white/10

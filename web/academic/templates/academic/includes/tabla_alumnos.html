@@ -1,59 +1,67 @@
-<div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-  <table class="min-w-full text-xs">
-    <thead class="bg-slate-50 text-slate-600 uppercase tracking-widest text-[10px]">
-      <tr>
-        <th class="px-6 py-4 text-left">Alumno</th>
-        <th class="px-6 py-4 text-left">Usuario</th>
-        <th class="px-6 py-4 text-center">Estado</th>
-        <th class="px-6 py-4 text-right">Acciones</th>
-      </tr>
-    </thead>
+{# academic/templates/academic/includes/tabla_alumnos.html #}
+{# Variables requeridas: alumnos (queryset/page_obj), color (str) #}
+{# Cada <tr> lleva data-* para que abrirModalAlumno() pueda leer sin fetch #}
+<div class="overflow-x-auto">
+    <table class="min-w-full text-xs">
+        <thead>
+            <tr class="bg-slate-50 border-b border-slate-100">
+                <th class="px-6 py-4 text-left text-[9.5px] font-black text-slate-400 uppercase tracking-widest">Alumno</th>
+                <th class="px-6 py-4 text-left text-[9.5px] font-black text-slate-400 uppercase tracking-widest">Usuario</th>
+                <th class="px-6 py-4 text-center text-[9.5px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
+                <th class="px-6 py-4 text-right text-[9.5px] font-black text-slate-400 uppercase tracking-widest">Acciones</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+            {% for alumno in alumnos %}
+            <tr class="hover:bg-slate-50 transition-colors"
+                data-alumno-id="{{ alumno.id }}"
+                data-nombre="{{ alumno.get_full_name }}"
+                data-username="{{ alumno.username }}"
+                data-email="{{ alumno.email|default:'' }}"
+                data-telefono="{{ alumno.telefono|default:'—' }}"
+                data-direccion="{{ alumno.direccion|default:'—' }}"
+                data-fecha="{{ alumno.fecha_nacimiento|date:'d/m/Y'|default:'—' }}"
+                data-estatus="{{ alumno.get_estatus_display|default:'Activo' }}"
+                data-activo="{{ alumno.is_active|yesno:'true,false' }}"
+                data-tutores="[{% for t in alumno.tutores.all %}{'nombre':'{{ t.nombre|escapejs }}','parentesco':'{{ t.parentesco|escapejs }}','telefono':'{{ t.telefono|escapejs }}'}{% if not forloop.last %},{% endif %}{% endfor %}]">
 
-    <tbody class="divide-y divide-slate-100">
-      {% for alumno in alumnos %}
-      <tr class="hover:bg-slate-50 transition">
+                <td class="px-6 py-4">
+                    <p class="font-bold text-slate-800">{{ alumno.first_name }} {{ alumno.last_name }}</p>
+                    <p class="text-[10px] text-slate-400">{{ alumno.email|default:"Sin correo" }}</p>
+                </td>
 
-        <td class="px-6 py-4">
-          <p class="font-bold text-slate-800">
-            {{ alumno.first_name }} {{ alumno.last_name }}
-          </p>
-          <p class="text-[11px] text-slate-400">
-            {{ alumno.email }}
-          </p>
-        </td>
+                <td class="px-6 py-4 text-slate-500 font-mono text-[11px]">
+                    {{ alumno.username }}
+                </td>
 
-        <td class="px-6 py-4 text-slate-500">
-          {{ alumno.username }}
-        </td>
+                <td class="px-6 py-4 text-center">
+                    {% if alumno.is_active %}
+                        <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">Activo</span>
+                    {% else %}
+                        <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-red-100 text-red-700">Baja</span>
+                    {% endif %}
+                </td>
 
-        <td class="px-6 py-4 text-center">
-          {% if alumno.is_active %}
-            <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700">
-              Activo
-            </span>
-          {% else %}
-            <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black bg-red-100 text-red-700">
-              Baja
-            </span>
-          {% endif %}
-        </td>
-
-        <td class="px-6 py-4 text-right">
-          <button
-            onclick="abrirModalAlumno({{ alumno.id }})"
-            class="text-{{ color }}-600 text-[10px] font-black uppercase hover:underline">
-            Ver detalles
-          </button>
-        </td>
-
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="4" class="px-6 py-10 text-center text-slate-400 italic">
-          No hay alumnos registrados
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+                <td class="px-6 py-4 text-right">
+                    {# Modal rápido #}
+                    <button onclick="abrirModalAlumno({{ alumno.id }})"
+                            class="text-{{ color }}-600 text-[10px] font-black uppercase hover:underline mr-3">
+                        Ver detalles
+                    </button>
+                    {# Perfil completo #}
+                    <a href="{% url 'detalle_alumno' alumno.id %}"
+                       class="text-slate-400 text-[10px] font-bold uppercase hover:text-slate-700 hover:underline">
+                        Perfil
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="px-6 py-12 text-center text-slate-400 italic text-xs">
+                    No hay alumnos registrados en este grupo.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>

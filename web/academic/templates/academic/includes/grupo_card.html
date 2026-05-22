@@ -1,3 +1,5 @@
+{# academic/templates/academic/includes/grupo_card.html #}
+{# Variables requeridas: grupo (Grupo obj), color (str ej: 'blue', 'purple') #}
 <a href="{% url 'detalle_grupo' grupo.pk %}"
    class="group bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm
           hover:border-{{ color }}-400 hover:shadow-xl transition-all duration-300
@@ -24,7 +26,6 @@
         </div>
     </div>
 
-    <!-- Barra de ocupación -->
     <div class="mb-6">
         <div class="flex justify-between items-center mb-1">
             <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ocupación</span>
@@ -39,15 +40,11 @@
     </div>
 
     <div class="mt-auto pt-5 border-t border-slate-50 flex justify-between items-center">
-        <div class="space-y-0.5">
+        <div>
             {% if grupo.aula %}
-            <p class="text-[10px] text-slate-500 font-bold flex items-center gap-1">
-                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-                </svg>
-                Aula {{ grupo.aula }}
-            </p>
+            <p class="text-[10px] text-slate-500 font-bold">Aula {{ grupo.aula }}</p>
             {% endif %}
+            <p class="text-[9px] text-slate-400">{{ grupo.asignaturas.count }} materias</p>
         </div>
         <svg class="w-5 h-5 text-{{ color }}-400 group-hover:translate-x-1 transition-transform"
              fill="none" stroke="currentColor" viewBox="0 0 24 24">

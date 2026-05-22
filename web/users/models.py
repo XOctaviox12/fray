@@ -53,4 +53,4 @@ class Tutor(models.Model):
     correo = models.EmailField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.nombre} - {self.alumno.nombre}"
+        return f"{self.nombre} - {self.alumno.get_full_name()}"

@@ -1,89 +1,99 @@
+editar_alumno.html
 {% extends 'inicio/base.html' %}
-
 {% block content %}
-<div class="max-w-2xl mx-auto pb-20 px-4 space-y-6">
+<style>
+  :root {
+    --ink:#111318;--ink-2:#6b7280;--ink-3:#9ca3af;
+    --border:#e8eaf0;--bg:#f4f5f9;--white:#fff;
+    --accent:#4f6ef7;--danger:#e53e3e;
+  }
+  .page-wrap { max-width:580px;margin:0 auto;display:flex;flex-direction:column;gap:14px; }
+  .page-header { display:flex;align-items:center;gap:10px; }
+  .back-btn { width:34px;height:34px;border-radius:10px;background:var(--white);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--ink-2);transition:all .15s;box-shadow:0 1px 2px rgba(0,0,0,.04); }
+  .back-btn:hover { border-color:var(--accent);color:var(--accent); }
+  .page-title { font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;color:var(--ink);margin:0; }
+  .page-sub { font-size:11.5px;color:var(--ink-2);margin:2px 0 0; }
 
-    <div class="flex items-center gap-3">
-        <a href="{% url 'detalle_alumno' alumno.pk %}"
-           class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
-            <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path d="M15 19l-7-7 7-7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        </a>
-        <div>
-            <h2 class="text-2xl font-black text-slate-800 tracking-tight uppercase">Editar Alumno</h2>
-            <p class="text-xs text-slate-500 font-medium">{{ alumno.get_full_name }} · @{{ alumno.username }}</p>
-        </div>
+  .form-card { background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .student-banner { background:var(--ink);padding:22px;display:flex;align-items:center;gap:14px; }
+  .student-avatar { width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-size:18px;color:#fff;flex-shrink:0;background:rgba(79,110,247,.3);border:1px solid rgba(79,110,247,.4); }
+  .student-name { font-size:15px;font-weight:700;color:#fff; }
+  .student-id { font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-top:2px; }
+
+  .form-body { padding:20px 22px;display:flex;flex-direction:column;gap:0; }
+  .field-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+  .field-group { display:flex;flex-direction:column;gap:5px;margin-bottom:12px; }
+  .field-group.full { grid-column:1/-1; }
+  .field-label { font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3); }
+  .field-error { font-size:10px;color:var(--danger);font-weight:700;margin-top:2px; }
+  .error-banner { background:#fff5f5;border-left:3px solid var(--danger);border-radius:9px;padding:9px 12px;font-size:11.5px;font-weight:700;color:var(--danger);margin-bottom:14px; }
+
+  .form-footer { display:flex;gap:10px;padding:14px 22px;border-top:1px solid var(--border);background:#fafbff; }
+  .btn-submit { flex:2;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:11px;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s; }
+  .btn-submit:hover { background:#3b56e8;box-shadow:0 4px 14px rgba(79,110,247,.28); }
+  .btn-cancel { flex:1;display:flex;align-items:center;justify-content:center;background:var(--white);border:1px solid var(--border);border-radius:11px;font-size:11.5px;font-weight:700;color:var(--ink-2);text-decoration:none;transition:all .15s; }
+  .btn-cancel:hover { border-color:var(--ink);color:var(--ink); }
+
+  @media(max-width:580px) { .field-grid { grid-template-columns:1fr; } }
+</style>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <a href="{% url 'detalle_alumno' alumno.pk %}" class="back-btn">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div>
+      <h2 class="page-title">Editar Alumno</h2>
+      <p class="page-sub">{{ alumno.get_full_name }} · @{{ alumno.username }}</p>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="student-banner">
+      <div class="student-avatar">{{ alumno.first_name|slice:":1" }}{{ alumno.last_name|slice:":1" }}</div>
+      <div>
+        <div class="student-name">{{ alumno.get_full_name }}</div>
+        <div class="student-id">Matrícula: {{ alumno.username }}</div>
+      </div>
     </div>
 
-    <div class="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
-        <div class="bg-slate-900 p-8 text-white">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-{{ color }}-500/20 flex items-center justify-center border border-{{ color }}-500/30">
-                    <span class="text-xl font-black text-{{ color }}-300">
-                        {{ alumno.first_name|slice:":1" }}{{ alumno.last_name|slice:":1" }}
-                    </span>
-                </div>
-                <div>
-                    <p class="font-black text-lg">{{ alumno.get_full_name }}</p>
-                    <p class="text-slate-400 text-[10px] uppercase tracking-widest">Matrícula: {{ alumno.username }}</p>
-                </div>
-            </div>
+    <form method="POST" id="editar-form">
+      {% csrf_token %}
+      <div class="form-body">
+        {% if form.non_field_errors %}
+        <div class="error-banner">{% for e in form.non_field_errors %}<p style="margin:0;">{{ e }}</p>{% endfor %}</div>
+        {% endif %}
+        <div class="field-grid">
+          <div class="field-group">
+            <label class="field-label">Nombre(s)</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}<p class="field-error">{{ form.first_name.errors.0 }}</p>{% endif %}
+          </div>
+          <div class="field-group">
+            <label class="field-label">Apellidos</label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}<p class="field-error">{{ form.last_name.errors.0 }}</p>{% endif %}
+          </div>
+          <div class="field-group">
+            <label class="field-label">Correo</label>{{ form.email }}
+          </div>
+          <div class="field-group">
+            <label class="field-label">Teléfono</label>{{ form.telefono }}
+          </div>
+          <div class="field-group">
+            <label class="field-label">Fecha de Nacimiento</label>{{ form.fecha_nacimiento }}
+          </div>
+          <div class="field-group full">
+            <label class="field-label">Dirección</label>{{ form.direccion }}
+          </div>
         </div>
+      </div>
+    </form>
 
-        <form method="POST" class="p-8 space-y-6">
-            {% csrf_token %}
-
-            {% if form.non_field_errors %}
-            <div class="bg-rose-50 border-l-4 border-rose-500 text-rose-700 p-4 rounded-r-2xl text-xs font-bold">
-                {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
-            </div>
-            {% endif %}
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nombre(s)</label>
-                    {{ form.first_name }}
-                    {% if form.first_name.errors %}<p class="text-[10px] text-rose-500 font-bold">{{ form.first_name.errors.0 }}</p>{% endif %}
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Apellidos</label>
-                    {{ form.last_name }}
-                    {% if form.last_name.errors %}<p class="text-[10px] text-rose-500 font-bold">{{ form.last_name.errors.0 }}</p>{% endif %}
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Correo</label>
-                    {{ form.email }}
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Teléfono</label>
-                    {{ form.telefono }}
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fecha de Nacimiento</label>
-                    {{ form.fecha_nacimiento }}
-                </div>
-                <div class="space-y-1 md:col-span-2">
-                    <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Dirección</label>
-                    {{ form.direccion }}
-                </div>
-            </div>
-
-            <div class="flex gap-3 pt-4 border-t border-slate-100">
-                <button type="submit"
-                        class="flex-1 bg-{{ color }}-600 text-white py-4 rounded-2xl
-                               font-black text-[10px] uppercase tracking-widest
-                               hover:bg-{{ color }}-700 shadow-lg transition-all">
-                    Guardar cambios
-                </button>
-                <a href="{% url 'detalle_alumno' alumno.pk %}"
-                   class="px-8 bg-slate-100 text-slate-500 rounded-2xl font-black
-                          text-[10px] uppercase tracking-widest hover:bg-slate-200
-                          transition-all flex items-center">
-                    Cancelar
-                </a>
-            </div>
-        </form>
+    <div class="form-footer">
+      <a href="{% url 'detalle_alumno' alumno.pk %}" class="btn-cancel">Cancelar</a>
+      <button type="submit" form="editar-form" class="btn-submit">Guardar Cambios</button>
     </div>
+  </div>
 </div>
 {% endblock %}

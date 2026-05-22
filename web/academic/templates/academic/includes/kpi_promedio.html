@@ -1,3 +1,5 @@
+{# academic/templates/academic/includes/kpi_promedio.html #}
+{# Variables requeridas: promedio_general (float) #}
 <div class="bg-white rounded-[2rem] border border-slate-200 p-6 shadow-sm">
     <div class="flex items-center justify-between mb-4">
         <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
@@ -8,10 +10,15 @@
         </div>
         <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Promedio General</span>
     </div>
-    <p class="text-4xl font-black text-slate-800">
+
+    <p class="text-4xl font-black
+        {% if promedio_general >= 8 %}text-emerald-600
+        {% elif promedio_general >= 6 %}text-amber-600
+        {% else %}text-slate-800{% endif %}">
         {{ promedio_general|floatformat:1 }}
     </p>
-    <div class="mt-3 flex items-center gap-2">
+
+    <div class="mt-3">
         {% if promedio_general >= 8 %}
             <span class="inline-flex items-center gap-1 text-[9px] font-black bg-emerald-50 text-emerald-700 px-2 py-1 rounded-full uppercase">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Excelente

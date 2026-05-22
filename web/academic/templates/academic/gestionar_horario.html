@@ -1,139 +1,691 @@
 {% extends 'inicio/base.html' %}
-{% load academic_extras %}
 {% block content %}
-<div class="max-w-7xl mx-auto pb-20 space-y-8 px-4">
-    
-    {% if messages %}
-    <div class="space-y-4">
-        {% for message in messages %}
-        <div class="flex items-center p-4 rounded-2xl {% if message.tags == 'error' %}bg-rose-50 text-rose-700 border border-rose-100{% else %}bg-emerald-50 text-emerald-700 border border-emerald-100{% endif %} animate-pulse">
-            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {% if message.tags == 'error' %}
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --ink: #0f1117; --ink-2: #4b5563; --ink-3: #9ca3af;
+    --border: #e5e7eb; --bg: #f7f8fc; --white: #ffffff;
+    --accent: #4361ee; --accent-soft: #eef0fd;
+    --ok: #059669; --ok-soft: #ecfdf5;
+    --danger: #dc2626; --danger-soft: #fef2f2;
+    --warn: #d97706; --warn-soft: #fffbeb;
+    --purple: #7c3aed;
+    --radius: 16px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,.06);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.08);
+    --shadow-lg: 0 16px 48px rgba(0,0,0,.12);
+  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Outfit', sans-serif; }
+
+  .hs-wrap { max-width: 1400px; margin: 0 auto; padding: 0 4px; }
+
+  .nav-back {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--ink-3); text-decoration: none;
+    transition: color .15s; margin-bottom: 20px;
+  }
+  .nav-back:hover { color: var(--accent); }
+  .nav-back svg { transition: transform .15s; }
+  .nav-back:hover svg { transform: translateX(-3px); }
+  .back-chip {
+    width: 30px; height: 30px; border-radius: 9px;
+    border: 1.5px solid var(--border); background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .hs-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+  .hs-title { font-family: 'DM Serif Display', serif; font-size: 30px; color: var(--ink); margin: 0; }
+  .hs-sub { font-size: 13px; color: var(--ink-2); margin: 4px 0 0; }
+  .hs-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; background: var(--accent-soft); color: var(--accent); margin-top: 6px; }
+
+  .btn-primary { display: inline-flex; align-items: center; gap: 7px; padding: 10px 18px; background: var(--accent); color: #fff; border-radius: 11px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; text-decoration: none; border: none; cursor: pointer; transition: all .16s; box-shadow: 0 3px 10px rgba(67,97,238,.3); font-family: 'Outfit', sans-serif; }
+  .btn-primary:hover { background: #2f4dd4; transform: translateY(-1px); }
+  .btn-ghost { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; background: var(--white); color: var(--ink-2); border: 1.5px solid var(--border); border-radius: 11px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: 'Outfit', sans-serif; text-decoration: none; }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+  .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-box { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: transform .2s, box-shadow .2s; }
+  .stat-box:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .stat-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: var(--radius) var(--radius) 0 0; }
+  .stat-box.blue::before   { background: var(--accent); }
+  .stat-box.green::before  { background: var(--ok); }
+  .stat-box.warn::before   { background: var(--warn); }
+  .stat-box.purple::before { background: var(--purple); }
+  .stat-num { font-family: 'DM Serif Display', serif; font-size: 32px; line-height: 1; }
+  .stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; margin-top: 5px; color: var(--ink-3); }
+  .stat-icon { position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; opacity: .12; }
+
+  .sched-card { background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
+  .sched-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+  .sched-toolbar-title { font-size: 13px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+  .dot-live { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px rgba(5,150,105,.15); animation: pulse-dot 2s infinite; }
+  @keyframes pulse-dot { 0%,100%{box-shadow:0 0 0 3px rgba(5,150,105,.15)} 50%{box-shadow:0 0 0 6px rgba(5,150,105,.07)} }
+
+  .sched-scroll { overflow-x: auto; }
+  .sched-tbl { width: 100%; border-collapse: collapse; min-width: 900px; }
+  .sched-tbl thead th { padding: 12px 10px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; background: var(--ink); color: rgba(255,255,255,.5); border-left: 1px solid rgba(255,255,255,.06); text-align: center; }
+  .sched-tbl thead th:first-child { text-align: left; padding-left: 18px; color: rgba(255,255,255,.85); border-left: none; width: 96px; }
+  .sched-tbl thead th.today-col { background: #1a1f36; color: rgba(255,255,255,.9); border-bottom: 2px solid var(--accent); }
+  .sched-tbl tbody tr { transition: background .1s; }
+  .sched-tbl tbody tr:not(:last-child) { border-bottom: 1px solid #f3f4f6; }
+  .sched-tbl tbody tr:hover { background: #fafbff; }
+
+  .sched-tbl tbody td { border-left: 1px solid #f0f1f5; vertical-align: top; padding: 4px; min-width: 150px; }
+  .sched-tbl tbody td:first-child { border-left: none; vertical-align: middle; background: var(--bg); border-right: 1.5px solid var(--border); padding: 10px 16px; width: 96px; }
+  .hora-num { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+  .hora-tag { font-size: 9px; font-weight: 700; color: var(--ink-3); margin-top: 2px; }
+
+  .clase-pill {
+    background: linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%);
+    border: 1.5px solid #a5b4fc; border-radius: 11px;
+    padding: 8px 8px 8px 14px;
+    position: relative; overflow: visible;
+    transition: box-shadow .15s, transform .15s;
+  }
+  .clase-pill::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:linear-gradient(180deg,#4361ee,#818cf8); border-radius:4px 0 0 4px; }
+  .clase-pill:hover { box-shadow: 0 4px 16px rgba(67,97,238,.18); }
+
+  .cp-row-flex { display: flex; align-items: flex-start; gap: 6px; }
+  .cp-info { flex: 1; min-width: 0; }
+  .cp-time { font-family:'DM Mono',monospace; font-size:8.5px; font-weight:500; color:#818cf8; }
+  .cp-asig { font-size:11px; font-weight:800; color:#3730a3; text-transform:uppercase; line-height:1.2; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cp-doc  { font-size:9px; color:#6366f1; margin-top:3px; display:flex; align-items:center; gap:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cp-aula { font-size:8px; color:#a5b4fc; margin-top:2px; }
+
+  .cp-btns { display:flex; flex-direction:column; gap:3px; flex-shrink:0; }
+  .cp-btn { width:26px; height:26px; border-radius:7px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .12s; }
+  .cp-btn.edit { background:rgba(67,97,238,.12); color:var(--accent); }
+  .cp-btn.edit:hover { background:rgba(67,97,238,.28); transform:scale(1.1); }
+  .cp-btn.del  { background:rgba(220,38,38,.1); color:var(--danger); }
+  .cp-btn.del:hover  { background:rgba(220,38,38,.22); transform:scale(1.1); }
+
+  .empty-cell { min-height:66px; display:flex; align-items:center; justify-content:center; border-radius:10px; border:1.5px dashed #e5e7eb; cursor:pointer; transition:all .15s; color:var(--ink-3); background:transparent; }
+  .empty-cell:hover { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); transform:scale(1.02); }
+  .empty-cell a { display:flex; align-items:center; justify-content:center; width:100%; min-height:66px; text-decoration:none; color:inherit; }
+
+  .legend-bar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:12px 20px; border-top:1px solid var(--border); background:#fafbff; }
+  .leg-item { display:flex; align-items:center; gap:6px; font-size:10px; font-weight:600; color:var(--ink-3); }
+  .leg-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+  .leg-hint { margin-left:auto; font-size:9.5px; color:var(--ink-3); font-weight:600; }
+
+  .empty-sched { padding:72px 24px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .empty-ico { width:64px; height:64px; border-radius:18px; background:var(--bg); border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; }
+  .empty-ttl { font-family:'DM Serif Display',serif; font-size:22px; color:var(--ink); }
+  .empty-sub { font-size:12px; color:var(--ink-2); max-width:300px; line-height:1.6; }
+
+  .overlay { display:none; position:fixed; inset:0; z-index:500; background:rgba(15,17,23,.75); backdrop-filter:blur(10px); align-items:center; justify-content:center; padding:20px; }
+  .overlay.open { display:flex; animation:fade-in .2s ease; }
+  @keyframes fade-in { from{opacity:0} to{opacity:1} }
+
+  .modal-form-box { background:var(--white); border-radius:20px; width:100%; max-width:720px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:slide-up .25s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes slide-up { from{opacity:0;transform:translateY(30px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .mf-header { padding:24px 28px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--white); z-index:2; }
+  .mf-title { font-family:'DM Serif Display',serif; font-size:22px; color:var(--ink); }
+  .mf-close { width:36px; height:36px; border-radius:10px; border:1.5px solid var(--border); background:var(--bg); cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--ink-2); transition:all .15s; }
+  .mf-close:hover { background:var(--danger-soft); color:var(--danger); border-color:#fca5a5; }
+  .mf-body { padding:24px 28px; }
+
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .form-row.full { grid-template-columns:1fr; }
+  .form-row.tri  { grid-template-columns:1fr 1fr 1fr; }
+  .field { display:flex; flex-direction:column; gap:5px; }
+  .field label { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-2); }
+  .field label .req { color:var(--danger); margin-left:2px; }
+  .field select, .field input[type="text"], .field input[type="time"] { padding:10px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:13px; font-family:'Outfit',sans-serif; color:var(--ink); background:var(--white); transition:border-color .15s,box-shadow .15s; -webkit-appearance:none; appearance:none; }
+  .field select:focus, .field input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(67,97,238,.12); }
+  .field select.error, .field input.error { border-color:var(--danger); box-shadow:0 0 0 3px rgba(220,38,38,.1); }
+  .field-error { font-size:10px; color:var(--danger); font-weight:600; display:none; }
+  .field-error.show { display:block; }
+  .field-hint { font-size:10px; color:var(--ink-3); }
+
+  .dias-grid { display:flex; gap:8px; flex-wrap:wrap; }
+  .dia-toggle { display:none; }
+  .dia-label { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:11px; border:1.5px solid var(--border); cursor:pointer; font-size:11px; font-weight:700; color:var(--ink-3); transition:all .15s; background:var(--bg); user-select:none; }
+  .dia-label:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+  .dia-toggle:checked + .dia-label { background:var(--accent); border-color:var(--accent); color:#fff; box-shadow:0 3px 10px rgba(67,97,238,.35); }
+
+  .conflict-preview { background:var(--warn-soft); border:1.5px solid #fcd34d; border-radius:12px; padding:14px; margin-top:14px; display:none; }
+  .conflict-preview.show { display:block; }
+  .cp-head { font-size:11px; font-weight:800; color:var(--warn); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .cp-row  { font-size:11px; color:var(--ink-2); padding:4px 0; border-bottom:1px solid #fde68a; }
+  .cp-row:last-child { border-bottom:none; }
+
+  .preview-section { margin-top:20px; }
+  .preview-title { font-size:11px; font-weight:700; color:var(--ink-2); text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+  .preview-grid { display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; }
+  .preview-dia { flex:1; min-width:80px; border-radius:10px; border:1.5px solid var(--border); overflow:hidden; }
+  .preview-dia-head { padding:5px; text-align:center; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; background:var(--ink); color:rgba(255,255,255,.6); }
+  .preview-dia-head.selected { background:var(--accent); color:#fff; }
+  .preview-slots { padding:4px; display:flex; flex-direction:column; gap:3px; min-height:60px; }
+  .preview-slot { padding:4px 6px; border-radius:6px; font-size:8.5px; font-weight:700; line-height:1.3; text-transform:uppercase; }
+  .preview-slot.existing  { background:var(--accent-soft); color:var(--accent); border:1px solid #a5b4fc; }
+  .preview-slot.new       { background:var(--ok-soft); color:var(--ok); border:1px solid #6ee7b7; }
+  .preview-slot.clash     { background:var(--danger-soft); color:var(--danger); border:1px solid #fca5a5; }
+  .preview-slot.empty-slot { background:var(--bg); color:var(--ink-3); border:1px dashed var(--border); text-align:center; }
+
+  .mf-footer { padding:16px 28px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; background:var(--bg); border-radius:0 0 20px 20px; position:sticky; bottom:0; }
+  .mf-footer-status { font-size:11px; color:var(--ink-3); font-weight:600; }
+  .mf-footer-status.ok   { color:var(--ok); }
+  .mf-footer-status.warn { color:var(--warn); }
+  .mf-btns { display:flex; gap:8px; }
+
+  .modal-del-box { background:var(--white); border-radius:20px; max-width:380px; width:100%; padding:32px; box-shadow:var(--shadow-lg); text-align:center; animation:slide-up .22s cubic-bezier(.34,1.56,.64,1); }
+  .del-icon { width:56px; height:56px; border-radius:15px; background:var(--danger-soft); border:1.5px solid #fca5a5; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:var(--danger); }
+  .del-title { font-family:'DM Serif Display',serif; font-size:22px; color:var(--ink); margin-bottom:6px; }
+  .del-sub { font-size:12px; color:var(--ink-2); margin-bottom:22px; line-height:1.6; }
+  .del-btns { display:flex; gap:8px; }
+  .btn-danger-full { flex:1; padding:13px; background:var(--danger); color:#fff; border:none; border-radius:12px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; cursor:pointer; font-family:'Outfit',sans-serif; transition:all .15s; }
+  .btn-danger-full:hover { background:#b91c1c; transform:translateY(-1px); }
+  .btn-cancel { flex:1; padding:13px; background:var(--bg); border:1.5px solid var(--border); border-radius:12px; font-size:12px; font-weight:700; color:var(--ink-2); cursor:pointer; font-family:'Outfit',sans-serif; transition:all .15s; }
+  .btn-cancel:hover { border-color:var(--ink); color:var(--ink); }
+
+  .msg-bar { display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:12px; margin-bottom:16px; font-size:12px; font-weight:600; animation:slide-down .3s ease; }
+  @keyframes slide-down { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+  .msg-bar.success { background:var(--ok-soft); color:var(--ok); border:1px solid #6ee7b7; }
+  .msg-bar.error   { background:var(--danger-soft); color:var(--danger); border:1px solid #fca5a5; }
+  .msg-bar.warning { background:var(--warn-soft); color:var(--warn); border:1px solid #fde68a; }
+
+  @media(max-width:900px) { .stats-row{grid-template-columns:repeat(2,1fr)} .form-row{grid-template-columns:1fr} .form-row.tri{grid-template-columns:1fr 1fr} }
+  @media(max-width:600px) { .hs-header{flex-direction:column} .mf-body{padding:18px} .mf-header{padding:18px} }
+</style>
+
+<div class="hs-wrap">
+
+  {% for msg in messages %}
+  <div class="msg-bar {{ msg.tags }}">
+    {% if msg.tags == 'success' %}<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+    {% elif msg.tags == 'error' %}<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+    {% else %}<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>{% endif %}
+    {{ msg }}
+  </div>
+  {% endfor %}
+
+  {# ── VOLVER según rol ── #}
+  <a href="{% url 'carga_horaria' %}" class="nav-back">
+    <div class="back-chip">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+    </div>
+    {% if rol == 'DOCENTE' %}Mis grupos{% else %}Gestión de horarios{% endif %}
+  </a>
+
+  <div class="hs-header">
+    <div>
+      <h1 class="hs-title">
+        {% if puede_editar %}Gestionar Horario{% else %}Horario Semanal{% endif %}
+      </h1>
+      <p class="hs-sub">{{ grupo.grado }}° {{ grupo.nombre }} &nbsp;·&nbsp; {{ grupo.carrera.nombre }}</p>
+      <span class="hs-badge">
+        <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        {% if puede_editar %}Edición de Horario{% else %}Solo Lectura{% endif %}
+      </span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-ghost" onclick="window.print()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimir
+      </button>
+      {% if puede_editar %}
+      <button class="btn-primary" onclick="abrirModalNuevo()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Nueva Clase
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box blue">
+      <div class="stat-num" style="color:var(--accent);" id="stat-bloques">—</div>
+      <div class="stat-label">Bloques / semana</div>
+      <div class="stat-icon" style="background:var(--accent);"><svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/></svg></div>
+    </div>
+    <div class="stat-box green">
+      <div class="stat-num" style="color:var(--ok);">{{ grupo.asignaturas.count }}</div>
+      <div class="stat-label">Materias asignadas</div>
+      <div class="stat-icon" style="background:var(--ok);"><svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l10 6.5v7L12 22 2 15.5v-7z"/></svg></div>
+    </div>
+    <div class="stat-box warn">
+      <div class="stat-num" style="color:var(--warn);">{{ grupo.alumnos.count }}</div>
+      <div class="stat-label">Alumnos inscritos</div>
+      <div class="stat-icon" style="background:var(--warn);"><svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+    </div>
+    <div class="stat-box purple">
+      <div class="stat-num" style="color:var(--purple);">{{ grupo.docentes.count }}</div>
+      <div class="stat-label">Docentes activos</div>
+      <div class="stat-icon" style="background:var(--purple);"><svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+    </div>
+  </div>
+
+  <div class="sched-card">
+    <div class="sched-toolbar">
+      <div class="sched-toolbar-title">
+        <div class="dot-live"></div>
+        Horario Interactivo
+      </div>
+      {% if puede_editar %}
+      <button class="btn-ghost" style="font-size:11px;padding:7px 12px;" onclick="abrirModalNuevo()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Agregar bloque
+      </button>
+      {% endif %}
+    </div>
+
+    {% if matriz %}
+    <div class="sched-scroll">
+      <table class="sched-tbl">
+        <thead>
+          <tr>
+            <th>Hora</th>
+            {% for dia_code, dia_nombre in dias_lista %}
+            <th class="{% if dia_code == dia_hoy %}today-col{% endif %}">
+              {{ dia_nombre }}
+              {% if dia_code == dia_hoy %}<div style="font-size:8px;color:rgba(255,255,255,.4);font-weight:500;text-transform:none;letter-spacing:0;margin-top:2px;">Hoy</div>{% endif %}
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for hora in horas_lista %}
+          <tr>
+            <td>
+              <div class="hora-num">{{ hora }}</div>
+              <div class="hora-tag">60 min</div>
+            </td>
+            {% for dia_code, dia_nombre in dias_lista %}
+            <td>
+              {% for h, dias in matriz.items %}{% if h == hora %}{% for dc, clase in dias.items %}{% if dc == dia_code %}
+                {% if clase %}
+                <div class="clase-pill">
+                  <div class="cp-row-flex">
+                    <div class="cp-info">
+                      <div class="cp-time">{{ clase.hora_inicio|time:"H:i" }} – {{ clase.hora_fin|time:"H:i" }}</div>
+                      <div class="cp-asig">{{ clase.asignatura.nombre }}</div>
+                      <div class="cp-doc">
+                        <svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        {{ clase.maestro.get_full_name|truncatechars:18 }}
+                      </div>
+                      {% if clase.aula %}<div class="cp-aula">📍 {{ clase.aula }}</div>{% endif %}
+                    </div>
+                    {% if puede_editar %}
+                    <div class="cp-btns">
+                      <button class="cp-btn edit"
+                        onclick="abrirModalEditar({{ clase.id }},'{{ clase.asignatura.id }}','{{ clase.asignatura.nombre|escapejs }}','{{ clase.maestro.id }}','{{ clase.maestro.get_full_name|escapejs }}','{{ clase.dia }}','{{ clase.hora_inicio|time:"H:i" }}','{{ clase.hora_fin|time:"H:i" }}','{{ clase.aula|escapejs }}')"
+                        title="Editar clase">
+                        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      <button class="cp-btn del"
+                        onclick="abrirModalEliminar({{ clase.id }},'{{ clase.asignatura.nombre|escapejs }}','{{ dia_nombre }}','{{ hora }}')"
+                        title="Eliminar clase">
+                        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                      </button>
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
                 {% else %}
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                {% if puede_editar %}
+                <div class="empty-cell">
+                  <a href="#" onclick="abrirModalNuevo('{{ dia_code }}','{{ hora }}');return false;" title="Agregar clase {{ dia_nombre }} {{ hora }}">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                  </a>
+                </div>
+                {% else %}
+                <div style="min-height:66px;"></div>
                 {% endif %}
-            </svg>
-            <span class="text-xs font-black uppercase tracking-widest">{{ message }}</span>
-        </div>
-        {% endfor %}
+                {% endif %}
+              {% endif %}{% endfor %}{% endif %}{% endfor %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="legend-bar">
+      <div class="leg-item"><div class="leg-dot" style="background:linear-gradient(135deg,#4361ee,#818cf8);"></div>Clase programada</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--bg);border:1.5px dashed #d1d5db;"></div>Bloque libre</div>
+    </div>
+
+    {% else %}
+    <div class="empty-sched">
+      <div class="empty-ico"><svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--border);"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+      <div class="empty-ttl">Sin horario configurado</div>
+      <p class="empty-sub">Este grupo aún no tiene clases programadas.</p>
+      {% if puede_editar %}
+      <button class="btn-primary" onclick="abrirModalNuevo()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Programar primera clase
+      </button>
+      {% endif %}
     </div>
     {% endif %}
+  </div>
 
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <div class="flex items-center gap-3 mb-2">
-                <a href="{% url 'detalle_grupo' grupo.id %}" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
-                    <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </a>
-                <h2 class="text-3xl font-black text-slate-800 uppercase tracking-tighter">Gestión de Horarios</h2>
-            </div>
-            <p class="text-sm text-slate-500 font-medium ml-12">
-                Grupo: <span class="text-indigo-600 font-bold px-2 py-0.5 bg-indigo-50 rounded-lg">{{ grupo.nombre }}</span> 
-                <span class="mx-2 text-slate-300">|</span> Ciclo Escolar Activo
-            </p>
-        </div>
-        
-        <div class="flex flex-wrap gap-3">
-            <a href="{% url 'crear_clase' %}?grupo={{ grupo.id }}" class="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 transition-all flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Nueva Asignación
-            </a>
-
-            <button onclick="window.print()" class="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 hover:shadow-lg transition-all flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Exportar Horario
-            </button>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/50 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full table-fixed border-collapse">
-                <thead>
-                    <tr class="bg-slate-900">
-                        <th class="p-6 w-32 text-[10px] uppercase font-black text-slate-500">Bloque</th>
-                        {% for dia_code, dia_nombre in dias_lista %}
-                            <th class="p-6 text-[10px] uppercase font-black text-white border-l border-slate-800 text-center tracking-widest">
-                                {{ dia_nombre }}
-                            </th>
-                        {% endfor %}
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    {% for hora, dias_dict in matriz.items %}
-                    <tr class="h-40">
-                        <td class="p-4 text-center bg-slate-50/80 backdrop-blur-sm">
-                            <div class="flex flex-col items-center justify-center h-full">
-                                <span class="text-sm font-black text-slate-800">{{ hora }}</span>
-                                <div class="w-px h-6 bg-gradient-to-b from-slate-300 to-transparent my-2"></div>
-                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Sesión</span>
-                            </div>
-                        </td>
-
-                        {% for dia_code, dia_nombre in dias_lista %}
-                        {% with clase=dias_dict|dict_get:dia_code %}
-                        <td class="p-2 border-l border-slate-50 relative group transition-all duration-300 hover:bg-slate-50/30">
-                            {% if clase %}
-                                <div class="h-full w-full bg-white border border-slate-200 rounded-[2rem] p-5 shadow-sm group-hover:shadow-xl group-hover:border-indigo-200 transition-all relative overflow-hidden flex flex-col justify-between">
-                                    <div class="absolute top-0 left-0 w-2 h-full bg-indigo-600"></div>
-                                    <div>
-                                        <div class="flex justify-between items-start mb-2">
-                                            <span class="text-[8px] font-black bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md uppercase tracking-widest">Activa</span>
-                                        </div>
-                                        <h5 class="text-xs font-black text-slate-800 uppercase leading-tight">
-                                            {{ clase.asignatura.nombre }}
-                                        </h5>
-                                    </div>
-
-                                    <div class="space-y-1.5 mt-4">
-                                        <p class="text-[10px] text-slate-600 font-bold flex items-center gap-2">
-                                            <span class="flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 text-[8px]">👨‍🏫</span>
-                                            {{ clase.maestro.get_full_name }}
-                                        </p>
-                                        <p class="text-[10px] text-indigo-600 font-black flex items-center gap-2">
-                                            <span class="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-50 text-[8px]">📍</span>
-                                            {{ clase.aula|default:"N/A" }}
-                                        </p>
-                                    </div>
-
-                                    <form action="#" method="POST" 
-                                          onsubmit="return confirm('¿Estás seguro de eliminar esta materia?');"
-                                          class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        {% csrf_token %}
-                                        <button type="submit" class="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all transform hover:scale-110">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                        </button>
-                                    </form>
-                                </div>
-                            {% else %}
-                                <a href="{% url 'crear_clase' %}?dia={{ dia_code }}&hora={{ hora }}&grupo={{ grupo.id }}" 
-                                   class="h-full w-full border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-3 hover:border-indigo-400 hover:bg-white hover:shadow-2xl hover:shadow-indigo-100 transition-all group/btn">
-                                    <div class="w-10 h-10 bg-slate-50 rounded-2xl flex items-center justify-center group-hover/btn:bg-indigo-600 group-hover/btn:rotate-90 transition-all duration-500 shadow-sm">
-                                        <svg class="w-5 h-5 text-slate-400 group-hover/btn:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="3" stroke-linecap="round"/></svg>
-                                    </div>
-                                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] group-hover/btn:text-indigo-600 transition-colors">Asignar</span>
-                                </a>
-                            {% endif %}
-                        </td>
-                        {% endwith %}
-                        {% endfor %}
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    <div class="flex items-center justify-center gap-8 py-6 bg-slate-50 rounded-3xl border border-slate-100">
-        <div class="flex items-center gap-2">
-            <div class="w-3 h-3 bg-indigo-600 rounded-full"></div>
-            <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Materia Asignada</span>
-        </div>
-        <div class="flex items-center gap-2">
-            <div class="w-3 h-3 border-2 border-dashed border-slate-300 rounded-full"></div>
-            <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Espacio Disponible</span>
-        </div>
-    </div>
 </div>
+
+{# ══ MODAL CREAR / EDITAR ══ #}
+<div id="overlay-form" class="overlay" role="dialog" aria-modal="true">
+  <div class="modal-form-box">
+    <div class="mf-header">
+      <div class="mf-title" id="mf-title-text">Nueva Clase</div>
+      <button class="mf-close" onclick="cerrarModalForm()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <form id="form-clase" method="POST" action="{% url 'crear_clase' %}" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="grupo" value="{{ grupo.id }}">
+      <input type="hidden" id="form-clase-id" name="clase_id" value="">
+      <div class="mf-body">
+        <div class="form-row">
+          <div class="field">
+            <label>Asignatura <span class="req">*</span></label>
+            <select id="sel-asig" name="asignatura" onchange="actualizarPreview()">
+              <option value="">— Selecciona materia —</option>
+              {% for asig in asignaturas %}<option value="{{ asig.id }}" data-nombre="{{ asig.nombre }}">{{ asig.nombre }}</option>{% endfor %}
+            </select>
+            <span class="field-error" id="err-asig">Selecciona una asignatura.</span>
+          </div>
+          <div class="field">
+            <label>Docente <span class="req">*</span></label>
+            <select id="sel-maestro" name="maestro" onchange="verificarConflictos()">
+              <option value="">— Selecciona docente —</option>
+              {% for m in maestros %}<option value="{{ m.id }}">{{ m.get_full_name }}</option>{% endfor %}
+            </select>
+            <span class="field-error" id="err-maestro">Selecciona un docente.</span>
+          </div>
+        </div>
+        <div class="form-row tri">
+          <div class="field">
+            <label>Hora inicio <span class="req">*</span></label>
+            <input type="time" id="inp-inicio" name="hora_inicio" min="07:00" max="21:00" onchange="actualizarPreview();verificarConflictos();">
+            <span class="field-hint">07:00 – 21:00</span>
+            <span class="field-error" id="err-inicio">Requerida.</span>
+          </div>
+          <div class="field">
+            <label>Hora fin <span class="req">*</span></label>
+            <input type="time" id="inp-fin" name="hora_fin" min="07:00" max="22:00" onchange="actualizarPreview();verificarConflictos();">
+            <span class="field-error" id="err-fin">Requerida.</span>
+          </div>
+          <div class="field">
+            <label>Aula / Salón</label>
+            <input type="text" id="inp-aula" name="aula" placeholder="Ej. A-201" maxlength="50" onchange="verificarConflictos()">
+            <span class="field-hint">Vacío = Por definir</span>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:14px;">
+          <label>Días <span class="req">*</span></label>
+          <div class="dias-grid">
+            {% for dia_code, dia_nombre in dias_opciones %}
+            <input class="dia-toggle" type="checkbox" name="dias" id="dia-{{ dia_code }}" value="{{ dia_code }}" onchange="actualizarPreview();verificarConflictos();">
+            <label class="dia-label" for="dia-{{ dia_code }}">{{ dia_nombre|slice:":2" }}</label>
+            {% endfor %}
+          </div>
+          <span class="field-error" id="err-dias">Selecciona al menos un día.</span>
+        </div>
+        <div class="conflict-preview" id="conflict-box">
+          <div class="cp-head">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            Conflictos detectados
+          </div>
+          <div id="conflict-list"></div>
+        </div>
+        <div class="preview-section">
+          <div class="preview-title">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Vista previa semanal
+          </div>
+          <div class="preview-grid" id="preview-grid">
+            {% for dia_code, dia_nombre in dias_opciones %}
+            <div class="preview-dia" id="prev-{{ dia_code }}">
+              <div class="preview-dia-head" id="prev-head-{{ dia_code }}">{{ dia_nombre|slice:":2" }}</div>
+              <div class="preview-slots" id="prev-slots-{{ dia_code }}"><div class="preview-slot empty-slot">Vacío</div></div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="mf-footer">
+        <span class="mf-footer-status" id="footer-status">Completa los campos para verificar conflictos.</span>
+        <div class="mf-btns">
+          <button type="button" class="btn-cancel" onclick="cerrarModalForm()">Cancelar</button>
+          <button type="submit" class="btn-primary" id="btn-submit-form">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+            Guardar clase
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ══ MODAL ELIMINAR ══ #}
+<div id="overlay-del" class="overlay">
+  <div class="modal-del-box">
+    <div class="del-icon">
+      <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    </div>
+    <div class="del-title">Eliminar clase</div>
+    <p class="del-sub" id="del-texto">¿Confirmas eliminar este bloque del horario?</p>
+    <div class="del-btns">
+      <button class="btn-cancel" onclick="cerrarModalDel()">Cancelar</button>
+      <button class="btn-danger-full" id="btn-confirmar-del">Eliminar</button>
+    </div>
+  </div>
+</div>
+<form id="form-del" method="POST" style="display:none;">{% csrf_token %}</form>
+
+<script id="horarios-data" type="application/json">{{ horarios_json }}</script>
+<script>
+const GRUPO_ID = {{ grupo.id }};
+const BASE_URL = "{% url 'crear_clase' %}";
+const ELIM_URL = "{% url 'eliminar_clase' 0 %}".replace('/0/', '/');
+const EDIT_URL = "{% url 'editar_clase' 0 %}".replace('/0/', '/');
+
+let HORARIOS = [];
+try { HORARIOS = JSON.parse(document.getElementById('horarios-data').textContent) || []; } catch(e){}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('stat-bloques').textContent = document.querySelectorAll('.clase-pill').length;
+  actualizarPreview();
+});
+
+// ── ABRIR MODAL CREAR ──
+function abrirModalNuevo(dia='', hora='') {
+  resetForm();
+  document.getElementById('mf-title-text').textContent = 'Crear nueva clase';
+  document.getElementById('form-clase').action = BASE_URL + '?grupo=' + GRUPO_ID;
+  document.getElementById('btn-submit-form').innerHTML = `
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+    Guardar clase`;
+  if (dia) {
+    const c = document.getElementById('dia-' + dia);
+    if (c) { c.checked = true; c.dispatchEvent(new Event('change')); }
+  }
+  if (hora) {
+    document.getElementById('inp-inicio').value = hora;
+    const [h, m] = hora.split(':').map(Number);
+    document.getElementById('inp-fin').value = String(h + 1).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
+  abrirOverlay('overlay-form');
+  actualizarPreview();
+}
+
+// ── ABRIR MODAL EDITAR ──
+function abrirModalEditar(id, asigId, asigNombre, maestroId, maestroNombre, dia, inicio, fin, aula) {
+  resetForm();
+  document.getElementById('mf-title-text').textContent = 'Editar clase — ' + asigNombre;
+  document.getElementById('form-clase-id').value = id;
+  document.getElementById('form-clase').action = EDIT_URL + id + '/';
+  document.getElementById('btn-submit-form').innerHTML = `
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+    Actualizar clase`;
+  document.getElementById('sel-asig').value    = asigId;
+  document.getElementById('sel-maestro').value = maestroId;
+  document.getElementById('inp-inicio').value  = inicio;
+  document.getElementById('inp-fin').value     = fin;
+  document.getElementById('inp-aula').value    = aula;
+  const c = document.getElementById('dia-' + dia);
+  if (c) c.checked = true;
+  abrirOverlay('overlay-form');
+  actualizarPreview();
+  verificarConflictos();
+}
+
+function cerrarModalForm() { cerrarOverlay('overlay-form'); resetForm(); }
+
+// ── MODAL ELIMINAR ──
+let pendingDeleteId = null;
+function abrirModalEliminar(id, asig, dia, hora) {
+  pendingDeleteId = id;
+  document.getElementById('del-texto').textContent =
+    `¿Confirmas eliminar "${asig}" del ${dia} a las ${hora}? Esta acción no se puede deshacer.`;
+  abrirOverlay('overlay-del');
+}
+function cerrarModalDel() { cerrarOverlay('overlay-del'); pendingDeleteId = null; }
+
+document.getElementById('btn-confirmar-del').addEventListener('click', () => {
+  if (!pendingDeleteId) return;
+  const f = document.getElementById('form-del');
+  f.action = ELIM_URL + pendingDeleteId + '/';
+  f.submit();
+});
+
+function abrirOverlay(id) { document.getElementById(id).classList.add('open'); document.body.style.overflow = 'hidden'; }
+function cerrarOverlay(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow = ''; }
+
+['overlay-form','overlay-del'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    if (e.target === e.currentTarget) { cerrarOverlay(id); if (id === 'overlay-del') pendingDeleteId = null; }
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { cerrarOverlay('overlay-form'); cerrarOverlay('overlay-del'); pendingDeleteId = null; }
+});
+
+function resetForm() {
+  document.getElementById('form-clase').reset();
+  document.getElementById('form-clase-id').value = '';
+  document.querySelectorAll('.field-error').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.field select,.field input').forEach(el => el.classList.remove('error'));
+  document.getElementById('conflict-box').classList.remove('show');
+  document.getElementById('conflict-list').innerHTML = '';
+  document.getElementById('footer-status').className = 'mf-footer-status';
+  document.getElementById('footer-status').textContent = 'Completa los campos para verificar conflictos.';
+  actualizarPreview();
+}
+
+// ── VALIDACIÓN AL ENVIAR ──
+document.getElementById('form-clase').addEventListener('submit', function(e) {
+  let valid = true;
+  ['sel-asig','sel-maestro','inp-inicio','inp-fin'].forEach(id => {
+    const el = document.getElementById(id);
+    const errId = 'err-' + id.replace('sel-','').replace('inp-','');
+    if (!el.value) { el.classList.add('error'); document.getElementById(errId)?.classList.add('show'); valid = false; }
+    else           { el.classList.remove('error'); document.getElementById(errId)?.classList.remove('show'); }
+  });
+  const ini = document.getElementById('inp-inicio').value;
+  const fin = document.getElementById('inp-fin').value;
+  if (ini && fin && fin <= ini) {
+    document.getElementById('inp-fin').classList.add('error');
+    const ef = document.getElementById('err-fin');
+    if (ef) { ef.textContent = 'La hora fin debe ser posterior al inicio.'; ef.classList.add('show'); }
+    valid = false;
+  }
+  if (!document.querySelectorAll('.dia-toggle:checked').length) {
+    document.getElementById('err-dias').classList.add('show'); valid = false;
+  } else {
+    document.getElementById('err-dias').classList.remove('show');
+  }
+  if (!valid) { e.preventDefault(); return; }
+  const conflicts = obtenerConflictos();
+  if (conflicts.length > 0) {
+    if (!confirm(`⚠️ ${conflicts.length} conflicto(s):\n\n` + conflicts.map(c => '• ' + c).join('\n') + '\n\n¿Continuar?')) {
+      e.preventDefault();
+    }
+  }
+});
+
+// ── DETECCIÓN DE CONFLICTOS ──
+function timeToMinutes(t) { if (!t) return 0; const [h,m] = t.split(':').map(Number); return h*60+m; }
+function solapan(i1,f1,i2,f2) { return timeToMinutes(i1) < timeToMinutes(f2) && timeToMinutes(f1) > timeToMinutes(i2); }
+
+function obtenerConflictos() {
+  const maestroId = document.getElementById('sel-maestro').value;
+  const aula      = document.getElementById('inp-aula').value.trim();
+  const inicio    = document.getElementById('inp-inicio').value;
+  const fin       = document.getElementById('inp-fin').value;
+  const diasSel   = [...document.querySelectorAll('.dia-toggle:checked')].map(c => c.value);
+  const editId    = parseInt(document.getElementById('form-clase-id').value) || null;
+  if (!maestroId || !inicio || !fin || !diasSel.length) return [];
+  const c = [];
+  HORARIOS.forEach(h => {
+    if (editId && h.id === editId) return;
+    if (!diasSel.includes(h.dia)) return;
+    if (!solapan(inicio, fin, h.hora_inicio, h.hora_fin)) return;
+    if (String(h.maestro_id) === String(maestroId))
+      c.push(`Docente ocupado: "${h.asignatura_nombre}" (${h.dia} ${h.hora_inicio}–${h.hora_fin})`);
+    if (aula && aula !== 'Por definir' && h.aula === aula)
+      c.push(`Aula "${aula}" ocupada (${h.dia} ${h.hora_inicio}–${h.hora_fin})`);
+    if (String(h.grupo_id) === String(GRUPO_ID))
+      c.push(`Grupo ya tiene clase: "${h.asignatura_nombre}" (${h.dia} ${h.hora_inicio}–${h.hora_fin})`);
+  });
+  return c;
+}
+
+function verificarConflictos() {
+  const c      = obtenerConflictos();
+  const box    = document.getElementById('conflict-box');
+  const status = document.getElementById('footer-status');
+  if (c.length) {
+    document.getElementById('conflict-list').innerHTML = c.map(x => `<div class="cp-row">⚠️ ${x}</div>`).join('');
+    box.classList.add('show');
+    status.className   = 'mf-footer-status warn';
+    status.textContent = `${c.length} conflicto(s) detectado(s). Revisa antes de guardar.`;
+  } else {
+    box.classList.remove('show');
+    const ok = document.getElementById('inp-inicio').value &&
+               document.getElementById('inp-fin').value &&
+               document.querySelectorAll('.dia-toggle:checked').length;
+    status.className   = ok ? 'mf-footer-status ok' : 'mf-footer-status';
+    status.textContent = ok ? '✓ Sin conflictos — Horario disponible.' : 'Completa los campos para verificar conflictos.';
+  }
+}
+
+// ── VISTA PREVIA ──
+const DIAS_CODES = ['LU','MA','MI','JU','VI','SA'];
+function actualizarPreview() {
+  const inicio  = document.getElementById('inp-inicio').value;
+  const fin     = document.getElementById('inp-fin').value;
+  const asigSel = document.getElementById('sel-asig');
+  const asigNom = asigSel.options[asigSel.selectedIndex]?.dataset?.nombre || '';
+  const diasSel = new Set([...document.querySelectorAll('.dia-toggle:checked')].map(c => c.value));
+  const editId  = parseInt(document.getElementById('form-clase-id').value) || null;
+  DIAS_CODES.forEach(dia => {
+    const head  = document.getElementById('prev-head-' + dia);
+    const slots = document.getElementById('prev-slots-' + dia);
+    if (!head || !slots) return;
+    const sel  = diasSel.has(dia);
+    head.className = 'preview-dia-head' + (sel ? ' selected' : '');
+    const exist = HORARIOS.filter(h => h.dia === dia && h.grupo_id === GRUPO_ID && !(editId && h.id === editId));
+    let html = '';
+    if (!exist.length && !sel) {
+      html = '<div class="preview-slot empty-slot">Vacío</div>';
+    } else {
+      exist.forEach(h => {
+        const clash = sel && inicio && fin && solapan(inicio, fin, h.hora_inicio, h.hora_fin);
+        html += `<div class="preview-slot ${clash ? 'clash' : 'existing'}">${h.hora_inicio} ${h.asignatura_nombre}</div>`;
+      });
+      if (sel && inicio && fin)
+        html += `<div class="preview-slot new">${inicio} ${asigNom || 'Nueva clase'}</div>`;
+    }
+    slots.innerHTML = html || '<div class="preview-slot empty-slot">Vacío</div>';
+  });
+}
+</script>
+
 {% endblock %}

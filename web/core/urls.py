@@ -22,14 +22,10 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # Rutas de la app INICIO
-    # Rutas de la app 'inicio' (Dashboard, Login)
     path('', include('inicio.urls')),
-    
-    # Rutas de la app 'users' (Perfil, Coordinadores, Alumnos)
     path('gestion/', include('users.urls')),
-
-    path('academic/',include('academic.urls'))
+    path('academic/', include('academic.urls')),
+    path('docente/', include('docente.urls')),  
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

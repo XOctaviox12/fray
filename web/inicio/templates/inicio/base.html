@@ -103,6 +103,16 @@
         .nav-item svg { flex-shrink: 0; opacity: .7; }
         .nav-item.active svg { opacity: 1; }
 
+        /* Badge para contadores en nav */
+        .nav-badge {
+            margin-left: auto;
+            background: rgba(79,110,247,.35);
+            color: #8ba4fa;
+            font-size: 9px; font-weight: 800;
+            padding: 2px 6px; border-radius: 99px;
+            min-width: 18px; text-align: center;
+        }
+
         .sidebar-footer {
             margin-top: auto;
             padding-top: 12px;
@@ -122,8 +132,24 @@
             display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
         }
+        /* Avatar distinto para docente */
+        .user-avatar.docente-avatar {
+            background: linear-gradient(135deg, #10b981, #34d399);
+        }
         .user-name { font-size: 11.5px; font-weight: 700; color: #fff; line-height: 1.2; }
         .user-role { font-size: 9.5px; color: rgba(255,255,255,.3); }
+
+        /* Rol pill en sidebar */
+        .role-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 8.5px; font-weight: 800; letter-spacing: .1em;
+            text-transform: uppercase; border-radius: 5px;
+            padding: 2px 7px; margin: 6px 10px 0;
+        }
+        .role-badge.director  { background: rgba(79,110,247,.15);  color: #8ba4fa; border: 1px solid rgba(79,110,247,.2); }
+        .role-badge.docente   { background: rgba(16,185,129,.15);  color: #34d399; border: 1px solid rgba(16,185,129,.2); }
+        .role-badge.coord     { background: rgba(245,158,11,.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,.2); }
+        .role-badge.admin     { background: rgba(229,62,62,.15);   color: #fc8181; border: 1px solid rgba(229,62,62,.2); }
 
         /* ══ LAYOUT ══ */
         #page-wrap {
@@ -285,37 +311,110 @@
         FRAY
     </div>
 
-    <div class="nav-section">Principal</div>
-    <a href="{% url 'dashboard' %}" class="nav-item {% block nav_dashboard %}{% endblock %}">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-        Dashboard
-    </a>
-    <a href="{% url 'lista_docentes' %}" class="nav-item {% block nav_docentes %}{% endblock %}">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        Docentes
-    </a>
-    <a href="{% url 'lista_grupos' %}" class="nav-item {% block nav_grupos %}{% endblock %}">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h12"/></svg>
-        Grupos
-    </a>
+ 
+    {% if user.rol in 'ADMIN,DIRECTOR,COORD' %}
 
-    <div class="nav-section">Académico</div>
-    <a href="{% url 'lista_asignaturas' %}" class="nav-item {% block nav_materias %}{% endblock %}">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-        Materias
-    </a>
-    <a href="{% url 'carga_horaria' %}" class="nav-item {% block nav_horarios %}{% endblock %}">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-        Horarios
-    </a>
-    <a href="{% url 'lista_coordinadores' %}" class="nav-item {% block nav_coordinadores %}{% endblock %}">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-        Coordinadores
-    </a>
+        {# Badge de rol #}
+        {% if user.rol == 'ADMIN' %}
+            <div class="role-badge admin">⚡ Súper Admin</div>
+        {% elif user.rol == 'DIRECTOR' %}
+            <div class="role-badge director">🏫 Director</div>
+        {% else %}
+            <div class="role-badge coord">🎓 Coordinador</div>
+        {% endif %}
+
+        <div class="nav-section">Principal</div>
+        <a href="{% url 'dashboard' %}" class="nav-item {% block nav_dashboard %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            Dashboard
+        </a>
+        <a href="{% url 'lista_docentes' %}" class="nav-item {% block nav_docentes %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Docentes
+        </a>
+        <a href="{% url 'lista_grupos' %}" class="nav-item {% block nav_grupos %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h12"/></svg>
+            Grupos
+        </a>
+
+        <div class="nav-section">Académico</div>
+        <a href="{% url 'lista_asignaturas' %}" class="nav-item {% block nav_materias %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            Materias
+        </a>
+        <a href="{% url 'carga_horaria' %}" class="nav-item {% block nav_horarios %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Horarios
+        </a>
+        <a href="{% url 'lista_coordinadores' %}" class="nav-item {% block nav_coordinadores %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            Coordinadores
+        </a>
+
+
+    {% elif user.rol == 'DOCENTE' %}
+
+        <div class="role-badge docente">📚 Docente</div>
+
+        <div class="nav-section">Mi Espacio</div>
+        <a href="{% url 'dashboard_docente' %}" class="nav-item {% block nav_docente_dashboard %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            Dashboard
+        </a>
+        <a href="{% url 'docente_mis_grupos' %}" class="nav-item {% block nav_mis_grupos %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            Mis Grupos
+        </a>
+        <a href="{% url 'docente_horario' %}" class="nav-item {% block nav_docente_horario %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Mi Horario
+        </a>
+
+        <div class="nav-section">Clase</div>
+        <a href="{% url 'docente_lista_asistencia' %}" class="nav-item {% block nav_asistencia %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            Pasar Lista
+        </a>
+        <a href="{% url 'docente_tareas' %}" class="nav-item {% block nav_tareas %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Tareas
+        </a>
+        <a href="{% url 'docente_actividades' %}" class="nav-item {% block nav_actividades %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Actividades de Clase
+        </a>
+
+        <div class="nav-section">Calificaciones</div>
+        <a href="{% url 'docente_calificar_tareas' %}" class="nav-item {% block nav_calificar_tareas %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            Calificar Tareas
+        </a>
+        <a href="{% url 'docente_calificar_actividades' %}" class="nav-item {% block nav_calificar_act %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Calificar Actividades
+        </a>
+        <a href="{% url 'docente_boleta' %}" class="nav-item {% block nav_boleta %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2m-2 4h6m0-4h.01"/></svg>
+            Boleta / Concentrado
+        </a>
+
+        <div class="nav-section">Contenido</div>
+        <a href="{% url 'docente_material' %}" class="nav-item {% block nav_material %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            Material de Apoyo
+        </a>
+        <a href="{% url 'docente_contenido' %}" class="nav-item {% block nav_contenido %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Subir Contenido
+        </a>
+
+    {% endif %}
 
     <div class="sidebar-footer">
         <div class="user-pill">
-            <div class="user-avatar">{{ user.first_name|slice:":1" }}{{ user.last_name|slice:":1" }}</div>
+            <div class="user-avatar {% if user.rol == 'DOCENTE' %}docente-avatar{% endif %}">
+                {{ user.first_name|slice:":1" }}{{ user.last_name|slice:":1" }}
+            </div>
             <div style="min-width:0; overflow:hidden;">
                 <div class="user-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                     {{ user.get_full_name|default:user.username }}
@@ -341,7 +440,8 @@
                  viewBox="0 0 24 24" style="color:var(--ink-3); flex-shrink:0;">
                 <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
             </svg>
-            <input type="text" name="q" placeholder="Buscar alumno, grupo, docente…"
+            <input type="text" name="q"
+                   placeholder="{% if user.rol == 'DOCENTE' %}Buscar alumno, grupo, tarea…{% else %}Buscar alumno, grupo, docente…{% endif %}"
                    autocomplete="off"
                    value="{{ request.GET.q|default:'' }}">
         </form>
@@ -430,6 +530,6 @@ function closeSidebar() {
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
 </script>
-
+{% block extra_js %}{% endblock %}
 </body>
 </html>

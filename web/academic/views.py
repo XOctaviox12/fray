@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import F, Q, Avg
+from django.db.models import F, Q, Avg, Count, Case, When, IntegerField
 import datetime
 import json
 from django.http import JsonResponse
@@ -42,7 +42,8 @@ def rol_requerido(*roles):
 # HELPERS
 # ─────────────────────────────────────────────────────────────────────────────
 def get_plantel_context(user):
-    es_uni = user.plantel.id == 2
+    plantel = user.plantel
+    es_uni = plantel.nivel_educativo == 'SUPERIOR'
     return {
         'color': 'purple' if es_uni else 'blue',
         'hex_color': '#9333ea' if es_uni else '#2563eb',
@@ -142,23 +143,46 @@ def lista_grupos(request):
     }
 
     def get_kpis(queryset):
+        from django.db.models import Count, Case, When, IntegerField, FloatField
+        from django.utils import timezone
+        now = timezone.now()
+
         total = queryset.count()
         if total == 0:
             return {'total': 0, 'promedio': 0.0, 'asistencia': 0, 'alertas': 0}
+
+        # 1 query para promedio de calificaciones
         avg = Calificacion.objects.filter(
             asignatura__grupos__in=queryset
         ).distinct().aggregate(Avg('nota'))['nota__avg']
-        promedio    = round(avg, 1) if avg else 0.0
-        asistencias = [g.asistencia_mensual for g in queryset]
-        asistencia  = round(sum(asistencias) / len(asistencias)) if asistencias else 0
-        alertas     = sum(
-            1 for g in queryset
-            if not g.asignaturas.exists()
-            or (g.capacidad_maxima > 0 and g.alumnos.count() >= g.capacidad_maxima)
+        promedio = round(avg, 1) if avg else 0.0
+
+        # 1 query para asistencia del mes (en vez de 2 por grupo)
+        asistencia_data = Asistencia.objects.filter(
+            grupo__in=queryset,
+            fecha__month=now.month
+        ).aggregate(
+            total=Count('id'),
+            presentes=Count(Case(When(estado='P', then=1), output_field=IntegerField()))
+        )
+        if asistencia_data['total']:
+            asistencia = int(asistencia_data['presentes'] / asistencia_data['total'] * 100)
+        else:
+            asistencia = 0
+
+        # 1 query para alertas usando anotaciones
+        grupos_con_datos = queryset.annotate(
+            num_asignaturas=Count('asignaturas', distinct=True),
+            num_alumnos=Count('alumnos', distinct=True)
+        )
+        alertas = sum(
+            1 for g in grupos_con_datos
+            if g.num_asignaturas == 0
+            or (g.capacidad_maxima > 0 and g.num_alumnos >= g.capacidad_maxima)
         )
         return {'total': total, 'promedio': promedio, 'asistencia': asistencia, 'alertas': alertas}
 
-    if plantel.id == 2:
+    if plantel.nivel_educativo == 'SUPERIOR':
         carreras_dict = {}
         for g in grupos_base:
             carreras_dict.setdefault(g.carrera, []).append(g)
@@ -204,16 +228,29 @@ def detalle_grupo(request, pk):
     form_alumno = AlumnoForm(request.POST or None)
     if request.method == 'POST' and 'btn_inscribir' in request.POST:
         if form_alumno.is_valid():
-            nuevo_alumno = form_alumno.save(creador=request.user, grupo=grupo)
-            messages.success(request, f"Inscrito: {nuevo_alumno.username} | Pass: {nuevo_alumno.password_plana}")
+            nuevo_alumno, pass_generada = form_alumno.save(creador=request.user, grupo=grupo)
+            messages.success(request, f"Inscrito: {nuevo_alumno.username} | Pass temporal: {pass_generada}")
             return redirect('detalle_grupo', pk=pk)
 
     form_mat = AsignaturaForm(request.POST or None, plantel=request.user.plantel)
     if request.method == 'POST' and 'btn_materia' in request.POST:
         if form_mat.is_valid():
+            from users.models import DocenteGrupo
             mat = form_mat.save(commit=False)
             mat.save()
             mat.grupos.add(grupo)
+            
+            # ── Sincronizar DocenteGrupo automáticamente ──
+            docentes_seleccionados = form_mat.cleaned_data.get('docentes', [])
+            for docente in docentes_seleccionados:
+                mat.docentes.add(docente)
+                DocenteGrupo.objects.get_or_create(
+                    docente=docente,
+                    grupo=grupo,
+                    asignatura=mat,
+                    defaults={'ciclo': '2026-1', 'activo': True}
+                )
+            
             messages.success(request, "Materia asignada al grupo.")
             return redirect('detalle_grupo', pk=pk)
 
@@ -327,6 +364,7 @@ def crear_materia(request):
                 plantel=plantel, grado=grado, carrera__nivel=nivel
             )
             if grupos_coincidentes.exists():
+                from users.models import DocenteGrupo
                 nueva_asignatura = Asignatura.objects.create(
                     carrera=grupos_coincidentes.first().carrera,
                     nombre=nombre, clave=clave, creditos=creditos
@@ -334,8 +372,15 @@ def crear_materia(request):
                 nueva_asignatura.grupos.set(grupos_coincidentes)
                 if docentes_seleccionados:
                     nueva_asignatura.docentes.set(docentes_seleccionados)
-                nombres_grupos = ", ".join([g.nombre for g in grupos_coincidentes])
-                messages.success(request, f"Materia '{nombre}' vinculada a: {nombres_grupos}")
+                    # ── Sincronizar DocenteGrupo ──
+                    for grupo_c in grupos_coincidentes:
+                        for docente in docentes_seleccionados:
+                            DocenteGrupo.objects.get_or_create(
+                                docente=docente,
+                                grupo=grupo_c,
+                                asignatura=nueva_asignatura,
+                                defaults={'ciclo': '2026-1', 'activo': True}
+                            )
             else:
                 messages.error(request, f"No se encontraron grupos para {grado}º de {nivel}.")
             return redirect('lista_asignaturas')
@@ -347,8 +392,10 @@ def crear_materia(request):
 # ─────────────────────────────────────────────────────────────────────────────
 # ALUMNOS
 # ─────────────────────────────────────────────────────────────────────────────
+@login_required
+@rol_requerido('DIRECTOR', 'COORD', 'ADMIN')
 def alumnos_view(request):
-    alumnos            = User.objects.filter(rol='ALUMNO')
+    alumnos = User.objects.filter(rol='ALUMNO', plantel=request.user.plantel)
     alumno_seleccionado = None
     form_tutor         = TutorForm()
 
@@ -400,8 +447,8 @@ def detalle_alumno(request, pk):
     promedio_alumno = calificaciones.aggregate(Avg('nota'))['nota__avg'] or 0.0
 
     asistencias         = Asistencia.objects.filter(alumno=alumno).order_by('-fecha')
-    total_presentes     = asistencias.filter(presente=True).count()
-    total_faltas        = asistencias.filter(presente=False).count()
+    total_presentes = asistencias.filter(estado='P').count()
+    total_faltas    = asistencias.filter(estado__in=['A', 'R']).count()
     total_registros     = asistencias.count()
     porcentaje_asistencia = (
         round((total_presentes / total_registros) * 100) if total_registros > 0 else 0
@@ -438,12 +485,14 @@ def editar_alumno(request, pk):
     return render(request, 'academic/editar_alumno.html', {'form': form, 'alumno': alumno, **ctx})
 
 
+@login_required
 def regenerar_password(request, pk):
-    alumno     = get_object_or_404(User, pk=pk)
+    alumno     = get_object_or_404(User, pk=pk, plantel=request.user.plantel)
     nueva_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
     alumno.set_password(nueva_pass)
-    alumno.password_plana = nueva_pass
+    alumno.password_plana = nueva_pass  # ← agregar esta línea
     alumno.save()
+    messages.success(request, f"Nueva contraseña para {alumno.get_full_name()}: {nueva_pass} — anótala antes de salir.")
     return redirect('detalle_alumno', pk=pk)
 
 

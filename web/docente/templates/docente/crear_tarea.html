@@ -1,0 +1,94 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Nueva Tarea{% endblock %}
+{% block nav_tareas %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:720px">
+  <div style="margin-bottom:1.5rem">
+    <a href="{% url 'docente_tareas' %}" style="font-size:12px;color:var(--ink-3);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px">
+      ← Volver a Tareas
+    </a>
+    <h1 style="font-size:22px;font-weight:700;color:var(--ink)">Nueva Tarea</h1>
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+
+      <div style="background:#10131c;padding:1rem 1.5rem">
+        <p style="font-size:13px;color:rgba(255,255,255,.6);margin:0">Completa los datos de la tarea</p>
+      </div>
+
+      <div style="padding:1.5rem;display:flex;flex-direction:column;gap:18px">
+
+        {# Grupo y asignatura #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Grupo y Asignatura *</label>
+          <select name="_sel" onchange="aplicarAsig(this)"
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
+            <option value="">— Selecciona —</option>
+            {% for a in asignaciones %}
+            <option value="{{ a.grupo.pk }}-{{ a.asignatura.pk }}" data-g="{{ a.grupo.pk }}" data-a="{{ a.asignatura.pk }}">
+              {{ a.grupo }} · {{ a.asignatura }}
+            </option>
+            {% endfor %}
+          </select>
+          <input type="hidden" name="grupo_id"      id="gInput">
+          <input type="hidden" name="asignatura_id" id="aInput">
+        </div>
+
+        {# Título #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Título *</label>
+          <input type="text" name="titulo" placeholder="Ej. Ejercicios del capítulo 3"
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+        </div>
+
+        {# Descripción #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Descripción / Instrucciones</label>
+          <textarea name="descripcion" rows="4" placeholder="Describe qué deben hacer los alumnos..."
+            style="width:100%;border:1px solid var(--border);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none;resize:vertical"></textarea>
+        </div>
+
+        {# Fecha límite #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Fecha y hora límite de entrega *</label>
+          <input type="datetime-local" name="fecha_entrega"
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+        </div>
+
+        {# Archivo adjunto #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Archivo adjunto (PDF, imagen, etc.)</label>
+          <input type="file" name="archivo" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+            style="width:100%;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink)">
+          <p style="font-size:11px;color:var(--ink-3);margin-top:4px">Opcional. PDF, Word o imagen.</p>
+        </div>
+
+      </div>
+
+      <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
+        <a href="{% url 'docente_tareas' %}"
+          style="height:38px;padding:0 18px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;text-decoration:none">
+          Cancelar
+        </a>
+        <button type="submit"
+          style="height:38px;padding:0 24px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+          Publicar Tarea
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function aplicarAsig(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  document.getElementById('gInput').value = opt.dataset.g || '';
+  document.getElementById('aInput').value = opt.dataset.a || '';
+}
+</script>
+{% endblock %}

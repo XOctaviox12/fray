@@ -153,10 +153,12 @@
             <input type="text" name="q" value="{{ query|default:'' }}"
                    placeholder="Buscar alumno…" class="search-input">
           </form>
+           {% if user.rol in 'DIRECTOR,COORD,ADMIN' %}
           <button onclick="document.getElementById('modal-alumno').classList.remove('hidden')"
                   class="btn-inscribir">
             + Inscribir
           </button>
+          {% endif %}
         </div>
 
         {# Tabla con data-attributes para el modal de detalle #}
@@ -183,12 +185,13 @@
         {% endif %}
       </div>
     </div>
-
+    {% if user.rol in 'DIRECTOR,COORD,ADMIN' %}
     {# Sidebar derecho #}
     <div style="display:flex;flex-direction:column;gap:14px;">
       {% include "academic/includes/comunicados.html" %}
       {% include "academic/includes/materias.html" %}
     </div>
+    {% endif %}
   </div>
 </div>
 

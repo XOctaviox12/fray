@@ -1,0 +1,335 @@
+{% extends 'inicio/base.html' %}
+{% load static %}
+
+{% block title %}Pasar Lista{% endblock %}
+{% block nav_asistencia %}active{% endblock %}
+
+{% block content %}
+
+{# ── Título ── #}
+<div class="mb-6">
+  <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:2px">Pasar Lista</h1>
+  <p style="font-size:13px;color:var(--ink-2)">
+    Registra la asistencia de tus alumnos · {{ fecha|date:"l d \d\e F \d\e Y" }}
+  </p>
+</div>
+
+{# ── Selector de grupo/asignatura/fecha ── #}
+<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.25rem">
+  <form method="get">
+    <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:12px;align-items:end">
+
+      <div>
+        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">
+          Grupo y asignatura
+        </label>
+        <select onchange="aplicarAsignacion(this);"
+          style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+          <option value="">— Selecciona —</option>
+          {% for a in asignaciones %}
+          <option
+            value="{{ a.grupo.pk }}-{{ a.asignatura.pk }}"
+            data-grupo="{{ a.grupo.pk }}"
+            data-asignatura="{{ a.asignatura.pk }}"
+            {% if grupo and asignatura and a.grupo.pk == grupo.pk and a.asignatura.pk == asignatura.pk %}selected{% endif %}>
+            {{ a.grupo }} · {{ a.asignatura }}
+          </option>
+          {% empty %}
+            {# ← Agrega esto temporalmente para diagnóstico #}
+            <option disabled>⚠ Sin asignaciones activas</option>
+        {% endfor %}
+        </select>
+        <input type="hidden" name="grupo_id"      id="grupoInput"      value="{{ grupo.pk|default:'' }}">
+        <input type="hidden" name="asignatura_id" id="asignaturaInput" value="{{ asignatura.pk|default:'' }}">
+      </div>
+
+      <div>
+        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">
+          Fecha
+        </label>
+        <input type="date" name="fecha"
+          value="{{ fecha|date:'Y-m-d' }}" max="{{ hoy|date:'Y-m-d' }}"
+          style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+      </div>
+
+      <div>
+        <button type="submit"
+          style="height:38px;padding:0 20px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          Cargar
+        </button>
+      </div>
+
+    </div>
+  </form>
+</div>
+
+{% if grupo and asignatura %}
+
+{# ── Tarjetas de conteo ── #}
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem">
+  {% for stat in "" %}{% endfor %}
+
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem 1.25rem;text-align:center">
+    <div style="font-size:30px;font-weight:700;color:var(--accent);line-height:1">{{ filas|length }}</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-top:4px">Alumnos</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem 1.25rem;text-align:center">
+    <div id="cntPresente" style="font-size:30px;font-weight:700;color:#059669;line-height:1">0</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-top:4px">Presentes</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem 1.25rem;text-align:center">
+    <div id="cntRetardo" style="font-size:30px;font-weight:700;color:#d97706;line-height:1">0</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-top:4px">Retardos</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem 1.25rem;text-align:center">
+    <div id="cntAusente" style="font-size:30px;font-weight:700;color:#dc2626;line-height:1">0</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-top:4px">Ausentes</div>
+  </div>
+</div>
+
+{# ── Tabla de asistencia ── #}
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="grupo_id"      value="{{ grupo.pk }}">
+  <input type="hidden" name="asignatura_id" value="{{ asignatura.pk }}">
+  <input type="hidden" name="fecha"         value="{{ fecha|date:'Y-m-d' }}">
+  <input type="hidden" name="guardar"       value="1">
+
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+
+    {# Cabecera azul marino — igual que cards de Mis Grupos #}
+    <div style="background:#10131c;border-bottom:1px solid rgba(255,255,255,.07);padding:1rem 1.5rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">{{ grupo }}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span style="background:rgba(79,110,247,.25);color:#8ba4fa;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">
+            {{ asignatura }}
+          </span>
+          <span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">
+            {{ fecha|date:"d/m/Y" }}
+          </span>
+          {% if ya_guardado %}
+          <span style="background:rgba(16,185,129,.2);color:#34d399;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+            Guardado
+          </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button type="button" onclick="marcarTodos('P')"
+          style="height:30px;padding:0 12px;background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+          Todos presentes
+        </button>
+        <button type="button" onclick="marcarTodos('A')"
+          style="height:30px;padding:0 12px;background:rgba(220,38,38,.12);color:#f87171;border:1px solid rgba(220,38,38,.2);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          Todos ausentes
+        </button>
+      </div>
+    </div>
+
+    {# Tabla #}
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:#f7f8fc;border-bottom:1px solid var(--border)">
+            <th style="width:44px;padding:.6rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:left">#</th>
+            <th style="padding:.6rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:left">Alumno</th>
+            <th style="width:290px;padding:.6rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Asistencia</th>
+            <th style="width:130px;padding:.6rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Este mes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fila in filas %}
+          <tr style="border-bottom:1px solid #f2f3f7;transition:background .1s" onmouseover="this.style.background='#f7f8fc'" onmouseout="this.style.background=''">
+
+            <td style="padding:.75rem 1.25rem;font-size:12px;color:var(--ink-3)">{{ forloop.counter }}</td>
+
+            <td style="padding:.75rem 1.25rem">
+              <div style="display:flex;align-items:center;gap:10px">
+                {% if fila.alumno.foto_perfil %}
+                <img src="{{ fila.alumno.foto_perfil.url }}"
+                  style="width:34px;height:34px;border-radius:9px;object-fit:cover;flex-shrink:0">
+                {% else %}
+                <div style="width:34px;height:34px;border-radius:9px;background:var(--accent-2);color:var(--accent);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  {{ fila.alumno.first_name|first|upper }}{{ fila.alumno.last_name|first|upper }}
+                </div>
+                {% endif %}
+                <div>
+                  <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ fila.alumno.get_full_name }}</div>
+                  <div style="font-size:11px;color:var(--ink-3)">{{ fila.alumno.username }}</div>
+                </div>
+              </div>
+            </td>
+
+            {# Toggle P / R / A #}
+            <td style="padding:.75rem 1.25rem">
+              <div style="display:inline-flex;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#f7f8fc;width:100%">
+
+                <input type="radio" class="radio-estado" name="estado_{{ fila.alumno.pk }}"
+                       id="P_{{ fila.alumno.pk }}" value="P" style="display:none"
+                       {% if fila.es_P %}checked{% endif %}>
+                <label for="P_{{ fila.alumno.pk }}" class="lbl-toggle lbl-p"
+                  style="flex:1;padding:6px 0;font-size:11px;font-weight:700;text-align:center;cursor:pointer;color:var(--ink-3);border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:4px;transition:background .12s,color .12s">
+                  <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                  Presente
+                </label>
+
+                <input type="radio" class="radio-estado" name="estado_{{ fila.alumno.pk }}"
+                       id="R_{{ fila.alumno.pk }}" value="R" style="display:none"
+                       {% if fila.es_R %}checked{% endif %}>
+                <label for="R_{{ fila.alumno.pk }}" class="lbl-toggle lbl-r"
+                  style="flex:1;padding:6px 0;font-size:11px;font-weight:700;text-align:center;cursor:pointer;color:var(--ink-3);border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:4px;transition:background .12s,color .12s">
+                  <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  Retardo
+                </label>
+
+                <input type="radio" class="radio-estado" name="estado_{{ fila.alumno.pk }}"
+                       id="A_{{ fila.alumno.pk }}" value="A" style="display:none"
+                       {% if fila.es_A %}checked{% endif %}>
+                <label for="A_{{ fila.alumno.pk }}" class="lbl-toggle lbl-a"
+                  style="flex:1;padding:6px 0;font-size:11px;font-weight:700;text-align:center;cursor:pointer;color:var(--ink-3);display:flex;align-items:center;justify-content:center;gap:4px;transition:background .12s,color .12s">
+                  <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  Ausente
+                </label>
+
+              </div>
+            </td>
+
+            <td style="padding:.75rem 1.25rem;text-align:center">
+              <div style="display:flex;gap:4px;justify-content:center">
+                <span style="background:#d1fae5;color:#065f46;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px" title="Presentes">{{ fila.presentes }}</span>
+                <span style="background:#fef3c7;color:#78350f;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px" title="Retardos">{{ fila.retardos }}</span>
+                <span style="background:#fee2e2;color:#7f1d1d;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px" title="Ausencias">{{ fila.ausentes }}</span>
+              </div>
+            </td>
+
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" style="padding:3rem;text-align:center">
+              <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--ink-3);margin:0 auto 10px;display:block"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+              <p style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:3px">Sin alumnos activos</p>
+              <p style="font-size:12px;color:var(--ink-3)">No hay alumnos activos registrados en este grupo.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if filas %}
+    <div style="padding:.875rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
+      <a href="?grupo_id={{ grupo.pk }}&asignatura_id={{ asignatura.pk }}&fecha={{ fecha|date:'Y-m-d' }}"
+        style="height:36px;padding:0 18px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 101.5-5M3 3v4h4"/></svg>
+        Cancelar
+      </a>
+      <button type="submit"
+        style="height:36px;padding:0 24px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        {% if ya_guardado %}Actualizar asistencia{% else %}Guardar asistencia{% endif %}
+      </button>
+    </div>
+    {% endif %}
+
+  </div>
+</form>
+
+{% else %}
+
+{# ── Estado vacío ── #}
+<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:4rem 1.5rem;text-align:center">
+  <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"
+    style="color:var(--ink-3);margin:0 auto 12px;display:block;opacity:.4">
+    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+  </svg>
+  <p style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px">Selecciona un grupo y asignatura</p>
+  <p style="font-size:13px;color:var(--ink-3)">Usa el selector de arriba para cargar la lista de alumnos.</p>
+</div>
+
+{% endif %}
+
+{# ── Estilos para el toggle de asistencia (requieren :checked, no funciona con clases inline) ── #}
+<style>
+  .radio-estado:checked ~ * { display:none; }
+
+  input#P_{{ grupo.pk }}:checked + .lbl-p,
+  [id^="P_"]:checked + .lbl-p {
+    background: #d1fae5 !important;
+    color: #065f46 !important;
+  }
+  [id^="R_"]:checked + .lbl-r {
+    background: #fef3c7 !important;
+    color: #78350f !important;
+  }
+  [id^="A_"]:checked + .lbl-a {
+    background: #fee2e2 !important;
+    color: #7f1d1d !important;
+  }
+</style>
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+<script>
+function aplicarAsignacion(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  const g = opt.dataset.grupo      || '';
+  const a = opt.dataset.asignatura || '';
+  if (g && a) {
+    const fecha = document.querySelector('input[name="fecha"]').value;
+    window.location.href = `?grupo_id=${g}&asignatura_id=${a}&fecha=${fecha}`;
+  }
+}
+
+function marcarTodos(v) {
+  document.querySelectorAll(`.radio-estado[value="${v}"]`).forEach(r => r.checked = true);
+  contar();
+  actualizarToggleUI();
+}
+
+function contar() {
+  let p=0,r=0,a=0;
+  document.querySelectorAll('.radio-estado:checked').forEach(el=>{
+    if(el.value==='P')p++; else if(el.value==='R')r++; else a++;
+  });
+  document.getElementById('cntPresente').textContent = p;
+  document.getElementById('cntRetardo').textContent  = r;
+  document.getElementById('cntAusente').textContent  = a;
+}
+
+function actualizarToggleUI() {
+  // Resetear todos
+  document.querySelectorAll('.lbl-toggle').forEach(l => {
+    l.style.background = '';
+    l.style.color = 'var(--ink-3)';
+  });
+  // Aplicar al seleccionado
+  document.querySelectorAll('.radio-estado:checked').forEach(r => {
+    const lbl = r.nextElementSibling;
+    if (!lbl) return;
+    if (r.value === 'P') { lbl.style.background='#d1fae5'; lbl.style.color='#065f46'; }
+    if (r.value === 'R') { lbl.style.background='#fef3c7'; lbl.style.color='#78350f'; }
+    if (r.value === 'A') { lbl.style.background='#fee2e2'; lbl.style.color='#7f1d1d'; }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.radio-estado').forEach(r => {
+    r.addEventListener('change', () => { contar(); actualizarToggleUI(); });
+  });
+  actualizarToggleUI();
+  contar();
+});
+</script>
+{% endblock %}

@@ -95,14 +95,18 @@ class Grupo(models.Model):
 
     @property
     def asistencia_mensual(self):
-        now   = timezone.now()
-        total = Asistencia.objects.filter(grupo=self, fecha__month=now.month).count()
+        from django.db.models import Count, Case, When, IntegerField
+        now = timezone.now()
+        resultado = Asistencia.objects.filter(
+            grupo=self, fecha__month=now.month
+        ).aggregate(
+            total=Count('id'),
+            presentes=Count(Case(When(estado='P', then=1), output_field=IntegerField()))
+        )
+        total = resultado['total']
         if total == 0:
             return 0
-        presentes = Asistencia.objects.filter(
-            grupo=self, fecha__month=now.month, presente=True
-        ).count()
-        return int((presentes / total) * 100)
+        return int((resultado['presentes'] / total) * 100)
 
 
 # ==========================================
@@ -163,22 +167,36 @@ class Calificacion(models.Model):
 
 
 class Asistencia(models.Model):
+    ESTADOS = [
+        ('P', 'Presente'),
+        ('A', 'Ausente'),
+        ('R', 'Retardo'),
+    ]
+
     alumno   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='asistencias')
     grupo    = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='asistencias')
-    fecha    = models.DateField(auto_now_add=True)
-    presente = models.BooleanField(default=True)
+    asignatura = models.ForeignKey(
+        'Asignatura',
+        on_delete=models.CASCADE,
+        related_name='asistencias',
+        null=True, blank=True,
+    )
+    fecha    = models.DateField(default=timezone.now)   # <-- ya no auto_now_add para poder editar
+    estado   = models.CharField(max_length=1, choices=ESTADOS, default='P')
 
     class Meta:
         verbose_name = "Asistencia"
         verbose_name_plural = "Asistencias"
         ordering = ['-fecha']
-        # Evita duplicar el registro del mismo alumno en el mismo día
-        unique_together = [['alumno', 'grupo', 'fecha']]
+        unique_together = [['alumno', 'grupo', 'asignatura', 'fecha']]
+
+    @property
+    def presente(self):
+        """Compatibilidad hacia atrás con código que use .presente"""
+        return self.estado == 'P'
 
     def __str__(self):
-        estado = "Presente" if self.presente else "Ausente"
-        return f"{self.alumno} — {self.grupo} — {self.fecha} ({estado})"
-
+        return f"{self.alumno} — {self.grupo} — {self.fecha} ({self.get_estado_display()})"
 
 # ==========================================
 # 4. HORARIOS
@@ -280,3 +298,61 @@ class HorarioClase(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+class Tarea(models.Model):
+    docente    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tareas_creadas')
+    grupo      = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='tareas')
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='tareas')
+    titulo     = models.CharField(max_length=200)
+    descripcion= models.TextField(blank=True)
+    archivo    = models.FileField(upload_to='tareas/archivos/', null=True, blank=True)
+    fecha_entrega = models.DateTimeField()
+    creada_en  = models.DateTimeField(auto_now_add=True)
+    activa     = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-creada_en']
+
+    def __str__(self):
+        return f"{self.titulo} — {self.grupo} | {self.asignatura}"
+
+    @property
+    def vencida(self):
+        from django.utils import timezone
+        return timezone.now() > self.fecha_entrega
+
+
+class EntregaTarea(models.Model):
+    ESTADOS = [
+        ('PENDIENTE',   'Pendiente'),
+        ('ENTREGADA',   'Entregada'),
+        ('CALIFICADA',  'Calificada'),
+        ('TARDE',       'Entrega tardía'),
+    ]
+    tarea     = models.ForeignKey(Tarea, on_delete=models.CASCADE, related_name='entregas')
+    alumno    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='entregas')
+    archivo   = models.FileField(upload_to='tareas/entregas/')
+    comentario= models.TextField(blank=True)
+    estado    = models.CharField(max_length=15, choices=ESTADOS, default='ENTREGADA')
+    calificacion = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    feedback  = models.TextField(blank=True)
+    entregada_en = models.DateTimeField(auto_now_add=True)
+    calificada_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [['tarea', 'alumno']]
+        ordering = ['-entregada_en']
+
+    def __str__(self):
+        return f"{self.alumno} → {self.tarea.titulo}"
+
+
+class ComentarioTarea(models.Model):
+    tarea   = models.ForeignKey(Tarea, on_delete=models.CASCADE, related_name='comentarios')
+    autor   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comentarios_tarea')
+    texto   = models.TextField()
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['creado_en']

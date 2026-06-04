@@ -9,18 +9,16 @@ User = get_user_model()
 
 INPUT_CLASSES = (
     "w-full px-4 py-3 rounded-xl "
-    "border border-slate-300 "
-    "bg-slate-50 "
+    "border border-slate-200 "
+    "bg-slate-50/50 "
     "text-sm text-slate-900 "
     "placeholder-slate-400 "
     "focus:bg-white "
     "focus:border-indigo-500 "
     "focus:ring-2 focus:ring-indigo-500 "
     "focus:outline-none "
-    "transition"
-    'w-full pl-4 pr-4 py-3 rounded-2xl text-xs border border-slate-200 '
-    'focus:ring-2 focus:ring-indigo-500 focus:border-transparent '
-    'transition-all duration-200 bg-slate-50/50 hover:bg-white'
+    "transition-all duration-200 "
+    "hover:bg-white"
 )
 
 class GrupoForm(forms.ModelForm):
@@ -151,7 +149,7 @@ class AsignaturaForm(forms.ModelForm):
                 plantel=plantel, rol='DOCENTE'
             )
             # Ocultar créditos en planteles que no sean universidad
-            if hasattr(plantel, 'id') and plantel.id != 2:
+            if hasattr(plantel, 'nivel_educativo') and plantel.nivel_educativo != 'SUPERIOR':
                 self.fields['creditos'].widget = forms.HiddenInput()
                 self.fields['creditos'].required = False
  
@@ -194,38 +192,24 @@ class AlumnoForm(forms.ModelForm):
                 'type': 'date'
             }),
         }
-
     def save(self, commit=True, creador=None, grupo=None):
         alumno = super().save(commit=False)
         alumno.rol = 'ALUMNO'
-
         if creador:
             alumno.plantel = creador.plantel
-
         if grupo:
             alumno.alumno_grupo = grupo
-
-        # --- LÓGICA DE CREDENCIALES AUTOMÁTICAS ---
-        
-        # 1. Generar Username Único ("fray" + 5 caracteres)
         while True:
             sufijo = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
             nuevo_username = f"fray{sufijo}"
             if not User.objects.filter(username=nuevo_username).exists():
                 alumno.username = nuevo_username
                 break
-
-        # 2. Generar Contraseña Aleatoria (8 caracteres)
         password_aleatoria = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
         alumno.set_password(password_aleatoria)
-
-        # AQUÍ GUARDAMOS LA COPIA EN TEXTO PLANO
-        alumno.password_plana = password_aleatoria 
-
         if commit:
             alumno.save()
-        return alumno
-    
+        return alumno, password_aleatoria   # ← ahora retorna tupla (alumno, contraseña)
 class TutorForm(forms.ModelForm):
     class Meta:
         model = Tutor

@@ -4,8 +4,8 @@ from django.contrib.auth.admin import UserAdmin
 from .models import User
 
 class CustomUserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'rol', 'plantel', 'status', 'is_staff')
-    list_filter = ('rol', 'plantel', 'status')
+    list_display = ('username', 'email', 'rol', 'plantel', 'estatus', 'is_staff')
+    list_filter = ('rol', 'plantel', 'estatus')
     add_fieldsets = UserAdmin.add_fieldsets + (
         ('Información de FRAY', {
             'fields': ('rol', 'plantel', 'telefono', 'status')

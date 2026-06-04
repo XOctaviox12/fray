@@ -1,4 +1,3 @@
-alumno_detalle.html
 {% extends 'inicio/base.html' %}
 {% block content %}
 <style>
@@ -42,7 +41,7 @@ alumno_detalle.html
   .avatar-initials { font-size:28px;font-weight:800;color:var(--ink-3);text-transform:uppercase; }
   .avatar-status { position:absolute;bottom:2px;right:2px;width:16px;height:16px;background:var(--ok);border:3px solid var(--white);border-radius:50%; }
   .alumno-name-main { font-size:16px;font-weight:800;color:var(--ink);text-align:center;line-height:1.2; }
-  .alumno-matricula { font-size:10px;font-weight:700;color:var(--accent);text-align:center;text-transform:uppercase;letter-spacing:.08em;margin-top:4px;font-style:italic; }
+  .alumno-matricula { font-size:10px;font-weight:700;color:var(--accent);text-align:center;text-transform:none;letter-spacing:.08em;margin-top:4px;font-style:italic; }
 
   .info-row { display:flex;flex-direction:column;gap:3px;margin-bottom:10px; }
   .info-row:last-child { margin-bottom:0; }
@@ -139,6 +138,7 @@ alumno_detalle.html
     <div style="display:flex;flex-direction:column;gap:14px;">
 
       <!-- Security -->
+       {% if user.rol in 'DIRECTOR,COORD,ADMIN' %}
       <div class="card">
         <div class="card-body">
           <div class="security-head">
@@ -169,7 +169,7 @@ alumno_detalle.html
           </a>
         </div>
       </div>
-
+      {% endif %}
       <!-- Avatar & info -->
       <div class="card">
         <div class="card-body" style="text-align:center;">

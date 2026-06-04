@@ -7,6 +7,8 @@ from .forms import (
     PlantelForm, DirectorCreationForm, AlumnoRegistrationForm, 
     UserProfileForm, CoordinadorForm, ResetPasswordForm, DocenteForm
 )
+import random
+import string
 
 # --- UTILIDADES DE SEGURIDAD Y CONTEXTO ---
 
@@ -19,7 +21,7 @@ def get_campus_theme(user):
         return {'color': 'blue', 'labels': {'docente': 'Docente', 'grupo': 'Grupo', 'alumnos': 'Alumnos'}}
     
     # Plantel 2 = Universidad (Superior), Otros = Básica
-    es_uni = user.plantel.id == 2
+    es_uni = user.plantel.nivel_educativo == 'SUPERIOR'
     return {
         'color': 'purple' if es_uni else 'blue',
         'labels': {
@@ -217,7 +219,7 @@ def get_campus_theme(user):
     if not user.plantel:
         return {'color': 'blue', 'labels': {'docente': 'Docente', 'docentes': 'Docentes', 'grupos': 'Grupos'}}
     
-    es_uni = user.plantel.id == 2
+    es_uni = user.plantel.nivel_educativo == 'SUPERIOR'
     return {
         'color': 'purple' if es_uni else 'blue',
         'labels': {
@@ -228,3 +230,12 @@ def get_campus_theme(user):
             'alumnos': 'Universitarios' if es_uni else 'Alumnos'
         }
     }
+@login_required
+def regenerar_password_docente(request, pk):
+    docente    = get_object_or_404(User, pk=pk, plantel=request.user.plantel, rol='DOCENTE')
+    nueva_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+    docente.set_password(nueva_pass)
+    docente.password_plana = nueva_pass
+    docente.save()
+    messages.success(request, f"Nueva contraseña para {docente.get_full_name()}: {nueva_pass}")
+    return redirect('detalle_docente', pk=pk)

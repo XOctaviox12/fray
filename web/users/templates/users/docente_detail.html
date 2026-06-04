@@ -74,6 +74,7 @@
     .detail-grid { grid-template-columns: 1fr; }
     .info-grid { grid-template-columns: 1fr; }
   }
+  
 </style>
 
 <div>
@@ -129,25 +130,88 @@
     </div>
 
     <!-- Sidebar -->
-    <div>
-      <div class="profile-sidebar">
-        <div class="sidebar-avatar">
-          {% if docente.foto_perfil %}
-            <img src="{{ docente.foto_perfil.url }}" style="width:100%;height:100%;object-fit:cover;">
-          {% else %}
-            {{ docente.first_name|first }}
-          {% endif %}
-        </div>
-        <div class="sidebar-name">{{ docente.get_full_name }}</div>
-        <div class="sidebar-id">@{{ docente.username }}</div>
-        <a href="{% url 'editar_docente' docente.pk %}" class="btn-edit">Editar Perfil</a>
-      </div>
+<div>
+  <div class="profile-sidebar">
+    <div class="sidebar-avatar">
+      {% if docente.foto_perfil %}
+        <img src="{{ docente.foto_perfil.url }}" style="width:100%;height:100%;object-fit:cover;">
+      {% else %}
+        {{ docente.first_name|first }}
+      {% endif %}
+    </div>
+    <div class="sidebar-name">{{ docente.get_full_name }}</div>
+    <div class="sidebar-id">@{{ docente.username }}</div>
+    <a href="{% url 'editar_docente' docente.pk %}" class="btn-edit">Editar Perfil</a>
+  </div>
 
-      <div class="coming-card">
-        <div class="coming-label">Carga Académica</div>
-        <div class="coming-sub">Materias asignadas próximamente.</div>
+  <!-- Seguridad -->
+  <div class="coming-card" style="margin-top:12px;">
+    <div class="coming-label" style="text-align:left;margin-bottom:10px;">Seguridad de Acceso</div>
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:12px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:8px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;">Contraseña Actual</div>
+          <div style="font-family:monospace;font-size:14px;font-weight:700;color:var(--accent);" id="pass-display-doc">••••••••</div>
+        </div>
+        {% if docente.password_plana %}
+        <div style="display:flex;gap:4px;">
+          <button onclick="togglePassDoc()" class="pass-icon-btn" title="Mostrar">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          </button>
+          <button onclick="copyPassDoc()" class="pass-icon-btn" title="Copiar">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          </button>
+        </div>
+        {% endif %}
       </div>
     </div>
+    <a href="{% url 'regenerar_password_docente' docente.pk %}" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;background:var(--ink);color:#fff;border:none;border-radius:10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;text-decoration:none;">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Regenerar Clave
+    </a>
+  </div>
+
+  <div class="coming-card">
+    <div class="coming-label">Carga Académica</div>
+    <div class="coming-sub">Materias asignadas próximamente.</div>
   </div>
 </div>
+  </div>
+</div>
+<style>
+  .pass-icon-btn {
+    width:28px;height:28px;border-radius:7px;background:none;border:none;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    color:var(--ink-3);transition:all .14s;
+  }
+  .pass-icon-btn:hover { background:var(--white);color:var(--purple); }
+</style>
+
+<script>
+let passDocVisible = false;
+const passDocDisplay = document.getElementById('pass-display-doc');
+const realPassDoc = '{{ docente.password_plana|default:"" }}';
+
+function togglePassDoc() {
+  passDocVisible = !passDocVisible;
+  passDocDisplay.textContent = passDocVisible ? (realPassDoc || 'No disponible') : '••••••••';
+  if (passDocVisible) setTimeout(() => { passDocVisible = false; passDocDisplay.textContent = '••••••••'; }, 10000);
+}
+
+function copyPassDoc() {
+  if (!realPassDoc) return;
+  navigator.clipboard.writeText(realPassDoc)
+    .then(() => showToast('Contraseña copiada'))
+    .catch(() => showToast('No se pudo copiar', true));
+}
+
+function showToast(msg, isError = false) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:999;padding:11px 18px;border-radius:12px;color:#fff;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;box-shadow:0 8px 24px rgba(0,0,0,.2);background:${isError ? 'var(--danger)' : 'var(--ok)'};transition:opacity .3s;font-family:'Plus Jakarta Sans',sans-serif;`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.style.opacity = '0', 2500);
+  setTimeout(() => t.remove(), 3000);
+}
+</script>
 {% endblock %}

@@ -11,23 +11,9 @@ from .forms import LoginForm
 from users.models import User
 from academic.models import Periodo, Grupo, Calificacion, Asistencia, Asignatura
 from academic.forms import AlumnoForm
+from users.views import get_campus_theme
 
 
-def get_campus_theme(user):
-    """Configuración visual según el plantel (Colores y Etiquetas)."""
-    if not user.plantel:
-        return {'color': 'blue', 'labels': {'alumnos': 'Alumnos', 'docentes': 'Docentes', 'grupos': 'Grupos'}}
-
-    es_uni = user.plantel.id == 2
-    return {
-        'color': 'purple' if es_uni else 'blue',
-        'labels': {
-            'alumnos':            'Universitarios' if es_uni else 'Alumnos',
-            'docentes':           'Catedráticos'   if es_uni else 'Docentes',
-            'grupos':             'Facultades'      if es_uni else 'Grupos',
-            'descripcion_grupos': 'Carreras y expedientes' if es_uni else 'Grados y secciones escolares',
-        }
-    }
 
 
 @login_required
@@ -85,7 +71,6 @@ def dashboard_view(request):
                     rol='ALUMNO',
                     plantel=plantel,
                     alumno_grupo=grupo,
-                    password_plana=password_aleatoria,
                 )
                 if fecha_nac:
                     try:
@@ -101,7 +86,7 @@ def dashboard_view(request):
                     request,
                     f"✅ Alumno inscrito: {nuevo_alumno.get_full_name()} "
                     f"| Matrícula: {nuevo_alumno.username} "
-                    f"| Contraseña: {password_aleatoria}"
+                    f"| Contraseña temporal: {password_aleatoria} — Anótala antes de cerrar."
                 )
                 return redirect('dashboard')
 
@@ -122,7 +107,7 @@ def dashboard_view(request):
     registros_hoy    = Asistencia.objects.filter(grupo__plantel=plantel, fecha=hoy).count()
     asistencia_global = "Sin registros"
     if registros_hoy > 0:
-        presentes = Asistencia.objects.filter(grupo__plantel=plantel, fecha=hoy, presente=True).count()
+        presentes = Asistencia.objects.filter(grupo__plantel=plantel, fecha=hoy, estado='P').count()
         asistencia_global = f"{int((presentes / registros_hoy) * 100)}%"
 
     # ── Radar de riesgo ───────────────────────────────────────────────
@@ -171,6 +156,9 @@ def dashboard_view(request):
 
     return render(request, 'inicio/dashboard.html', context)
 
+def logout_view(request):
+    logout(request)
+    return redirect('login')
 
 # ── Autenticación ─────────────────────────────────────────────────────
 
@@ -187,16 +175,17 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user:
                 login(request, user)
-                return redirect('/admin/' if user.is_superuser else 'dashboard')
+                # ── Redirigir según rol ──
+                if user.is_superuser:
+                    return redirect('/admin/')
+                elif user.rol == 'DOCENTE':
+                    return redirect('dashboard_docente')
+                else:
+                    return redirect('dashboard')
             messages.error(request, "Credenciales incorrectas.")
     else:
         form = LoginForm()
     return render(request, 'registration/login.html', {'form': form})
-
-
-def logout_view(request):
-    logout(request)
-    return redirect('login')
 
 
 # ── Búsqueda global ───────────────────────────────────────────────────
@@ -238,5 +227,45 @@ def busqueda_global(request):
         'docentes': docentes,
         'grupos':  grupos,
         'total':   total,
+        **theme,
+    })
+@login_required
+def dashboard_docente(request):
+    if request.user.rol != 'DOCENTE':
+        return redirect('dashboard')
+    
+    from users.models import DocenteGrupo
+    theme   = get_campus_theme(request.user)
+    hoy     = timezone.now().date()
+
+    # Grupos via DocenteGrupo (la fuente correcta)
+    asignaciones = DocenteGrupo.objects.filter(
+        docente=request.user, activo=True, asignatura__isnull=False
+    ).select_related('grupo', 'asignatura')
+
+    grupos = list({a.grupo for a in asignaciones})  # únicos
+
+    # Asistencia de hoy
+    registros_hoy = Asistencia.objects.filter(grupo__in=grupos, fecha=hoy).count()
+    presentes_hoy = Asistencia.objects.filter(grupo__in=grupos, fecha=hoy, estado='P').count()
+    asistencia_hoy = f"{int((presentes_hoy / registros_hoy) * 100)}%" if registros_hoy > 0 else "Sin registro"
+
+    # Total alumnos
+    total_alumnos = User.objects.filter(
+        rol='ALUMNO', alumno_grupo__in=grupos
+    ).distinct().count()
+
+    # Alumnos en riesgo
+    alumnos_riesgo = User.objects.filter(
+        rol='ALUMNO', alumno_grupo__in=grupos, notas__nota__lt=6.0
+    ).distinct()[:5]
+
+    return render(request, 'inicio/dashboard_docente.html', {
+        'grupos':         grupos,
+        'asignaciones':   asignaciones,
+        'total_alumnos':  total_alumnos,
+        'asistencia_hoy': asistencia_hoy,
+        'alumnos_riesgo': alumnos_riesgo,
+        'hoy':            hoy,
         **theme,
     })

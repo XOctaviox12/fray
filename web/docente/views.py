@@ -5,6 +5,8 @@ from django.contrib import messages
 from users.models import DocenteGrupo
 from django.utils import timezone
 from django.db.models import F, Q, Avg, Count, Case, When, IntegerField
+import cloudinary
+import requests as req
 
 def docente_required(view_func):
     """Decorador: solo docentes pueden acceder."""
@@ -247,6 +249,11 @@ def crear_tarea(request):
         'asignaciones': asignaciones,
     })
 
+def fix_pdf_url(url):
+    url = url.replace('http://', 'https://').replace('/image/upload/', '/raw/upload/')
+    if not url.endswith('.pdf'):
+        url += '.pdf'
+    return url
 
 @docente_required
 def detalle_tarea(request, pk):
@@ -265,6 +272,8 @@ def detalle_tarea(request, pk):
     filas = []
     for alumno in alumnos:
         entrega = entregas.get(alumno.pk)
+        if entrega and entrega.archivo:
+            entrega.archivo_url = fix_pdf_url(entrega.archivo.url)
         filas.append({
             'alumno':  alumno,
             'entrega': entrega,
@@ -300,9 +309,11 @@ def detalle_tarea(request, pk):
     total_entregaron = len([f for f in filas if f['entrega']])
     total_calificadas = len([f for f in filas if f['estado'] == 'CALIFICADA'])
     total_pendientes = total_alumnos - total_entregaron
+    tarea_archivo_url = fix_pdf_url(tarea.archivo.url) if tarea.archivo else None
 
     return render(request, 'docente/detalle_tarea.html', {
         'tarea':             tarea,
+        'tarea_archivo_url': tarea_archivo_url,
         'filas':             filas,
         'comentarios':       comentarios,
         'total_alumnos':     total_alumnos,
@@ -311,6 +322,33 @@ def detalle_tarea(request, pk):
         'total_pendientes':  total_pendientes,
     })
 
+@docente_required
+def ver_pdf(request, pk, tipo):
+    from academic.models import Tarea, EntregaTarea
+    import requests as req
+
+    if tipo == 'tarea':
+        obj = get_object_or_404(Tarea, pk=pk, docente=request.user)
+        public_id = str(obj.archivo) if obj.archivo else None
+    else:
+        obj = get_object_or_404(EntregaTarea, pk=pk)
+        public_id = str(obj.archivo) if obj.archivo else None
+
+    if not public_id:
+        return redirect('docente_tareas')
+
+    from django.conf import settings
+    cloud = settings.CLOUDINARY_STORAGE['CLOUD_NAME']
+    if not public_id.endswith('.pdf'):
+        public_id += '.pdf'
+    url = f'https://res.cloudinary.com/{cloud}/raw/upload/{public_id}'
+
+    r = req.get(url)
+    from django.http import HttpResponse
+    response = HttpResponse(r.content, content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="documento.pdf"'
+    response['X-Frame-Options'] = 'SAMEORIGIN'
+    return response
 
 @docente_required
 def eliminar_tarea(request, pk):
@@ -319,7 +357,7 @@ def eliminar_tarea(request, pk):
     if request.method == 'POST':
         tarea.delete()
         messages.success(request, 'Tarea eliminada.')
-    return redirect('tareas')
+    return redirect('docente_tareas')
 
 
 @docente_required

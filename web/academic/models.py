@@ -4,6 +4,7 @@ from django.db.models import Avg
 from django.utils import timezone
 from users.models import Plantel
 from django.core.exceptions import ValidationError
+from cloudinary.models import CloudinaryField
 
 
 # ==========================================
@@ -306,7 +307,7 @@ class Tarea(models.Model):
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='tareas')
     titulo     = models.CharField(max_length=200)
     descripcion= models.TextField(blank=True)
-    archivo    = models.FileField(upload_to='tareas/archivos/', null=True, blank=True)
+    archivo = CloudinaryField('archivo', resource_type='raw',type='upload', blank=True, null=True)
     fecha_entrega = models.DateTimeField()
     creada_en  = models.DateTimeField(auto_now_add=True)
     activa     = models.BooleanField(default=True)
@@ -332,7 +333,7 @@ class EntregaTarea(models.Model):
     ]
     tarea     = models.ForeignKey(Tarea, on_delete=models.CASCADE, related_name='entregas')
     alumno    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='entregas')
-    archivo   = models.FileField(upload_to='tareas/entregas/')
+    archivo = CloudinaryField('archivo', resource_type='raw',type='upload')
     comentario= models.TextField(blank=True)
     estado    = models.CharField(max_length=15, choices=ESTADOS, default='ENTREGADA')
     calificacion = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)

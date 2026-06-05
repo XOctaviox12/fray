@@ -27,13 +27,13 @@
       {% if tarea.descripcion %}
       <p style="font-size:13px;color:rgba(255,255,255,.5);margin-top:10px;margin-bottom:0">{{ tarea.descripcion }}</p>
       {% endif %}
-      {% if tarea.archivo %}
-      <a href="{{ tarea.archivo.url }}" target="_blank"
-        style="display:inline-flex;align-items:center;gap:5px;margin-top:10px;font-size:12px;font-weight:600;color:#8ba4fa;text-decoration:none">
-        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Ver archivo adjunto
-      </a>
-      {% endif %}
+{% if tarea_archivo_url %}
+<a href="{% url 'ver_pdf' tarea.pk 'tarea' %}" target="_blank"
+   style="display:inline-flex;align-items:center;gap:5px;margin-top:10px;font-size:12px;font-weight:600;color:#8ba4fa;text-decoration:none">
+  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+  Ver archivo adjunto
+</a>
+{% endif %}
     </div>
     <form method="post" action="{% url 'eliminar_tarea' tarea.pk %}" onsubmit="return confirm('¿Eliminar esta tarea?')">
       {% csrf_token %}
@@ -106,17 +106,19 @@
         </td>
         <td style="padding:.75rem 1.25rem;text-align:center">
           {% if fila.entrega %}
-            <a href="{{ fila.entrega.archivo.url }}" target="_blank"
-              style="font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px">
-              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Ver archivo
-            </a>
-            {% if fila.entrega.comentario %}
-            <p style="font-size:11px;color:var(--ink-3);margin:4px 0 0">"{{ fila.entrega.comentario|truncatechars:60 }}"</p>
-            {% endif %}
-          {% else %}
-            <span style="font-size:12px;color:var(--ink-3)">—</span>
-          {% endif %}
+{% if fila.entrega.archivo_url %}
+<a href="{% url 'ver_pdf' fila.entrega.pk 'entrega' %}" target="_blank"
+   style="font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+  Ver archivo
+</a>
+{% endif %}
+  {% if fila.entrega.comentario %}
+  <p style="font-size:11px;color:var(--ink-3);margin:4px 0 0">"{{ fila.entrega.comentario|truncatechars:60 }}"</p>
+  {% endif %}
+{% else %}
+  <span style="font-size:12px;color:var(--ink-3)">—</span>
+{% endif %}
         </td>
         <td style="padding:.75rem 1.25rem;text-align:center">
           {% if fila.entrega.calificacion %}

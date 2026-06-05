@@ -10,6 +10,7 @@ urlpatterns = [
     # Clase
     path('asistencia/',          views.lista_asistencia,     name='docente_lista_asistencia'),
     path('tareas/',                      views.tareas,         name='docente_tareas'),
+    path('ver-pdf/<int:pk>/<str:tipo>/', views.ver_pdf, name='ver_pdf'),
     path('tareas/crear/',                views.crear_tarea,    name='crear_tarea'),
     path('tareas/<int:pk>/',             views.detalle_tarea,  name='detalle_tarea'),
     path('tareas/<int:pk>/eliminar/',    views.eliminar_tarea, name='eliminar_tarea'),

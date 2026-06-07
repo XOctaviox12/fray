@@ -233,39 +233,83 @@ def busqueda_global(request):
 def dashboard_docente(request):
     if request.user.rol != 'DOCENTE':
         return redirect('dashboard')
-    
-    from users.models import DocenteGrupo
-    theme   = get_campus_theme(request.user)
-    hoy     = timezone.now().date()
 
-    # Grupos via DocenteGrupo (la fuente correcta)
+    from users.models import DocenteGrupo
+    from academic.models import Tarea, ComentarioTarea
+    theme = get_campus_theme(request.user)
+    hoy   = timezone.now().date()
+
+    # Grupos via DocenteGrupo
     asignaciones = DocenteGrupo.objects.filter(
         docente=request.user, activo=True, asignatura__isnull=False
     ).select_related('grupo', 'asignatura')
 
-    grupos = list({a.grupo for a in asignaciones})  # únicos
+    grupos = list({a.grupo for a in asignaciones})
 
-    # Asistencia de hoy
+    # KPIs
     registros_hoy = Asistencia.objects.filter(grupo__in=grupos, fecha=hoy).count()
     presentes_hoy = Asistencia.objects.filter(grupo__in=grupos, fecha=hoy, estado='P').count()
     asistencia_hoy = f"{int((presentes_hoy / registros_hoy) * 100)}%" if registros_hoy > 0 else "Sin registro"
 
-    # Total alumnos
     total_alumnos = User.objects.filter(
         rol='ALUMNO', alumno_grupo__in=grupos
     ).distinct().count()
 
-    # Alumnos en riesgo
-    alumnos_riesgo = User.objects.filter(
-        rol='ALUMNO', alumno_grupo__in=grupos, notas__nota__lt=6.0
-    ).distinct()[:5]
+    tareas_activas = Tarea.objects.filter(
+        docente=request.user, publicada=True,
+        fecha_entrega__gte=timezone.now()
+    ).count()
+
+    # Últimas 10 notificaciones: entregas + comentarios
+    from academic.models import EntregaTarea, ComentarioTarea, EntregaActividad
+    from itertools import chain
+
+    entregas_tarea = EntregaTarea.objects.filter(
+        tarea__docente=request.user
+    ).select_related('alumno', 'tarea').order_by('-entregada_en')[:10]
+
+    comentarios_tarea = ComentarioTarea.objects.filter(
+        tarea__docente=request.user
+    ).exclude(autor=request.user).select_related('autor', 'tarea').order_by('-creado_en')[:10]
+
+    # Construir lista unificada de notificaciones
+    notificaciones = []
+
+    for e in entregas_tarea:
+        notificaciones.append({
+            'tipo':   'entrega_tarea',
+            'icono':  '📥',
+            'color':  '#059669',
+            'bg':     '#d1fae5',
+            'titulo': f'{e.alumno.get_full_name()} entregó una tarea',
+            'sub':    e.tarea.titulo,
+            'fecha':  e.entregada_en,
+            'url':    f'/docente/tareas/{e.tarea.pk}/',
+        })
+
+    for c in comentarios_tarea:
+        notificaciones.append({
+            'tipo':   'comentario',
+            'icono':  '💬',
+            'color':  '#7c3aed',
+            'bg':     '#ede9fe',
+            'titulo': f'{c.autor.get_full_name()} comentó',
+            'sub':    c.tarea.titulo,
+            'fecha':  c.creado_en,
+            'url':    f'/docente/tareas/{c.tarea.pk}/',
+        })
+
+    # Ordenar por fecha desc y tomar 10
+    notificaciones.sort(key=lambda x: x['fecha'], reverse=True)
+    notificaciones = notificaciones[:10]
 
     return render(request, 'inicio/dashboard_docente.html', {
-        'grupos':         grupos,
-        'asignaciones':   asignaciones,
-        'total_alumnos':  total_alumnos,
-        'asistencia_hoy': asistencia_hoy,
-        'alumnos_riesgo': alumnos_riesgo,
-        'hoy':            hoy,
+        'grupos':          grupos,
+        'asignaciones':    asignaciones,
+        'total_alumnos':   total_alumnos,
+        'asistencia_hoy':  asistencia_hoy,
+        'tareas_activas':  tareas_activas,
+        'notificaciones':  notificaciones,
+        'hoy':             hoy,
         **theme,
     })

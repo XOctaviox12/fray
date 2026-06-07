@@ -1,0 +1,183 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Editar Actividad{% endblock %}
+{% block nav_actividades %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:760px">
+  <div style="margin-bottom:1.5rem">
+    <a href="{% url 'detalle_actividad' actividad.pk %}" style="font-size:12px;color:var(--ink-3);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-bottom:8px">
+      ← Volver al detalle
+    </a>
+    <h1 style="font-size:22px;font-weight:700;color:var(--ink)">Editar Actividad</h1>
+    <p style="font-size:13px;color:var(--ink-2)">Tipo: <strong>{{ actividad.get_tipo_display }}</strong> — Los campos de grupo y asignatura no se pueden cambiar.</p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:1.25rem">
+
+      <div style="background:#10131c;padding:1rem 1.5rem;display:flex;align-items:center;gap:10px">
+        <div>
+          <span style="background:rgba(79,110,247,.25);color:#8ba4fa;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">{{ actividad.asignatura }}</span>
+          <span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;margin-left:6px">{{ actividad.grupo }}</span>
+        </div>
+      </div>
+
+      <div style="padding:1.5rem;display:flex;flex-direction:column;gap:18px">
+
+        {# Título #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Título *</label>
+          <input type="text" name="titulo" value="{{ actividad.titulo }}"
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+        </div>
+
+        {# Instrucciones #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Instrucciones</label>
+          <textarea name="instrucciones" rows="3"
+            style="width:100%;border:1px solid var(--border);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none;resize:vertical">{{ actividad.instrucciones }}</textarea>
+        </div>
+
+        {# Fecha #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Fecha y hora límite *</label>
+          <input type="datetime-local" name="fecha_entrega"
+            value="{{ actividad.fecha_entrega|date:'Y-m-d' }}T{{ actividad.fecha_entrega|date:'H:i' }}"
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+        </div>
+
+        {# URL interactiva solo si aplica #}
+        {% if actividad.tipo == 'INTERACTIVA' %}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">URL del ejercicio interactivo</label>
+          <input type="url" name="url_interactiva" value="{{ actividad.url_interactiva|default:'' }}"
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+        </div>
+        {% endif %}
+
+        {# Archivo #}
+        {% if actividad.tipo in 'ARCHIVO,ABIERTA,MULTIPLE' %}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">
+            Reemplazar archivo adjunto
+            {% if actividad.archivo %}<span style="font-weight:400;color:var(--ink-3)">(hay uno cargado)</span>{% endif %}
+          </label>
+          <input type="file" name="archivo" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+            style="width:100%;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:13px;background:#f7f8fc;color:var(--ink)">
+          <p style="font-size:11px;color:var(--ink-3);margin-top:4px">Dejar vacío para conservar el archivo actual.</p>
+        </div>
+        {% endif %}
+
+        {# Estado publicación #}
+        <div style="display:flex;align-items:center;gap:10px;padding:12px;background:#f7f8fc;border-radius:9px;border:1px solid var(--border)">
+          <input type="checkbox" name="publicada" value="1" id="chkPublicada"
+            {% if actividad.publicada %}checked{% endif %}
+            style="width:16px;height:16px;accent-color:var(--accent)">
+          <label for="chkPublicada" style="font-size:13px;font-weight:600;color:var(--ink);cursor:pointer">
+            Publicada — visible para los alumnos
+          </label>
+        </div>
+
+      </div>
+    </div>
+
+    {# Preguntas editables si aplica #}
+    {% if actividad.tipo in 'MULTIPLE,ABIERTA' %}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:1.25rem">
+      <div style="padding:.75rem 1.5rem;border-bottom:1px solid var(--border);background:#f7f8fc;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:12px;font-weight:700;color:var(--ink)">Preguntas</span>
+        <button type="button" onclick="agregarPregunta()"
+          style="height:28px;padding:0 12px;background:var(--accent-2);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:7px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+          + Agregar pregunta
+        </button>
+      </div>
+      <div id="contenedorPreguntas" style="padding:1rem 1.5rem;display:flex;flex-direction:column;gap:16px">
+        {% for p in preguntas %}
+        <div class="bloque-pregunta" style="border:1px solid var(--border);border-radius:10px;padding:1rem;background:#f7f8fc">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span style="font-size:11px;font-weight:700;color:var(--ink-3);min-width:24px">{{ forloop.counter }}.</span>
+            <input type="text" name="pregunta_texto" value="{{ p.texto }}" placeholder="Texto de la pregunta"
+              style="flex:1;height:36px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:var(--ink);outline:none">
+            <input type="number" name="pregunta_puntos" value="{{ p.puntos }}" min="0.5" step="0.5" placeholder="Pts"
+              style="width:70px;height:36px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:var(--ink);outline:none;text-align:center">
+            <button type="button" onclick="this.closest('.bloque-pregunta').remove()"
+              style="width:30px;height:30px;border:none;background:rgba(220,38,38,.1);color:#dc2626;border-radius:7px;cursor:pointer;font-size:14px;flex-shrink:0">×</button>
+          </div>
+          {% if actividad.tipo == 'MULTIPLE' %}
+          <div class="opciones-wrap" style="padding-left:32px;display:flex;flex-direction:column;gap:6px">
+            {% for op in p.opciones.all %}
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="radio" name="opcion_correcta_{{ forloop.parentloop.counter0 }}"
+                value="{{ forloop.counter0 }}"
+                {% if op.es_correcta %}checked{% endif %}
+                style="accent-color:#059669">
+              <input type="text" name="opcion_texto_{{ forloop.parentloop.counter0 }}" value="{{ op.texto }}"
+                placeholder="Opción {{ forloop.counter }}"
+                style="flex:1;height:32px;border:1px solid var(--border);border-radius:7px;padding:0 10px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:var(--ink);outline:none">
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% empty %}
+        <p style="font-size:13px;color:var(--ink-3);text-align:center;padding:1rem 0">Sin preguntas. Agrega con el botón de arriba.</p>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div style="display:flex;justify-content:flex-end;gap:10px">
+      <a href="{% url 'detalle_actividad' actividad.pk %}"
+        style="height:38px;padding:0 18px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;text-decoration:none">
+        Cancelar
+      </a>
+      <button type="submit"
+        style="height:38px;padding:0 24px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+        Guardar cambios
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TIPO = "{{ actividad.tipo }}";
+let contadorPreguntas = {{ preguntas|length }};
+
+function agregarPregunta() {
+  const i = contadorPreguntas++;
+  const wrap = document.getElementById('contenedorPreguntas');
+  const div = document.createElement('div');
+  div.className = 'bloque-pregunta';
+  div.style.cssText = 'border:1px solid var(--border);border-radius:10px;padding:1rem;background:#f7f8fc';
+
+  let opcionesHTML = '';
+  if (TIPO === 'MULTIPLE') {
+    opcionesHTML = `
+      <div class="opciones-wrap" style="padding-left:32px;display:flex;flex-direction:column;gap:6px">
+        ${[0,1,2,3].map(j => `
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="radio" name="opcion_correcta_${i}" value="${j}" style="accent-color:#059669">
+            <input type="text" name="opcion_texto_${i}" placeholder="Opción ${j+1}"
+              style="flex:1;height:32px;border:1px solid var(--border);border-radius:7px;padding:0 10px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:var(--ink);outline:none">
+          </div>`).join('')}
+      </div>`;
+  }
+
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:700;color:var(--ink-3);min-width:24px">${i+1}.</span>
+      <input type="text" name="pregunta_texto" placeholder="Texto de la pregunta"
+        style="flex:1;height:36px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:var(--ink);outline:none">
+      <input type="number" name="pregunta_puntos" value="1" min="0.5" step="0.5" placeholder="Pts"
+        style="width:70px;height:36px;border:1px solid var(--border);border-radius:8px;padding:0 10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:var(--ink);outline:none;text-align:center">
+      <button type="button" onclick="this.closest('.bloque-pregunta').remove()"
+        style="width:30px;height:30px;border:none;background:rgba(220,38,38,.1);color:#dc2626;border-radius:7px;cursor:pointer;font-size:14px;flex-shrink:0">×</button>
+    </div>
+    ${opcionesHTML}`;
+  wrap.appendChild(div);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Boleta{% endblock %}
+{% block nav_boleta %}active{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1.5rem">
+  <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:2px">Boleta / Concentrado</h1>
+  <p style="font-size:13px;color:var(--ink-2)">Selecciona un grupo para ver y capturar calificaciones</p>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+  {% for g in grupos %}
+  <a href="{% url 'docente_boleta_grupo' g.grupo__pk %}"
+    style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;text-decoration:none;display:flex;align-items:center;gap:14px;transition:box-shadow .15s"
+    onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.07)'" onmouseout="this.style.boxShadow=''">
+    <div style="width:42px;height:42px;border-radius:10px;background:var(--accent-2);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+    </div>
+    <div>
+      <div style="font-size:14px;font-weight:700;color:var(--ink)">{{ g.grupo__nombre }}</div>
+      <div style="font-size:12px;color:var(--ink-3);margin-top:2px">Ver boleta y capturar calificaciones</div>
+    </div>
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-left:auto;color:var(--ink-3)"><path d="M9 18l6-6-6-6"/></svg>
+  </a>
+  {% empty %}
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:3rem;text-align:center;grid-column:1/-1">
+    <p style="font-size:14px;color:var(--ink-3)">No tienes grupos asignados.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;display:flex;align-items:center;gap:16px;transition:box-shadow .15s"
+  onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.07)'" onmouseout="this.style.boxShadow=''">
+
+  {# Ícono tipo #}
+  <div style="width:42px;height:42px;border-radius:10px;background:{% if not act.publicada %}#f3f4f6{% else %}var(--accent-2){% endif %};color:{% if not act.publicada %}var(--ink-3){% else %}var(--accent){% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    {% if act.tipo == 'MULTIPLE' %}
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    {% elif act.tipo == 'ABIERTA' %}
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    {% elif act.tipo == 'ARCHIVO' %}
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    {% else %}
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+    {% endif %}
+  </div>
+
+  {# Info #}
+  <div style="flex:1;min-width:0">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+      <span style="font-size:14px;font-weight:700;color:var(--ink)">{{ act.titulo }}</span>
+      {% if not act.publicada %}
+        <span style="background:#f3f4f6;color:#6b7280;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">Borrador</span>
+      {% elif act.vencida %}
+        <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">Vencida</span>
+      {% else %}
+        <span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">Activa</span>
+      {% endif %}
+      <span style="background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">{{ act.get_tipo_display }}</span>
+    </div>
+    <div style="font-size:12px;color:var(--ink-3);display:flex;gap:12px;flex-wrap:wrap">
+      <span>📚 {{ act.asignatura }}</span>
+      <span>👥 {{ act.grupo }}</span>
+      <span>📅 {{ act.fecha_entrega|date:"d/m/Y H:i" }}</span>
+      <span>📝 {{ act.total_entregas }} entregas</span>
+    </div>
+  </div>
+
+  {# Botones #}
+  <div style="display:flex;gap:8px;flex-shrink:0;align-items:center">
+    <a href="{% url 'detalle_actividad' act.pk %}"
+      style="height:34px;padding:0 16px;background:var(--accent-2);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:9px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;text-decoration:none">
+      Ver detalle →
+    </a>
+    {% if not act.publicada or act.vencida %}
+    <a href="{% url 'editar_actividad' act.pk %}"
+      style="height:34px;padding:0 14px;background:#f7f8fc;color:var(--ink-2);border:1px solid var(--border);border-radius:9px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;text-decoration:none">
+      <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Editar
+    </a>
+    {% endif %}
+    {% if not act.publicada %}
+    <form method="post" action="{% url 'eliminar_actividad' act.pk %}"
+      onsubmit="return confirm('¿Eliminar esta actividad?')" style="margin:0">
+      {% csrf_token %}
+      <button type="submit"
+        style="height:34px;padding:0 14px;background:rgba(220,38,38,.08);color:#dc2626;border:1px solid rgba(220,38,38,.2);border-radius:9px;font-size:12px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        Borrar
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+</div>

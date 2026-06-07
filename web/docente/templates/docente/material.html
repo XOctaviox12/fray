@@ -1,0 +1,238 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Material de Apoyo{% endblock %}
+{% block nav_material %}active{% endblock %}
+
+{% block content %}
+
+{# ── Encabezado ── #}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px">
+  <div>
+    <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:2px">Material de Apoyo</h1>
+    <p style="font-size:13px;color:var(--ink-2)">{{ total }} recurso{% if total != 1 %}s{% endif %} publicados para tus alumnos</p>
+  </div>
+  <a href="{% url 'subir_material' %}"
+    style="height:38px;padding:0 20px;background:var(--accent);color:#fff;border-radius:9px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    Subir material
+  </a>
+</div>
+
+{# ── Filtros y búsqueda ── #}
+<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem 1.5rem;margin-bottom:1.25rem">
+  <form method="get" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+
+    {# Búsqueda #}
+    <div style="flex:2;min-width:200px">
+      <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Buscar</label>
+      <div style="position:relative">
+        <svg width="13" height="13" fill="none" stroke="var(--ink-3)" stroke-width="2" viewBox="0 0 24 24"
+          style="position:absolute;left:10px;top:50%;transform:translateY(-50%)">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input type="text" name="q" value="{{ q }}" placeholder="Buscar por título..."
+          style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 12px 0 32px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+      </div>
+    </div>
+
+    {# Grupo/asignatura #}
+    <div style="flex:2;min-width:180px">
+      <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Grupo / Asignatura</label>
+      <select name="_sel" onchange="filtrarMat(this)"
+        style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
+        <option value="">— Todos —</option>
+        {% for a in asignaciones %}
+        <option value="{{ a.grupo.pk }}-{{ a.asignatura.pk }}"
+          {% if grupo_id == a.grupo.pk|stringformat:"s" and asignatura_id == a.asignatura.pk|stringformat:"s" %}selected{% endif %}>
+          {{ a.grupo }} · {{ a.asignatura }}
+        </option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="grupo_id" id="fGrupo" value="{{ grupo_id }}">
+      <input type="hidden" name="asignatura_id" id="fAsig" value="{{ asignatura_id }}">
+    </div>
+
+    {# Tipo #}
+    <div style="flex:1;min-width:130px">
+      <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Tipo</label>
+      <select name="tipo"
+        style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
+        <option value="">— Todos —</option>
+        {% for cod, nom in tipos %}
+        <option value="{{ cod }}" {% if tipo_filtro == cod %}selected{% endif %}>{{ nom }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="submit" style="height:38px;padding:0 18px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+      Filtrar
+    </button>
+    {% if q or grupo_id or asignatura_id or tipo_filtro or carpeta_id %}
+    <a href="{% url 'material_apoyo' %}"
+      style="height:38px;padding:0 14px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;text-decoration:none">
+      ✕ Limpiar
+    </a>
+    {% endif %}
+  </form>
+</div>
+
+{# ── Chips de tipo ── #}
+<div style="display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap">
+  <a href="?{% if grupo_id %}grupo_id={{ grupo_id }}&asignatura_id={{ asignatura_id }}&{% endif %}q={{ q }}"
+    style="height:30px;padding:0 14px;border-radius:20px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px;text-decoration:none;border:1px solid {% if not tipo_filtro %}var(--accent){% else %}var(--border){% endif %};background:{% if not tipo_filtro %}var(--accent-2){% else %}#fff{% endif %};color:{% if not tipo_filtro %}var(--accent){% else %}var(--ink-2){% endif %}">
+    Todos <span style="background:rgba(0,0,0,.08);border-radius:20px;padding:1px 6px">{{ total }}</span>
+  </a>
+  {% for cod, nom in tipos %}
+  <a href="?tipo={{ cod }}{% if grupo_id %}&grupo_id={{ grupo_id }}&asignatura_id={{ asignatura_id }}{% endif %}&q={{ q }}"
+    style="height:30px;padding:0 14px;border-radius:20px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:5px;text-decoration:none;border:1px solid {% if tipo_filtro == cod %}var(--accent){% else %}var(--border){% endif %};background:{% if tipo_filtro == cod %}var(--accent-2){% else %}#fff{% endif %};color:{% if tipo_filtro == cod %}var(--accent){% else %}var(--ink-2){% endif %}">
+    {% if cod == 'PDF' %}📄{% elif cod == 'VIDEO' %}🎬{% elif cod == 'IMAGEN' %}🖼️{% elif cod == 'LINK' %}🔗{% else %}📎{% endif %}
+    {{ nom }}
+    {% if conteos.cod %}<span style="background:rgba(0,0,0,.08);border-radius:20px;padding:1px 6px">{{ conteos.cod }}</span>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+{% if total == 0 %}
+{# ── Estado vacío ── #}
+<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:5rem;text-align:center">
+  <div style="font-size:52px;margin-bottom:12px">📚</div>
+  <p style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px">
+    {% if q %}Sin resultados para "{{ q }}"{% else %}Sin material aún{% endif %}
+  </p>
+  <p style="font-size:13px;color:var(--ink-3);margin-bottom:20px">
+    {% if q %}Intenta con otro término de búsqueda.{% else %}Sube el primer recurso para tus alumnos.{% endif %}
+  </p>
+  {% if not q %}
+  <a href="{% url 'subir_material' %}"
+    style="height:38px;padding:0 20px;background:var(--accent);color:#fff;border-radius:9px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;margin:0 auto">
+    + Subir material
+  </a>
+  {% endif %}
+</div>
+
+{% else %}
+
+{# ── Carpetas con su material ── #}
+{% for carpeta, mats in con_carpeta.items %}
+<div class="carpeta-bloque" data-carpeta-id="{{ carpeta.pk }}" style="margin-bottom:1.5rem">
+
+  {# Header carpeta #}
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:32px;height:32px;border-radius:8px;background:var(--accent-2);color:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer"
+        onclick="toggleCarpeta('carpeta-{{ carpeta.pk }}')">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" id="ico-carpeta-{{ carpeta.pk }}"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--ink)">{{ carpeta.nombre }}</div>
+        {% if carpeta.descripcion %}
+        <div style="font-size:11px;color:var(--ink-3)">{{ carpeta.descripcion }}</div>
+        {% endif %}
+      </div>
+      <span style="background:var(--accent-2);color:var(--accent);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">
+        {{ mats|length }} recurso{% if mats|length != 1 %}s{% endif %}
+      </span>
+    </div>
+    <form method="post" action="{% url 'eliminar_carpeta' carpeta.pk %}"
+      onsubmit="return confirm('¿Eliminar carpeta? Los materiales quedarán sin carpeta.')" style="margin:0">
+      {% csrf_token %}
+      <button type="submit"
+        style="height:28px;padding:0 10px;background:rgba(220,38,38,.07);color:#dc2626;border:1px solid rgba(220,38,38,.15);border-radius:7px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+        Eliminar carpeta
+      </button>
+    </form>
+  </div>
+
+  {# Grid de cards de esta carpeta #}
+  <div id="carpeta-{{ carpeta.pk }}"
+    class="material-grid sortable-grid"
+    data-url="{% url 'reordenar_material' %}"
+    style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+    {% for mat in mats %}
+      {% include "docente/_card_material.html" with mat=mat %}
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+{# ── Sin carpeta ── #}
+{% if sin_carpeta %}
+<div style="margin-bottom:1.5rem">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:.875rem">
+    <span style="font-size:12px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.07em">Sin carpeta</span>
+    <span style="background:#f3f4f6;color:#6b7280;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">{{ sin_carpeta|length }}</span>
+  </div>
+  <div class="material-grid sortable-grid"
+    data-url="{% url 'reordenar_material' %}"
+    style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+    {% for mat in sin_carpeta %}
+      {% include "docente/_card_material.html" with mat=mat %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filtrarMat(sel) {
+  const [g, a] = (sel.value || '-').split('-');
+  document.getElementById('fGrupo').value = g || '';
+  document.getElementById('fAsig').value  = a || '';
+}
+
+function toggleCarpeta(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'grid' : 'none';
+}
+
+// ── Drag & drop para reordenar ──
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.sortable-grid').forEach(grid => {
+    let dragSrc = null;
+
+    grid.querySelectorAll('.material-card').forEach(card => {
+      card.setAttribute('draggable', true);
+
+      card.addEventListener('dragstart', e => {
+        dragSrc = card;
+        card.style.opacity = '.4';
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => {
+        card.style.opacity = '1';
+        guardarOrden(grid);
+      });
+      card.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+      card.addEventListener('drop', e => {
+        e.preventDefault();
+        if (dragSrc !== card) {
+          const allCards = [...grid.querySelectorAll('.material-card')];
+          const srcIdx  = allCards.indexOf(dragSrc);
+          const tgtIdx  = allCards.indexOf(card);
+          if (srcIdx < tgtIdx) card.after(dragSrc);
+          else card.before(dragSrc);
+        }
+      });
+    });
+
+    function guardarOrden(grid) {
+      const ids = [...grid.querySelectorAll('.material-card')].map(c => c.dataset.id);
+      fetch(grid.dataset.url, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken': getCookie('csrftoken')},
+        body: JSON.stringify({ids})
+      });
+    }
+  });
+});
+
+function getCookie(name) {
+  return document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith(name+'='))?.split('=')[1] || '';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,216 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Nueva Actividad{% endblock %}
+{% block nav_actividades %}active{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1rem">
+  <a href="{% url 'docente_actividades' %}" style="font-size:12px;color:var(--ink-3);text-decoration:none">← Volver</a>
+</div>
+
+<div style="max-width:720px">
+  <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:1.5rem">Nueva Actividad</h1>
+
+  {% if messages %}
+    {% for msg in messages %}
+    <div style="background:#fee2e2;color:#991b1b;padding:.75rem 1rem;border-radius:9px;margin-bottom:1rem;font-size:13px">{{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {# Grupo / Asignatura #}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1rem">Grupo y Asignatura</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Grupo</label>
+          <select name="grupo_id" id="selGrupo" onchange="filtrarAsig()" required
+            style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
+            <option value="">— Selecciona —</option>
+            {% for a in asignaciones %}
+            <option value="{{ a.grupo.pk }}">{{ a.grupo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Asignatura</label>
+          <select name="asignatura_id" id="selAsig" required
+            style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
+            <option value="">— Primero elige grupo —</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    {# Info básica #}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1rem">Información</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Título *</label>
+          <input type="text" name="titulo" required
+            style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Instrucciones</label>
+          <textarea name="instrucciones" rows="3"
+            style="width:100%;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none;resize:none;box-sizing:border-box"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Tipo de actividad *</label>
+            <select name="tipo" id="selTipo" onchange="mostrarSeccion()" required
+              style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
+              <option value="">— Selecciona —</option>
+              <option value="ABIERTA">Pregunta abierta</option>
+              <option value="MULTIPLE">Opción múltiple</option>
+              <option value="ARCHIVO">Subir archivo</option>
+              <option value="INTERACTIVA">Ejercicio interactivo</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Fecha de entrega *</label>
+            <input type="datetime-local" name="fecha_entrega" required
+              style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none;box-sizing:border-box">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# Sección archivo adjunto #}
+    <div id="secArchivo" style="display:none;background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1rem">Archivo de instrucciones (opcional)</div>
+      <input type="file" name="archivo" accept=".pdf,.doc,.docx" style="font-size:13px;color:var(--ink)">
+    </div>
+
+    {# Sección URL interactiva #}
+    <div id="secInteractiva" style="display:none;background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px">URL del ejercicio interactivo</div>
+      <p style="font-size:11px;color:var(--ink-3);margin-bottom:12px">Pega el enlace de GeoGebra, Kahoot, Quizlet, Wordwall, Desmos, etc.</p>
+      <input type="url" name="url_interactiva" placeholder="https://..."
+        style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none;box-sizing:border-box">
+    </div>
+
+    {# Sección preguntas #}
+    <div id="secPreguntas" style="display:none;background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <span style="font-size:12px;font-weight:700;color:var(--ink)">Preguntas</span>
+        <button type="button" onclick="agregarPregunta()"
+          style="height:30px;padding:0 14px;background:var(--accent-2);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+          + Agregar pregunta
+        </button>
+      </div>
+      <div id="listaPreguntas"></div>
+    </div>
+
+    {# Toggle publicar #}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">Publicar ahora</div>
+        <div style="font-size:12px;color:var(--ink-3)">Si no publicas, los alumnos no verán la actividad hasta que la liberes</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" name="publicada" value="1" id="chkPublicar" style="display:none">
+        <div id="togglePublicar" onclick="toggleSwitch()"
+          style="width:44px;height:24px;background:#e5e7eb;border-radius:12px;position:relative;transition:background .2s;cursor:pointer">
+          <div id="toggleCircle" style="width:20px;height:20px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+        </div>
+        <span id="toggleLabel" style="font-size:12px;font-weight:600;color:var(--ink-3)">Borrador</span>
+      </div>
+    </div>
+
+    <button type="submit"
+      style="height:42px;padding:0 28px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+      Crear Actividad
+    </button>
+
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const asignaciones = [
+  {% for a in asignaciones %}
+  { grupo: "{{ a.grupo.pk }}", asignatura: "{{ a.asignatura.pk }}", nombre: "{{ a.asignatura }}" },
+  {% endfor %}
+];
+
+function filtrarAsig() {
+  const grupoId = document.getElementById('selGrupo').value;
+  const sel = document.getElementById('selAsig');
+  sel.innerHTML = '<option value="">— Selecciona —</option>';
+  asignaciones.filter(a => a.grupo === grupoId).forEach(a => {
+    sel.innerHTML += `<option value="${a.asignatura}">${a.nombre}</option>`;
+  });
+}
+
+function mostrarSeccion() {
+  const tipo = document.getElementById('selTipo').value;
+  document.getElementById('secArchivo').style.display     = ['ABIERTA','MULTIPLE','ARCHIVO'].includes(tipo) ? 'block' : 'none';
+  document.getElementById('secInteractiva').style.display = tipo === 'INTERACTIVA' ? 'block' : 'none';
+  document.getElementById('secPreguntas').style.display   = ['ABIERTA','MULTIPLE'].includes(tipo) ? 'block' : 'none';
+}
+
+function toggleSwitch() {
+  const chk = document.getElementById('chkPublicar');
+  chk.checked = !chk.checked;
+  actualizarToggle(chk.checked);
+}
+
+function actualizarToggle(activo) {
+  const toggle = document.getElementById('togglePublicar');
+  const circle = document.getElementById('toggleCircle');
+  const label  = document.getElementById('toggleLabel');
+  toggle.style.background = activo ? 'var(--accent)' : '#e5e7eb';
+  circle.style.left       = activo ? '22px' : '2px';
+  label.textContent       = activo ? 'Publicada' : 'Borrador';
+  label.style.color       = activo ? 'var(--accent)' : 'var(--ink-3)';
+}
+
+document.addEventListener('DOMContentLoaded', () => actualizarToggle(false));
+
+let preguntaIdx = 0;
+
+function agregarPregunta() {
+  const tipo = document.getElementById('selTipo').value;
+  const i = preguntaIdx++;
+  const div = document.createElement('div');
+  div.style.cssText = 'border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:10px';
+  div.id = `preg_${i}`;
+
+  let opcionesHTML = tipo === 'MULTIPLE' ? `
+    <div style="margin-top:10px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px">Opciones (marca la correcta)</div>
+      <div id="opciones_${i}">
+        ${[0,1,2,3].map(j => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <input type="radio" name="opcion_correcta_${i}" value="${j}">
+          <input type="text" name="opcion_texto_${i}" placeholder="Opción ${j+1}"
+            style="flex:1;height:32px;border:1px solid var(--border);border-radius:7px;padding:0 10px;font-size:12px;background:#f7f8fc;outline:none">
+        </div>`).join('')}
+      </div>
+    </div>` : '';
+
+  div.innerHTML = `
+    <div style="display:flex;gap:10px;align-items:flex-start">
+      <div style="flex:1">
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3)">Pregunta ${i+1}</label>
+        <textarea name="pregunta_texto" rows="2" placeholder="Escribe la pregunta..."
+          style="width:100%;margin-top:5px;border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;outline:none;resize:none;box-sizing:border-box"></textarea>
+      </div>
+      <div style="width:80px">
+        <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3)">Puntos</label>
+        <input type="number" name="pregunta_puntos" value="1" min="0.5" step="0.5"
+          style="width:100%;height:38px;margin-top:5px;border:1px solid var(--border);border-radius:7px;padding:0 8px;font-size:13px;background:#f7f8fc;outline:none;box-sizing:border-box">
+      </div>
+      <button type="button" onclick="document.getElementById('preg_${i}').remove()"
+        style="margin-top:18px;height:30px;width:30px;background:#fee2e2;color:#dc2626;border:none;border-radius:7px;font-size:16px;cursor:pointer;flex-shrink:0">×</button>
+    </div>
+    ${opcionesHTML}
+  `;
+  document.getElementById('listaPreguntas').appendChild(div);
+}
+</script>
+{% endblock %}

@@ -33,7 +33,7 @@
             </option>
             {% endfor %}
           </select>
-          <input type="hidden" name="grupo_id"      id="gInput">
+          <input type="hidden" name="grupo_id" id="gInput">
           <input type="hidden" name="asignatura_id" id="aInput">
         </div>
 
@@ -66,6 +66,18 @@
           <p style="font-size:11px;color:var(--ink-3);margin-top:4px">Opcional. PDF, Word o imagen.</p>
         </div>
 
+        {# Publicar / Borrador #}
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f7f8fc;border:1px solid var(--border);border-radius:9px">
+          <input type="checkbox" name="publicada" value="1" id="chkPublicada" checked
+            style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0">
+          <div>
+            <label for="chkPublicada" style="font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;display:block">
+              Publicar ahora — visible para los alumnos
+            </label>
+            <span style="font-size:11px;color:var(--ink-3)">Desactiva para guardar como borrador y publicar después.</span>
+          </div>
+        </div>
+
       </div>
 
       <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
@@ -73,11 +85,13 @@
           style="height:38px;padding:0 18px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;text-decoration:none">
           Cancelar
         </a>
-        <button type="submit"
-          style="height:38px;padding:0 24px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+        <button type="submit" id="btnSubmit"
+          style="height:38px;padding:0 24px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
           Publicar Tarea
         </button>
       </div>
+
     </div>
   </form>
 </div>
@@ -90,5 +104,16 @@ function aplicarAsig(sel) {
   document.getElementById('gInput').value = opt.dataset.g || '';
   document.getElementById('aInput').value = opt.dataset.a || '';
 }
+
+document.getElementById('chkPublicada').addEventListener('change', function() {
+  const btn = document.getElementById('btnSubmit');
+  if (this.checked) {
+    btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Publicar Tarea`;
+    btn.style.background = 'var(--accent)';
+  } else {
+    btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Guardar Borrador`;
+    btn.style.background = '#6b7280';
+  }
+});
 </script>
 {% endblock %}

@@ -153,9 +153,17 @@ class Asignatura(models.Model):
 
 
 class Calificacion(models.Model):
+    TIPOS = [
+        ('MANUAL',     'Captura manual'),
+        ('TAREA',      'Tarea'),
+        ('ACTIVIDAD',  'Actividad'),
+    ]
     alumno     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notas')
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='calificaciones')
+    grupo      = models.ForeignKey('Grupo', on_delete=models.CASCADE, related_name='calificaciones', null=True, blank=True)
+    docente    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='calificaciones_dadas', null=True, blank=True)
     nota       = models.DecimalField(max_digits=4, decimal_places=2)
+    tipo       = models.CharField(max_length=15, choices=TIPOS, default='MANUAL')
     fecha      = models.DateField(auto_now_add=True)
 
     class Meta:
@@ -311,6 +319,7 @@ class Tarea(models.Model):
     fecha_entrega = models.DateTimeField()
     creada_en  = models.DateTimeField(auto_now_add=True)
     activa     = models.BooleanField(default=True)
+    publicada  = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-creada_en']
@@ -353,6 +362,134 @@ class ComentarioTarea(models.Model):
     tarea   = models.ForeignKey(Tarea, on_delete=models.CASCADE, related_name='comentarios')
     autor   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comentarios_tarea')
     texto   = models.TextField()
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['creado_en']
+
+class Actividad(models.Model):
+    TIPOS = [
+        ('ABIERTA',    'Pregunta abierta'),
+        ('MULTIPLE',   'Opción múltiple'),
+        ('ARCHIVO',    'Subir archivo'),
+        ('INTERACTIVA','Ejercicio interactivo'),
+    ]
+    docente       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    grupo         = models.ForeignKey(Grupo, on_delete=models.CASCADE)
+    asignatura    = models.ForeignKey(Asignatura, on_delete=models.CASCADE)
+    titulo        = models.CharField(max_length=200)
+    instrucciones = models.TextField(blank=True)
+    tipo          = models.CharField(max_length=15, choices=TIPOS)
+    archivo       = CloudinaryField('archivo', resource_type='raw', type='upload', blank=True, null=True)
+    url_interactiva = models.URLField(blank=True, null=True)  # GeoGebra, Kahoot, Quizlet, etc.
+    fecha_entrega = models.DateTimeField()
+    calificacion_automatica = models.BooleanField(default=False)
+    valor_total   = models.DecimalField(max_digits=4, decimal_places=2, default=10)
+    creada_en     = models.DateTimeField(auto_now_add=True)
+    publicada    = models.BooleanField(default=False)
+    publicada_en = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def vencida(self):
+        return timezone.now() > self.fecha_entrega
+
+class PreguntaActividad(models.Model):
+    actividad  = models.ForeignKey(Actividad, on_delete=models.CASCADE, related_name='preguntas')
+    texto      = models.TextField()
+    orden      = models.IntegerField(default=0)
+    puntos     = models.DecimalField(max_digits=4, decimal_places=2, default=1)
+
+class OpcionRespuesta(models.Model):
+    pregunta   = models.ForeignKey(PreguntaActividad, on_delete=models.CASCADE, related_name='opciones')
+    texto      = models.CharField(max_length=300)
+    es_correcta = models.BooleanField(default=False)
+
+class EntregaActividad(models.Model):
+    actividad    = models.ForeignKey(Actividad, on_delete=models.CASCADE, related_name='entregas')
+    alumno       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    archivo      = CloudinaryField('archivo', resource_type='raw', type='upload', blank=True, null=True)
+    calificacion = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    feedback     = models.TextField(blank=True)
+    entregada_en = models.DateTimeField(auto_now_add=True)
+
+class RespuestaAlumno(models.Model):
+    entrega   = models.ForeignKey(EntregaActividad, on_delete=models.CASCADE, related_name='respuestas')
+    pregunta  = models.ForeignKey(PreguntaActividad, on_delete=models.CASCADE)
+    texto     = models.TextField(blank=True)       # para preguntas abiertas
+    opcion    = models.ForeignKey(OpcionRespuesta, on_delete=models.SET_NULL, null=True, blank=True)  # para opción múltiple
+
+class CarpetaMaterial(models.Model):
+    docente    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='carpetas_material')
+    grupo      = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='carpetas_material')
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='carpetas_material')
+    nombre     = models.CharField(max_length=100)
+    descripcion= models.TextField(blank=True)
+    orden      = models.IntegerField(default=0)
+    creada_en  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['orden', 'nombre']
+        verbose_name = 'Carpeta de Material'
+
+    def __str__(self):
+        return f"{self.nombre} — {self.asignatura} | {self.grupo}"
+
+
+class MaterialApoyo(models.Model):
+    TIPOS = [
+        ('PDF',    'PDF / Documento'),
+        ('VIDEO',  'Video'),
+        ('IMAGEN', 'Imagen'),
+        ('LINK',   'Enlace externo'),
+        ('OTRO',   'Otro'),
+    ]
+
+    docente    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='materiales')
+    grupo      = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='materiales')
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='materiales')
+    carpeta    = models.ForeignKey(CarpetaMaterial, on_delete=models.SET_NULL, null=True, blank=True, related_name='materiales')
+    titulo     = models.CharField(max_length=200)
+    descripcion= models.TextField(blank=True)
+    tipo       = models.CharField(max_length=10, choices=TIPOS)
+    archivo    = CloudinaryField('archivo', resource_type='auto', type='upload', blank=True, null=True)
+    url_externa= models.URLField(blank=True, null=True)
+    orden      = models.IntegerField(default=0)
+    creado_en  = models.DateTimeField(auto_now_add=True)
+    activo     = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['orden', '-creado_en']
+        verbose_name = 'Material de Apoyo'
+
+    def __str__(self):
+        return f"{self.titulo} — {self.asignatura}"
+
+    @property
+    def icono(self):
+        return {'PDF':'📄','VIDEO':'🎬','IMAGEN':'🖼️','LINK':'🔗','OTRO':'📎'}.get(self.tipo,'📎')
+
+    @property
+    def es_youtube(self):
+        return self.url_externa and ('youtube.com' in self.url_externa or 'youtu.be' in self.url_externa)
+
+    @property
+    def youtube_embed(self):
+        if not self.es_youtube:
+            return None
+        url = self.url_externa
+        if 'youtu.be/' in url:
+            vid = url.split('youtu.be/')[1].split('?')[0]
+        elif 'v=' in url:
+            vid = url.split('v=')[1].split('&')[0]
+        else:
+            return None
+        return f"https://www.youtube.com/embed/{vid}"
+
+
+class ComentarioMaterial(models.Model):
+    material  = models.ForeignKey(MaterialApoyo, on_delete=models.CASCADE, related_name='comentarios')
+    autor     = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    texto     = models.TextField()
     creado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:

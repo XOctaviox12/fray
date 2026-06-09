@@ -20,13 +20,17 @@ from users.views import get_campus_theme
 def dashboard_view(request):
     plantel = request.user.plantel
     theme   = get_campus_theme(request.user)
-    periodos = Periodo.objects.filter(activo=True)
+    periodos = Periodo.objects.filter(activo=True, plantel=request.user.plantel)
     hoy      = timezone.now().date()
 
     # ── Inscripción rápida desde el modal ────────────────────────────
     inscripcion_errors = []
     inscripcion_data   = {}
 
+    if request.user.rol == 'DOCENTE':
+        return redirect('dashboard_docente')
+    plantel = request.user.plantel
+    
     if request.method == 'POST' and request.POST.get('accion') == 'inscribir':
         first_name      = request.POST.get('first_name', '').strip()
         last_name       = request.POST.get('last_name',  '').strip()
@@ -102,6 +106,7 @@ def dashboard_view(request):
     total_docentes      = User.objects.filter(plantel=plantel, rol='DOCENTE').count()
     total_coordinadores = User.objects.filter(plantel=plantel, rol='COORD').count()
     total_alumnos       = User.objects.filter(plantel=plantel, rol='ALUMNO').count()
+    
 
     # ── Asistencia diaria ─────────────────────────────────────────────
     registros_hoy    = Asistencia.objects.filter(grupo__plantel=plantel, fecha=hoy).count()

@@ -2,7 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.db.models import Avg
 from django.utils import timezone
-from users.models import Plantel
+from campuses.models import Plantel
 from django.core.exceptions import ValidationError
 from cloudinary.models import CloudinaryField
 
@@ -16,6 +16,13 @@ class Periodo(models.Model):
     fecha_inicio = models.DateField(null=True, blank=True)
     fecha_fin = models.DateField(null=True, blank=True)
     activo = models.BooleanField(default=True)
+    plantel = models.ForeignKey(
+        'campuses.Plantel',
+        on_delete=models.CASCADE,
+        related_name='periodos',
+        null=True, blank=True
+    )
+    nombre = models.CharField(max_length=50)
 
     class Meta:
         verbose_name = "Periodo"
@@ -246,15 +253,14 @@ class HorarioClase(models.Model):
     def clean(self):
         errors = {}
 
-        # 1. Hora fin debe ser posterior a hora inicio
         if self.hora_inicio and self.hora_fin:
             if self.hora_inicio >= self.hora_fin:
                 errors['hora_fin'] = 'La hora de fin debe ser posterior a la de inicio.'
 
-        # Solo seguimos si las horas son válidas
         if not errors:
 
-            # 2. Colisión de MAESTRO
+            # 1. Colisión de MAESTRO (sin filtro de plantel — un maestro no puede
+            #    estar en dos lugares a la vez aunque sean planteles distintos)
             if self.maestro_id:
                 conflicto_maestro = HorarioClase.objects.filter(
                     dia=self.dia,
@@ -271,7 +277,7 @@ class HorarioClase(models.Model):
                         f'los {self.get_dia_display()} en ese horario.'
                     )
 
-            # 3. Colisión de GRUPO
+            # 2. Colisión de GRUPO (dentro del mismo plantel)
             if self.grupo_id:
                 conflicto_grupo = HorarioClase.objects.filter(
                     dia=self.dia,
@@ -288,11 +294,12 @@ class HorarioClase(models.Model):
                         f'los {self.get_dia_display()} en ese horario.'
                     )
 
-            # 4. Colisión de AULA (solo si está definida)
-            if self.aula and self.aula != "Por definir":
+            # 3. Colisión de AULA — solo dentro del mismo plantel (Fix crítico)
+            if self.aula and self.aula != "Por definir" and self.grupo_id:
                 conflicto_aula = HorarioClase.objects.filter(
                     dia=self.dia,
                     aula=self.aula,
+                    grupo__plantel=self.grupo.plantel,   # ← Fix: solo mismo plantel
                     activo=True,
                     hora_inicio__lt=self.hora_fin,
                     hora_fin__gt=self.hora_inicio,

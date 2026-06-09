@@ -118,3 +118,11 @@ class DocenteGrupo(models.Model):
     def __str__(self):
         materia = self.asignatura.nombre if self.asignatura else 'Tutor'
         return f"{self.docente.get_full_name()} → {self.grupo} | {materia} ({self.ciclo})"
+    
+class DocentePlantel(models.Model):
+    docente = models.ForeignKey(User, on_delete=models.CASCADE, related_name='planteles_asignados')
+    plantel = models.ForeignKey(Plantel, on_delete=models.CASCADE)
+    activo  = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('docente', 'plantel')

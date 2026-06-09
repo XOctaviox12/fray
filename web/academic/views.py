@@ -209,6 +209,14 @@ def lista_grupos(request):
 def detalle_grupo(request, pk):
     ctx   = get_plantel_context(request.user)
     grupo = get_object_or_404(Grupo, pk=pk, plantel=request.user.plantel)
+    # Si es docente, verificar que tenga asignación en este grupo
+    if request.user.rol == 'DOCENTE':
+        tiene_acceso = grupo.docentes_asignados.filter(
+            docente=request.user, activo=True
+        ).exists()
+        if not tiene_acceso:
+            messages.error(request, 'No tienes acceso a este grupo.')
+            return redirect('docente_mis_grupos')
 
     promedio   = grupo.promedio_general
     asistencia = grupo.asistencia_mensual
@@ -333,7 +341,7 @@ def promocion_masiva(request):
         messages.success(request, "Promoción completada.")
         return redirect('lista_grupos')
     return render(request, 'academic/confirmar_promocion.html', {
-        'periodos': Periodo.objects.filter(activo=True)
+        'periodos': Periodo.objects.filter(activo=True, plantel=request.user.plantel)
     })
 
 
@@ -343,7 +351,9 @@ def promocion_masiva(request):
 @login_required
 def lista_asignaturas(request):
     ctx      = get_plantel_context(request.user)
-    carreras = Carrera.objects.prefetch_related('grupos__asignaturas').all()
+    carreras = Carrera.objects.filter(
+        plantel=request.user.plantel
+    ).prefetch_related('grupos__asignaturas')
     return render(request, 'academic/lista_asignaturas.html', {'carreras': carreras, **ctx})
 
 
@@ -400,7 +410,7 @@ def alumnos_view(request):
     form_tutor         = TutorForm()
 
     if request.method == 'POST' and 'btn_tutor' in request.POST:
-        alumno_seleccionado = User.objects.get(id=request.POST.get('alumno_id'))
+        alumno_seleccionado = get_object_or_404(User, id=request.POST.get('alumno_id'), plantel=request.user.plantel)
         form_tutor = TutorForm(request.POST)
         if form_tutor.is_valid():
             tutor        = form_tutor.save(commit=False)
@@ -417,7 +427,7 @@ def alumnos_view(request):
 @login_required
 def agregar_tutor(request):
     if request.method == "POST":
-        alumno = get_object_or_404(User, id=request.POST.get("alumno_id"))
+        alumno = get_object_or_404(User, id=request.POST.get("alumno_id"), plantel=request.user.plantel)
         Tutor.objects.create(
             alumno=alumno,
             nombre=request.POST.get("nombre"),
@@ -506,23 +516,32 @@ def pasar_lista(request, grupo_id):
     hoy     = ddate.today()
     alumnos = User.objects.filter(rol='ALUMNO', alumno_grupo=grupo).order_by('last_name', 'first_name')
 
-    if request.method == 'POST':
-        Asistencia.objects.filter(grupo=grupo, fecha=hoy).delete()
+    if request.method == 'POST' and 'guardar' in request.POST:
         presentes_ids = set(request.POST.getlist('presentes'))
-        Asistencia.objects.bulk_create([
-            Asistencia(alumno=a, grupo=grupo, fecha=hoy, presente=(str(a.id) in presentes_ids))
-            for a in alumnos
-        ])
+        
+        for alumno in alumnos:
+            estado = 'P' if str(alumno.id) in presentes_ids else 'A'
+            Asistencia.objects.update_or_create(
+                alumno=alumno,
+                grupo=grupo,
+                asignatura=None,
+                fecha=hoy,
+                defaults={'estado': estado},
+            )
+
         messages.success(
             request,
-            f"Lista del {hoy.strftime('%d/%m/%Y')} guardada — {len(presentes_ids)} presentes de {alumnos.count()}."
+            f"Lista del {hoy.strftime('%d/%m/%Y')} guardada — "
+            f"{len(presentes_ids)} presentes de {alumnos.count()}."
         )
         return redirect('detalle_grupo', pk=grupo_id)
 
+    # Leer registros existentes
     ya_registrados = {
-        a.alumno_id: a.presente
-        for a in Asistencia.objects.filter(grupo=grupo, fecha=hoy)
+        a.alumno_id: a.estado
+        for a in Asistencia.objects.filter(grupo=grupo, fecha=hoy, asignatura=None)
     }
+
     return render(request, 'academic/pasar_lista.html', {
         'grupo':          grupo,
         'alumnos':        alumnos,
@@ -531,8 +550,6 @@ def pasar_lista(request, grupo_id):
         'primera_vez':    not bool(ya_registrados),
         **ctx,
     })
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # CALIFICACIONES
 # ─────────────────────────────────────────────────────────────────────────────
@@ -907,6 +924,7 @@ def api_verificar_conflicto(request):
         qs = HorarioClase.objects.filter(
             dia=dia, activo=True,
             hora_inicio__lt=hora_fin, hora_fin__gt=hora_ini,
+            grupo__plantel=request.user.plantel,
         )
         if excluir_id:
             qs = qs.exclude(pk=excluir_id)

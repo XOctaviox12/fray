@@ -122,6 +122,12 @@
       </div>
 
       <div style="display:flex;gap:8px">
+        <a href="{% url 'pdf_asistencia' grupo.pk asignatura.pk %}?mes={{ fecha|date:'Y-m' }}"
+          style="height:30px;padding:0 12px;background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px;text-decoration:none;"
+          target="_blank">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          Exportar mes
+        </a>
         <button type="button" onclick="marcarTodos('P')"
           style="height:30px;padding:0 12px;background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
           <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>

@@ -1,0 +1,210 @@
+{% extends "inicio/base.html" %}
+{% block title %}{{ plan.titulo }} | FRAY{% endblock %}
+
+{% block content %}
+<style>
+  .tema-row {
+    background:#fff; border:1px solid var(--border); border-radius:12px;
+    padding:14px 16px; margin-bottom:8px; display:flex; align-items:flex-start; gap:14px;
+    transition:all .15s;
+  }
+  .tema-row.completado { border-color:#a7f3d0; background:#f0fdf4; }
+  .tema-num {
+    width:36px; height:36px; border-radius:10px; flex-shrink:0;
+    background:#eef0fe; color:var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:800;
+  }
+  .tema-row.completado .tema-num { background:#d1fae5; color:#059669; }
+  .modal-overlay { display:none; position:fixed; inset:0; z-index:300; background:rgba(17,19,24,.7); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px; }
+  .modal-overlay.open { display:flex; }
+  .modal-box { background:#fff; border-radius:20px; max-width:560px; width:100%; padding:28px; position:relative; box-shadow:0 20px 60px rgba(0,0,0,.2); max-height:90vh; overflow-y:auto; }
+  .modal-input { width:100%; padding:10px 13px; border:1px solid var(--border); border-radius:10px; font-size:12.5px; font-family:'Plus Jakarta Sans',sans-serif; color:var(--ink); background:var(--bg); outline:none; transition:border .15s; box-sizing:border-box; }
+  .modal-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,110,247,.08); }
+  .modal-label { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-3); display:block; margin-bottom:5px; }
+  .progress-bar { height:8px; border-radius:99px; background:var(--border); overflow:hidden; margin-bottom:6px; }
+  .progress-fill { height:100%; border-radius:99px; background:var(--accent); transition:width .3s; }
+</style>
+
+<!-- Topbar -->
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <a href="{% url 'docente_lista_planes' %}" style="display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);text-decoration:none;">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+      Mis Planes
+    </a>
+    <span style="color:var(--border);">/</span>
+    <span style="font-size:12px;font-weight:600;color:var(--ink);">{{ plan.titulo }}</span>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="{% url 'pdf_cronograma' plan.pk %}" target="_blank"
+      style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#eef0fe;border:1px solid #c7d2fe;border-radius:9px;font-size:11px;font-weight:700;color:var(--accent);text-decoration:none;">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+      Exportar PDF
+    </a>
+    <a href="{% url 'docente_editar_plan' plan.pk %}"
+      style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:11px;font-weight:700;color:var(--ink-2);text-decoration:none;">
+      Editar Plan
+    </a>
+    <form method="post" style="display:inline;">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="toggle_publicado">
+      <button type="submit"
+        style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:{% if plan.publicado %}#ecfdf5{% else %}var(--accent){% endif %};border:1px solid {% if plan.publicado %}#a7f3d0{% else %}var(--accent){% endif %};border-radius:9px;font-size:11px;font-weight:700;color:{% if plan.publicado %}#059669{% else %}#fff{% endif %};cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">
+        {% if plan.publicado %}Archivar{% else %}Publicar{% endif %}
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Header card -->
+<div style="background:linear-gradient(135deg,#10131c,#1e2a4a);border-radius:16px;padding:22px 24px;margin-bottom:16px;">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.35);margin-bottom:6px;">
+        {{ plan.get_periodo_tipo_display }} · {{ plan.asignatura }} · {{ plan.grupo }}
+      </div>
+      <h1 style="font-family:'Instrument Serif',serif;font-size:24px;font-weight:400;color:#fff;margin:0 0 6px;">{{ plan.titulo }}</h1>
+      <div style="font-size:12px;color:rgba(255,255,255,.4);">
+        {{ plan.fecha_inicio|date:"d/m/Y" }} → {{ plan.fecha_fin|date:"d/m/Y" }}
+        · {{ temas.count }} sesión{{ temas.count|pluralize:"es" }}
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-family:'Instrument Serif',serif;font-size:36px;color:#fff;line-height:1;">{{ plan.progreso }}%</div>
+      <div style="font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;">completado</div>
+    </div>
+  </div>
+  <div class="progress-bar" style="margin-top:14px;margin-bottom:0;">
+    <div class="progress-fill" style="width:{{ plan.progreso }}%;"></div>
+  </div>
+</div>
+
+<!-- Objetivo y competencias -->
+{% if plan.objetivo_general or plan.competencias %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+  {% if plan.objetivo_general %}
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:6px;">Objetivo General</div>
+    <p style="font-size:12px;color:var(--ink);margin:0;line-height:1.5;">{{ plan.objetivo_general }}</p>
+  </div>
+  {% endif %}
+  {% if plan.competencias %}
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px;">
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:6px;">Competencias</div>
+    <p style="font-size:12px;color:var(--ink);margin:0;line-height:1.5;">{{ plan.competencias }}</p>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Sesiones -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+  <h2 style="font-size:14px;font-weight:700;color:var(--ink);margin:0;">Sesiones</h2>
+  <button onclick="document.getElementById('modal-tema').classList.add('open')"
+    style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">
+    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    Agregar Sesión
+  </button>
+</div>
+
+{% for tema in temas %}
+<div class="tema-row {% if tema.completado %}completado{% endif %}">
+  <div class="tema-num">{{ tema.numero }}</div>
+  <div style="flex:1;min-width:0;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--ink);">{{ tema.titulo }}</div>
+        {% if tema.descripcion %}
+        <div style="font-size:11.5px;color:var(--ink-2);margin-top:2px;">{{ tema.descripcion }}</div>
+        {% endif %}
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+          {% if tema.fecha %}<span style="font-size:10px;font-weight:600;color:var(--ink-3);">📅 {{ tema.fecha|date:"d/m/Y" }}</span>{% endif %}
+          <span style="font-size:10px;font-weight:600;color:var(--ink-3);">⏱ {{ tema.duracion_min }} min</span>
+          {% if tema.recursos %}<span style="font-size:10px;font-weight:600;color:var(--ink-3);" title="{{ tema.recursos }}">📎 Recursos</span>{% endif %}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="toggle_completado">
+          <input type="hidden" name="tema_id" value="{{ tema.pk }}">
+          <button type="submit"
+            style="width:32px;height:32px;border-radius:8px;border:1px solid {% if tema.completado %}#a7f3d0{% else %}var(--border){% endif %};background:{% if tema.completado %}#ecfdf5{% else %}#fff{% endif %};color:{% if tema.completado %}#059669{% else %}var(--ink-3){% endif %};cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;" title="{% if tema.completado %}Marcar pendiente{% else %}Marcar completado{% endif %}">
+            {% if tema.completado %}✓{% else %}○{% endif %}
+          </button>
+        </form>
+        <form method="post" style="display:inline;" onsubmit="return confirm('¿Eliminar esta sesión?')">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="eliminar_tema">
+          <input type="hidden" name="tema_id" value="{{ tema.pk }}">
+          <button type="submit"
+            style="width:32px;height:32px;border-radius:8px;border:1px solid #fecaca;background:#fff5f5;color:var(--danger);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">×</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:40px;text-align:center;">
+  <p style="font-size:13px;color:var(--ink-3);margin:0;">Aún no hay sesiones. Agrega la primera sesión usando el botón de arriba.</p>
+</div>
+{% endfor %}
+
+<!-- Modal agregar tema -->
+<div id="modal-tema" class="modal-overlay">
+  <div class="modal-box">
+    <button onclick="document.getElementById('modal-tema').classList.remove('open')"
+      style="position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:9px;background:var(--bg);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ink-2);">×</button>
+    <div style="font-family:'Instrument Serif',serif;font-size:20px;color:var(--ink);margin-bottom:18px;">Agregar Sesión</div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="agregar_tema">
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label class="modal-label">Nº Sesión</label>
+          <input type="number" name="numero" value="{{ siguiente_numero }}" min="1" class="modal-input" required>
+        </div>
+        <div>
+          <label class="modal-label">Título</label>
+          <input type="text" name="titulo_tema" class="modal-input" placeholder="Ej: Introducción al tema" required>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="modal-label">Descripción / Objetivo de la sesión</label>
+        <textarea name="descripcion_tema" class="modal-input" rows="2" placeholder="Describe brevemente el contenido..."></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label class="modal-label">Fecha (opcional)</label>
+          <input type="date" name="fecha_tema" class="modal-input">
+        </div>
+        <div>
+          <label class="modal-label">Duración (minutos)</label>
+          <input type="number" name="duracion_min" value="50" min="1" class="modal-input">
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label class="modal-label">Recursos / Materiales</label>
+        <input type="text" name="recursos" class="modal-input" placeholder="Ej: Libro cap. 3, pizarrón, presentación">
+      </div>
+      <div style="margin-bottom:16px;">
+        <label class="modal-label">Instrumento de evaluación</label>
+        <input type="text" name="evaluacion" class="modal-input" placeholder="Ej: Participación oral, ejercicio en clase">
+      </div>
+      <div style="display:flex;gap:8px;border-top:1px solid var(--border);padding-top:14px;">
+        <button type="button" onclick="document.getElementById('modal-tema').classList.remove('open')"
+          style="flex:1;padding:11px;background:var(--bg);border:1px solid var(--border);border-radius:10px;font-size:11.5px;font-weight:700;color:var(--ink-2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Cancelar</button>
+        <button type="submit"
+          style="flex:2;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Agregar Sesión</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.getElementById('modal-tema').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+</script>
+{% endblock %}

@@ -44,6 +44,20 @@ urlpatterns = [
     path('material/carpetas/reordenar/', views.reordenar_carpetas,       name='reordenar_carpetas'),
     path('material/carpetas/json/',      views.carpetas_json,            name='carpetas_json'),
 
+       # ── PLANIFICACIÓN (NUEVAS) ────────────────────────────────────────────────
+    path('planes/',               views.lista_planes,          name='docente_lista_planes'),
+    path('planes/nuevo/',         views.crear_plan,            name='docente_crear_plan'),
+    path('planes/<int:pk>/',      views.detalle_plan,          name='docente_detalle_plan'),
+    path('planes/<int:pk>/editar/', views.editar_plan,         name='docente_editar_plan'),
+    path('planes/<int:pk>/eliminar/', views.eliminar_plan,     name='docente_eliminar_plan'),
     # ── Utilidades ────────────────────────────────────────────────────────────
     path('ver-pdf/<int:pk>/<str:tipo>/', views.ver_pdf,                  name='ver_pdf'),
+    path('pdf/boleta/<int:alumno_pk>/',       views.pdf_boleta_alumno,   name='pdf_boleta_alumno'),
+    path('pdf/asistencia/<int:grupo_pk>/',    views.pdf_asistencia_grupo,name='pdf_asistencia_grupo'),
+    path('pdf/cronograma/<int:plan_pk>/',     views.pdf_cronograma,      name='pdf_cronograma'),
+
+    # ── Exportación PDF ───────────────────────────────────────────────────────
+    path('pdf/boleta/<int:grupo_id>/',                          views.pdf_boleta_grupo, name='pdf_boleta_grupo'),
+    path('pdf/concentrado/<int:grupo_id>/',                     views.pdf_concentrado,  name='pdf_concentrado'),
+    path('pdf/asistencia/<int:grupo_id>/<int:asignatura_id>/',  views.pdf_asistencia,   name='pdf_asistencia'),
 ]

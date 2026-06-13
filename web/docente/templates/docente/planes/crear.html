@@ -1,0 +1,118 @@
+{% extends "inicio/base.html" %}
+{% block title %}Nuevo Plan de Clase | FRAY{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;margin:0 auto;">
+  <div style="margin-bottom:22px;">
+    <a href="{% url 'docente_lista_planes' %}" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+      Mis Planes
+    </a>
+    <h1 style="font-family:'Instrument Serif',serif;font-size:26px;font-weight:400;color:var(--ink);margin:8px 0 3px;">Nuevo Plan de Clase</h1>
+    <p style="font-size:12.5px;color:var(--ink-2);margin:0;">Define el cronograma y temario para tu grupo.</p>
+  </div>
+
+  <div style="background:#fff;border:1px solid var(--border);border-radius:16px;padding:28px;">
+    <form method="post">
+      {% csrf_token %}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Título del Plan *</label>
+          <input type="text" name="titulo" required placeholder="Ej: Temario Primer Bimestre — Álgebra"
+            style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--ink);background:var(--bg);outline:none;box-sizing:border-box;">
+        </div>
+
+        <div>
+          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Grupo *</label>
+          <select name="grupo" id="sel-grupo" onchange="cargarAsignaturas()" required
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:10px;padding:0 11px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink);outline:none;">
+            <option value="">— Selecciona —</option>
+            {% for g in grupos %}
+            <option value="{{ g.pk }}" data-asignaturas='[{% for a in g.asignaturas.all %}{"id":{{ a.pk }},"nombre":"{{ a.nombre }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+              {{ g }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Asignatura *</label>
+          <select name="asignatura" id="sel-asignatura" required
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:10px;padding:0 11px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink);outline:none;">
+            <option value="">— Primero selecciona un grupo —</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Tipo de Periodo *</label>
+          <select name="periodo_tipo"
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:10px;padding:0 11px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink);outline:none;">
+            <option value="SEMANA">Semanal</option>
+            <option value="QUINCENA">Quincenal</option>
+            <option value="MES" selected>Mensual</option>
+            <option value="BIMESTRE">Bimestral</option>
+            <option value="SEMESTRE">Semestral</option>
+            <option value="ANUAL">Anual</option>
+          </select>
+        </div>
+
+        <div></div>
+
+        <div>
+          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Fecha Inicio *</label>
+          <input type="date" name="fecha_inicio" required
+            style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);outline:none;box-sizing:border-box;">
+        </div>
+
+        <div>
+          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Fecha Fin *</label>
+          <input type="date" name="fecha_fin" required
+            style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);outline:none;box-sizing:border-box;">
+        </div>
+
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Objetivo General</label>
+          <textarea name="objetivo_general" rows="2" placeholder="¿Qué aprenderán los alumnos al finalizar este periodo?"
+            style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+        </div>
+
+        <div style="grid-column:1/-1;">
+          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Competencias a Desarrollar</label>
+          <textarea name="competencias" rows="2" placeholder="Lista las competencias del programa que se abordarán..."
+            style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;border-top:1px solid var(--border);padding-top:16px;">
+        <a href="{% url 'docente_lista_planes' %}"
+          style="flex:1;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:11px;font-size:12px;font-weight:700;color:var(--ink-2);text-align:center;text-decoration:none;">
+          Cancelar
+        </a>
+        <button type="submit"
+          style="flex:2;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:11px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">
+          Crear Plan y Agregar Sesiones →
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function cargarAsignaturas() {
+  const sel = document.getElementById('sel-grupo');
+  const opt = sel.options[sel.selectedIndex];
+  const selAsig = document.getElementById('sel-asignatura');
+  selAsig.innerHTML = '<option value="">— Selecciona asignatura —</option>';
+  if (!opt.dataset.asignaturas) return;
+  try {
+    const asigs = JSON.parse(opt.dataset.asignaturas);
+    asigs.forEach(a => {
+      const o = document.createElement('option');
+      o.value = a.id; o.textContent = a.nombre;
+      selAsig.appendChild(o);
+    });
+  } catch(e) {}
+}
+</script>
+{% endblock %}

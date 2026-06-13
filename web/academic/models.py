@@ -501,3 +501,87 @@ class ComentarioMaterial(models.Model):
 
     class Meta:
         ordering = ['creado_en']
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLANIFICACIÓN CURRICULAR
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PlanClase(models.Model):
+    """Plan de clase semanal/mensual creado por un docente para una asignatura y grupo."""
+
+    PERIODOS = [
+        ('SEMANA',    'Semanal'),
+        ('QUINCENA',  'Quincenal'),
+        ('MES',       'Mensual'),
+        ('BIMESTRE',  'Bimestral'),
+        ('SEMESTRE',  'Semestral'),
+        ('ANUAL',     'Anual'),
+    ]
+
+    docente    = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={'rol': 'DOCENTE'},
+        related_name='planes_clase',
+    )
+    asignatura = models.ForeignKey(
+        Asignatura,
+        on_delete=models.CASCADE,
+        related_name='planes_clase',
+    )
+    grupo      = models.ForeignKey(
+        Grupo,
+        on_delete=models.CASCADE,
+        related_name='planes_clase',
+    )
+    titulo         = models.CharField(max_length=200)
+    descripcion    = models.TextField(blank=True)
+    periodo_tipo   = models.CharField(max_length=20, choices=PERIODOS, default='MES')
+    fecha_inicio   = models.DateField()
+    fecha_fin      = models.DateField()
+    objetivo_general = models.TextField(blank=True, verbose_name='Objetivo general')
+    competencias   = models.TextField(blank=True, verbose_name='Competencias a desarrollar')
+    publicado      = models.BooleanField(default=False)
+    creado_en      = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name        = 'Plan de Clase'
+        verbose_name_plural = 'Planes de Clase'
+        ordering            = ['-fecha_inicio']
+
+    def __str__(self):
+        return f"{self.titulo} — {self.asignatura} ({self.grupo})"
+
+    @property
+    def progreso(self):
+        """Porcentaje de temas marcados como completados."""
+        total = self.temas.count()
+        if total == 0:
+            return 0
+        completados = self.temas.filter(completado=True).count()
+        return int((completados / total) * 100)
+
+
+class TemaClase(models.Model):
+    """Tema/sesión individual dentro de un PlanClase."""
+
+    plan        = models.ForeignKey(PlanClase, on_delete=models.CASCADE, related_name='temas')
+    numero      = models.PositiveIntegerField(verbose_name='# Sesión')
+    titulo      = models.CharField(max_length=200)
+    descripcion = models.TextField(blank=True)
+    fecha       = models.DateField(null=True, blank=True)
+    duracion_min = models.PositiveIntegerField(default=50, verbose_name='Duración (min)')
+    recursos    = models.TextField(blank=True, verbose_name='Recursos / materiales')
+    evaluacion  = models.TextField(blank=True, verbose_name='Instrumento de evaluación')
+    completado  = models.BooleanField(default=False)
+    notas_docente = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name        = 'Tema / Sesión'
+        verbose_name_plural = 'Temas / Sesiones'
+        ordering            = ['numero']
+        unique_together     = [['plan', 'numero']]
+
+    def __str__(self):
+        return f"Sesión {self.numero}: {self.titulo}"

@@ -24,6 +24,9 @@
 </div>
 
 {% if grupo and filas %}
+{% if grupo %}
+<a href="{% url 'pdf_concentrado' grupo.pk %}">⬇ Descargar PDF</a>
+{% endif %}
 <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:auto">
   <table style="width:100%;border-collapse:collapse;min-width:500px">
     <thead>

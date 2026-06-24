@@ -1,0 +1,138 @@
+materia_form.html
+{% extends 'inicio/base.html' %}
+{% block content %}
+<style>
+  :root {
+    --ink:#111318;--ink-2:#6b7280;--ink-3:#9ca3af;
+    --border:#e8eaf0;--bg:#f4f5f9;--white:#fff;
+    --accent:#4f6ef7;--danger:#e53e3e;
+  }
+  .form-page { max-width:560px;margin:0 auto; }
+  .back-link { display:inline-flex;align-items:center;gap:7px;text-decoration:none;color:var(--ink-3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;transition:color .15s;margin-bottom:18px; }
+  .back-link:hover { color:var(--accent); }
+  .back-link:hover svg { transform:translateX(-2px); }
+  .back-link svg { transition:transform .15s; }
+  .back-icon { width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center; }
+  .form-title { font-family:'Instrument Serif',serif;font-size:24px;font-weight:400;color:var(--ink);margin:0 0 2px;letter-spacing:-.02em; }
+  .form-sub { font-size:12px;color:var(--ink-2);margin:0 0 20px; }
+
+  .form-card { background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04); }
+
+  .step-block { background:var(--bg);border-bottom:1px solid var(--border);padding:16px 22px; }
+  .step-header { display:flex;align-items:center;gap:8px;margin-bottom:12px; }
+  .step-num { width:22px;height:22px;border-radius:99px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:800;flex-shrink:0; }
+  .step-label { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2); }
+
+  .grupo-wrap { padding:16px 22px;border-top:1px solid var(--border);transition:opacity .25s; }
+  .grupo-wrap.disabled { opacity:.4;pointer-events:none; }
+  .helper-text { font-size:9.5px;color:var(--ink-3);font-style:italic;margin-top:5px; }
+
+  .fields-section { padding:18px 22px;border-top:1px solid var(--border); }
+  .field-group { display:flex;flex-direction:column;gap:5px;margin-bottom:14px; }
+  .field-group:last-child { margin-bottom:0; }
+  .field-label { font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3); }
+  .field-required { color:var(--danger); }
+  .field-error { font-size:10px;color:var(--danger);font-weight:700;margin-top:3px; }
+
+  .error-banner { background:#fff5f5;border-left:3px solid var(--danger);border-radius:10px;padding:10px 14px;font-size:11.5px;font-weight:700;color:var(--danger);margin:14px 22px 0; }
+
+  .form-footer { display:flex;gap:10px;padding:14px 22px;border-top:1px solid var(--border);background:#fafbff; }
+  .btn-submit { flex:2;padding:13px;background:var(--ink);color:#fff;border:none;border-radius:12px;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s; }
+  .btn-submit:hover { background:var(--accent);box-shadow:0 4px 14px rgba(79,110,247,.3); }
+  .btn-cancel-link { flex:1;display:flex;align-items:center;justify-content:center;background:var(--white);border:1px solid var(--border);border-radius:12px;font-size:11.5px;font-weight:700;color:var(--ink-2);text-decoration:none;transition:all .15s; }
+  .btn-cancel-link:hover { border-color:var(--ink);color:var(--ink); }
+</style>
+
+<div class="form-page">
+  <a href="{% url 'lista_asignaturas' %}" class="back-link">
+    <div class="back-icon"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></div>
+    Materias
+  </a>
+
+  <h2 class="form-title">{% if form.instance.pk %}Editar Materia{% else %}Nueva Materia{% endif %}</h2>
+  <p class="form-sub">Organización académica por niveles.</p>
+
+  <div class="form-card">
+    <form method="POST" id="materiaForm">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+      <div class="error-banner">{% for e in form.non_field_errors %}<p style="margin:0;">{{ e }}</p>{% endfor %}</div>
+      {% endif %}
+
+      <!-- Paso 1: Nivel -->
+      <div class="step-block">
+        <div class="step-header">
+          <div class="step-num">1</div>
+          <span class="step-label">Selección de Nivel</span>
+        </div>
+        {{ form.nivel_academico }}
+      </div>
+
+      <!-- Paso 2: Grupo (dependiente) -->
+      <div class="grupo-wrap disabled" id="wrapper-grupo">
+        <div class="step-header">
+          <div class="step-num" id="step-2-indicator" style="background:var(--ink-3);">2</div>
+          <span class="step-label">{{ form.grupo.label }}</span>
+        </div>
+        {{ form.grupo }}
+        <p class="helper-text" id="helper-text">Primero seleccione un nivel arriba.</p>
+      </div>
+
+      <!-- Otros campos -->
+      <div class="fields-section">
+        {% for field in form %}
+          {% if field.name != 'nivel_academico' and field.name != 'grupo' %}
+            {% if field.is_hidden %}{{ field }}{% else %}
+            <div class="field-group">
+              <label class="field-label">
+                {{ field.label }} {% if field.field.required %}<span class="field-required">*</span>{% endif %}
+              </label>
+              {{ field }}
+              {% if field.errors %}<p class="field-error">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <div class="form-footer">
+        <a href="{% url 'lista_asignaturas' %}" class="btn-cancel-link">Cancelar</a>
+        <button type="submit" class="btn-submit">Guardar Materia</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const nivelSelector = document.getElementById('id_nivel_selector');
+  const grupoSelect = document.getElementById('id_grupo_final');
+  const wrapperGrupo = document.getElementById('wrapper-grupo');
+  const indicator = document.getElementById('step-2-indicator');
+  const helper = document.getElementById('helper-text');
+  const opcionesBase = Array.from(grupoSelect.options);
+
+  function filtrar() {
+    const nivel = nivelSelector.value;
+    grupoSelect.innerHTML = '';
+    if (!nivel) {
+      wrapperGrupo.classList.add('disabled');
+      indicator.style.background = 'var(--ink-3)';
+      grupoSelect.innerHTML = '<option value="">--- Primero seleccione nivel ---</option>';
+      helper.textContent = 'Primero seleccione un nivel arriba.';
+      return;
+    }
+    wrapperGrupo.classList.remove('disabled');
+    indicator.style.background = 'var(--ink)';
+    helper.textContent = nivel === 'PREPARATORIA' ? 'Mostrando cuatrimestres de preparatoria.' : 'Mostrando grados de secundaria.';
+    const filtro = nivel === 'PREPARATORIA' ? 'cuatrimestre' : 'grado';
+    grupoSelect.innerHTML = '<option value="">Seleccione el grupo destino…</option>';
+    opcionesBase.forEach(opt => { if (opt.text.toLowerCase().includes(filtro)) grupoSelect.appendChild(opt.cloneNode(true)); });
+  }
+
+  nivelSelector?.addEventListener('change', filtrar);
+  if (nivelSelector?.value) filtrar();
+});
+</script>
+{% endblock %}

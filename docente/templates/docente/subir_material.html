@@ -1,0 +1,198 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Subir Material{% endblock %}
+{% block nav_material %}active{% endblock %}
+
+{% block content %}
+<div style="max-width:680px">
+  <div style="margin-bottom:1.5rem">
+    <a href="{% url 'material_apoyo' %}" style="font-size:12px;color:var(--ink-3);text-decoration:none;margin-bottom:8px;display:inline-block">← Volver</a>
+    <h1 style="font-size:22px;font-weight:700;color:var(--ink)">Subir Material de Apoyo</h1>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" id="formMaterial">
+    {% csrf_token %}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+
+      <div style="background:#10131c;padding:1rem 1.5rem">
+        <p style="font-size:13px;color:rgba(255,255,255,.5);margin:0">El material será visible para los alumnos del grupo seleccionado</p>
+      </div>
+
+      <div style="padding:1.5rem;display:flex;flex-direction:column;gap:18px">
+
+        {# Grupo/asignatura #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Grupo y Asignatura *</label>
+          <select name="_sel" onchange="aplicarAsig(this)" id="selAsig"
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
+            <option value="">— Selecciona —</option>
+            {% for a in asignaciones %}
+            <option value="{{ a.grupo.pk }}-{{ a.asignatura.pk }}" data-g="{{ a.grupo.pk }}" data-a="{{ a.asignatura.pk }}">
+              {{ a.grupo }} · {{ a.asignatura }}
+            </option>
+            {% endfor %}
+          </select>
+          <input type="hidden" name="grupo_id"      id="gInput">
+          <input type="hidden" name="asignatura_id" id="aInput">
+        </div>
+
+        {# Carpeta #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Carpeta / Tema</label>
+          <div style="display:flex;gap:8px">
+            <select name="carpeta_id" id="selCarpeta"
+              style="flex:1;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
+              <option value="">— Sin carpeta —</option>
+            </select>
+            <span style="display:flex;align-items:center;font-size:12px;color:var(--ink-3);font-weight:600">ó</span>
+            <input type="text" name="nueva_carpeta" id="nuevaCarpeta" placeholder="Nueva carpeta..."
+              style="flex:1;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+          </div>
+          <p style="font-size:11px;color:var(--ink-3);margin-top:4px">Selecciona una existente o escribe el nombre de una nueva.</p>
+        </div>
+
+        {# Tipo #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:8px">Tipo *</label>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+            {% for cod, nom in tipos %}
+            <label style="cursor:pointer">
+              <input type="radio" name="tipo" value="{{ cod }}" onchange="cambiarTipo('{{ cod }}')" style="display:none">
+              <div class="tipo-btn" id="btn-{{ cod }}"
+                style="border:1px solid var(--border);border-radius:10px;padding:.75rem .5rem;text-align:center;transition:all .15s;background:#f7f8fc">
+                <div style="font-size:22px;margin-bottom:4px">{% if cod == 'PDF' %}📄{% elif cod == 'VIDEO' %}🎬{% elif cod == 'IMAGEN' %}🖼️{% elif cod == 'LINK' %}🔗{% else %}📎{% endif %}</div>
+                <div style="font-size:10px;font-weight:700;color:var(--ink-2)">{{ nom }}</div>
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        {# Título #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Título *</label>
+          <input type="text" name="titulo" placeholder="Ej. Capítulo 3 — Álgebra lineal"
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+        </div>
+
+        {# Descripción #}
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Descripción</label>
+          <textarea name="descripcion" rows="2" placeholder="Describe brevemente el contenido..."
+            style="width:100%;border:1px solid var(--border);border-radius:9px;padding:10px 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none;resize:vertical"></textarea>
+        </div>
+
+        {# Zona archivo #}
+        <div id="zonaArchivo" style="display:none">
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Archivo</label>
+          <div id="dropzone"
+            style="border:2px dashed var(--border);border-radius:12px;padding:2rem;text-align:center;cursor:pointer;background:#f7f8fc;transition:border .15s"
+            onclick="document.getElementById('archivoInput').click()"
+            ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+            ondragleave="this.style.borderColor='var(--border)'"
+            ondrop="handleDrop(event)">
+            <svg width="32" height="32" fill="none" stroke="var(--ink-3)" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 8px;display:block"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <p style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">Arrastra aquí o haz clic</p>
+            <p id="archivoNombre" style="font-size:11px;color:var(--ink-3)">PDF, Word, PPT, imagen, video — máx. 100MB</p>
+          </div>
+          <input type="file" id="archivoInput" name="archivo"
+            accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.webp,.mp4,.mov"
+            style="display:none" onchange="mostrarNombre(this)">
+        </div>
+
+        {# Zona URL #}
+        <div id="zonaURL" style="display:none">
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Enlace externo</label>
+          <input type="url" name="url_externa" id="urlInput" placeholder="https://youtube.com/watch?v=..."
+            style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+          <p style="font-size:11px;color:var(--ink-3);margin-top:4px">YouTube, Google Drive, Canva, GeoGebra, Kahoot…</p>
+          <div id="youtubePreview" style="display:none;margin-top:10px;border-radius:10px;overflow:hidden;aspect-ratio:16/9;background:#000">
+            <iframe id="youtubeFrame" style="width:100%;height:100%;border:none" allowfullscreen></iframe>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
+        <a href="{% url 'material_apoyo' %}"
+          style="height:38px;padding:0 18px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;text-decoration:none">
+          Cancelar
+        </a>
+        <button type="submit"
+          style="height:38px;padding:0 24px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Publicar material
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Carpetas por asignación (cargadas via AJAX al cambiar selector)
+function aplicarAsig(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  const g   = opt.dataset.g || '';
+  const a   = opt.dataset.a || '';
+  document.getElementById('gInput').value = g;
+  document.getElementById('aInput').value = a;
+
+  // Cargar carpetas de esa asignación
+  if (g && a) {
+    fetch(`{% url 'carpetas_json' %}?grupo_id=${g}&asignatura_id=${a}`)
+      .then(r => r.json())
+      .then(data => {
+        const sel = document.getElementById('selCarpeta');
+        sel.innerHTML = '<option value="">— Sin carpeta —</option>';
+        data.carpetas.forEach(c => {
+          sel.innerHTML += `<option value="${c.pk}">${c.nombre}</option>`;
+        });
+      });
+  }
+}
+
+function cambiarTipo(tipo) {
+  document.querySelectorAll('.tipo-btn').forEach(b => {
+    b.style.background  = '#f7f8fc';
+    b.style.borderColor = 'var(--border)';
+  });
+  const btn = document.getElementById('btn-' + tipo);
+  if (btn) { btn.style.background = 'var(--accent-2)'; btn.style.borderColor = 'var(--accent)'; }
+
+  const necesitaArchivo = ['PDF','IMAGEN','VIDEO','OTRO'].includes(tipo);
+  const necesitaURL     = ['LINK','VIDEO'].includes(tipo);
+  document.getElementById('zonaArchivo').style.display = necesitaArchivo ? 'block' : 'none';
+  document.getElementById('zonaURL').style.display     = necesitaURL     ? 'block' : 'none';
+}
+
+function mostrarNombre(input) {
+  if (input.files[0]) {
+    document.getElementById('archivoNombre').textContent = '✅ ' + input.files[0].name;
+    document.getElementById('dropzone').style.borderColor = 'var(--accent)';
+  }
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  document.getElementById('archivoInput').files = dt.files;
+  document.getElementById('archivoNombre').textContent = '✅ ' + file.name;
+  document.getElementById('dropzone').style.borderColor = 'var(--accent)';
+}
+
+document.getElementById('urlInput')?.addEventListener('input', function() {
+  const url = this.value;
+  let vid = null;
+  if (url.includes('youtu.be/'))   vid = url.split('youtu.be/')[1]?.split('?')[0];
+  else if (url.includes('v='))     vid = url.split('v=')[1]?.split('&')[0];
+  const preview = document.getElementById('youtubePreview');
+  const frame   = document.getElementById('youtubeFrame');
+  if (vid) { frame.src = `https://www.youtube.com/embed/${vid}`; preview.style.display = 'block'; }
+  else     { preview.style.display = 'none'; frame.src = ''; }
+});
+</script>
+{% endblock %}

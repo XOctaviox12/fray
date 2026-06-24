@@ -1,0 +1,54 @@
+{# academic/templates/academic/includes/grupo_card.html #}
+{# Variables requeridas: grupo (Grupo obj), color (str ej: 'blue', 'purple') #}
+<a href="{% url 'detalle_grupo' grupo.pk %}"
+   class="group bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm
+          hover:border-{{ color }}-400 hover:shadow-xl transition-all duration-300
+          transform hover:-translate-y-1 flex flex-col">
+
+    <div class="flex justify-between items-start mb-6">
+        <div>
+            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                {{ grupo.carrera.nombre }}
+            </span>
+            <h3 class="text-2xl font-black text-slate-800 mt-1">
+                {{ grupo.grado }}º
+                <span class="text-{{ color }}-600">{{ grupo.nombre }}</span>
+            </h3>
+        </div>
+        <div class="flex -space-x-2">
+            {% for docente in grupo.docentes.all|slice:":3" %}
+            <div class="w-8 h-8 rounded-full bg-{{ color }}-100 border-2 border-white
+                        flex items-center justify-center text-[10px] font-black text-{{ color }}-700"
+                 title="{{ docente.get_full_name }}">
+                {{ docente.first_name|slice:":1" }}{{ docente.last_name|slice:":1" }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="mb-6">
+        <div class="flex justify-between items-center mb-1">
+            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Ocupación</span>
+            <span class="text-[9px] font-black text-slate-600">
+                {{ grupo.alumnos.count }}/{{ grupo.capacidad_maxima }}
+            </span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div class="h-full rounded-full bg-{{ color }}-500 transition-all duration-700"
+                 style="width: {{ grupo.ocupacion_porcentaje|floatformat:0 }}%"></div>
+        </div>
+    </div>
+
+    <div class="mt-auto pt-5 border-t border-slate-50 flex justify-between items-center">
+        <div>
+            {% if grupo.aula %}
+            <p class="text-[10px] text-slate-500 font-bold">Aula {{ grupo.aula }}</p>
+            {% endif %}
+            <p class="text-[9px] text-slate-400">{{ grupo.asignaturas.count }} materias</p>
+        </div>
+        <svg class="w-5 h-5 text-{{ color }}-400 group-hover:translate-x-1 transition-transform"
+             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+        </svg>
+    </div>
+</a>

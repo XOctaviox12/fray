@@ -1,0 +1,50 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Subir Horario{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1rem">
+  <a href="{% url 'lista_horarios_pdf' %}" style="font-size:12px;color:var(--ink-3);text-decoration:none">← Volver</a>
+</div>
+
+<div style="max-width:560px">
+  <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:1.5rem">Subir Horario PDF</h1>
+
+  {% if messages %}
+    {% for msg in messages %}
+    <div style="background:#fee2e2;color:#991b1b;padding:.75rem 1rem;border-radius:9px;margin-bottom:1rem;font-size:13px">{{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:14px">
+
+      <div>
+        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Grupo *</label>
+        <select name="grupo_id" required
+          style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
+          <option value="">— Selecciona un grupo —</option>
+          {% for grupo in grupos %}
+          <option value="{{ grupo.pk }}" {% if request.GET.grupo_id == grupo.pk|stringformat:"s" %}selected{% endif %}>
+            {{ grupo }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Archivo PDF *</label>
+        <input type="file" name="archivo" accept=".pdf" required
+          style="font-size:13px;color:var(--ink)">
+        <p style="font-size:11px;color:var(--ink-3);margin-top:4px">Solo archivos PDF. Si ya existe un horario para ese grupo, será reemplazado.</p>
+      </div>
+
+    </div>
+
+    <button type="submit"
+      style="margin-top:1rem;height:42px;padding:0 28px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+      Subir Horario
+    </button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,139 @@
+<!-- ═══════════════════════════════════════════
+     crear_docente.html  (también editar_docente.html)
+     ═══════════════════════════════════════════ -->
+{% extends 'inicio/base.html' %}
+{% block content %}
+<style>
+  :root {
+    --ink: #111318; --ink-2: #6b7280; --ink-3: #9ca3af;
+    --border: #e8eaf0; --bg: #f4f5f9; --white: #fff;
+    --accent: #4f6ef7; --purple: #7c3aed;
+  }
+  .form-page { max-width: 860px; margin: 0 auto; }
+
+  .back-link { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; color: var(--ink-3); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; transition: color .15s; margin-bottom: 18px; }
+  .back-link:hover { color: var(--purple); }
+  .back-link svg { transition: transform .15s; }
+  .back-link:hover svg { transform: translateX(-2px); }
+  .back-icon { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); display: flex; align-items: center; justify-content: center; }
+
+  .form-title { font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; color: var(--ink); margin: 0 0 2px; letter-spacing: -.02em; }
+  .form-sub { font-size: 12px; color: var(--ink-2); margin: 0 0 22px; }
+
+  .form-card { background: var(--white); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+
+  .form-section { padding: 24px; border-bottom: 1px solid var(--border); }
+  .form-section:last-child { border-bottom: none; }
+  .form-section-bg { background: #fafbff; }
+
+  .section-header { display: flex; align-items: center; gap: 9px; margin-bottom: 18px; }
+  .section-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .section-label { font-size: 11.5px; font-weight: 700; color: var(--ink); text-transform: uppercase; letter-spacing: .07em; }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field-group { display: flex; flex-direction: column; gap: 5px; }
+  .field-group.full { grid-column: 1 / -1; }
+  .field-label { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); }
+
+  .btn-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+  .btn-submit {
+    padding: 12px 28px; background: var(--purple); color: #fff;
+    border: none; border-radius: 11px; font-size: 11.5px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .1em; cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif; transition: all .16s;
+  }
+  .btn-submit:hover { background: #6d28d9; box-shadow: 0 4px 14px rgba(109,40,217,.3); }
+
+  input[type="file"] { font-size: 12px; color: var(--ink-2); }
+  input[type="file"]::file-selector-button {
+    background: var(--bg); color: var(--ink-2); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 8px; cursor: pointer;
+    font-weight: 700; font-size: 10px; text-transform: uppercase;
+    margin-right: 10px; font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: background .15s;
+  }
+  input[type="file"]::file-selector-button:hover { background: var(--border); }
+
+  @media (max-width: 700px) { .field-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div class="form-page">
+  <a href="{% url 'lista_docentes' %}" class="back-link">
+    <div class="back-icon"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></div>
+    Lista de {{ labels.docentes }}
+  </a>
+
+  <h2 class="form-title">{{ titulo }}</h2>
+  <p class="form-sub">Gestión de expediente para {{ user.plantel.nombre }}.</p>
+
+  <div class="form-card">
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <!-- Access -->
+      <div class="form-section form-section-bg">
+        <div class="section-header">
+          <div class="section-icon" style="background:#111318;color:#fff;">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <span class="section-label">Acceso al Sistema</span>
+        </div>
+        <div class="field-grid">
+          <div class="field-group">
+            <label class="field-label">Usuario / Matrícula</label>
+            {{ form.username }}
+          </div>
+          <div class="field-group">
+            <label class="field-label">Contraseña Provisional</label>
+            {{ form.password }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Personal info -->
+      <div class="form-section">
+        <div class="section-header">
+          <div class="section-icon" style="background:#faf5ff;color:var(--purple);">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          </div>
+          <span class="section-label">Información del {{ labels.docente }}</span>
+        </div>
+        <div class="field-grid">
+          <div class="field-group">
+            <label class="field-label">Nombre(s)</label>
+            {{ form.first_name }}
+          </div>
+          <div class="field-group">
+            <label class="field-label">Apellidos</label>
+            {{ form.last_name }}
+          </div>
+          <div class="field-group">
+            <label class="field-label">Correo Electrónico</label>
+            {{ form.email }}
+          </div>
+          <div class="field-group">
+            <label class="field-label">Teléfono</label>
+            {{ form.telefono }}
+          </div>
+          <div class="field-group full">
+            <label class="field-label">Dirección Particular</label>
+            {{ form.direccion }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Photo + submit -->
+      <div class="form-section form-section-bg">
+        <div class="btn-row">
+          <div>
+            <label class="field-label" style="display:block;margin-bottom:6px;">Foto de Perfil</label>
+            {{ form.foto_perfil }}
+          </div>
+          <button type="submit" class="btn-submit">Guardar {{ labels.docente }}</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends 'inicio/base.html' %}
+{% block content %}
+<style>
+  :root { --ink:#111318;--ink-2:#6b7280;--ink-3:#9ca3af;--border:#e8eaf0;--bg:#f4f5f9;--white:#fff;--accent:#4f6ef7;--danger:#e53e3e; }
+  .top-bar { display:flex;align-items:center;gap:12px;margin-bottom:22px; }
+  .back-link { display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--ink-3);text-decoration:none;text-transform:uppercase;letter-spacing:.08em;transition:color .14s; }
+  .back-link:hover { color:var(--accent); }
+  .card { background:var(--white);border:1px solid var(--border);border-radius:18px;padding:28px;max-width:640px; }
+  .card-title { font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;color:var(--ink);margin:0 0 20px; }
+  .field { display:flex;flex-direction:column;gap:5px;margin-bottom:14px; }
+  .label { font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3); }
+  .input, .select, .textarea { border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:500;color:var(--ink);background:#f7f8fc;outline:none;transition:border .15s;width:100%;box-sizing:border-box; }
+  .input:focus, .select:focus, .textarea:focus { border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,110,247,.08);background:#fff; }
+  .textarea { resize:vertical;min-height:120px; }
+  .radio-group { display:flex;gap:8px;flex-wrap:wrap; }
+  .radio-opt { display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .14s; }
+  .radio-opt:has(input:checked) { border-color:var(--accent);background:#eef0fe; }
+  .radio-opt input { accent-color:var(--accent); }
+  .radio-opt span { font-size:12.5px;font-weight:600;color:var(--ink); }
+  .footer { display:flex;gap:8px;padding-top:18px;border-top:1px solid var(--border);margin-top:6px; }
+  .btn-submit { flex:2;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:11px;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s; }
+  .btn-submit:hover { background:#3b56e8; }
+  .btn-cancel { flex:1;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:11px;font-size:11.5px;font-weight:700;color:var(--ink-2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;text-decoration:none;display:flex;align-items:center;justify-content:center; }
+  .btn-cancel:hover { border-color:var(--ink);color:var(--ink); }
+  #grupo-select { display:{% if es_docente %}flex{% else %}none{% endif %}; }
+  .file-hint { font-size:10px;color:var(--ink-3);margin-top:3px; }
+  .docente-notice { background:#f0fdf4;border:1px solid #a7f3d0;border-radius:10px;padding:10px 14px;font-size:12px;color:#065f46;margin-bottom:16px;display:flex;align-items:center;gap:8px; }
+</style>
+
+<div class="top-bar">
+  <a href="{% url 'lista_comunicados' %}" class="back-link">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+    Comunicados
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-title">Nuevo Comunicado</div>
+
+  {% if messages %}
+  {% for msg in messages %}
+  <div style="background:#fff5f5;border-left:3px solid var(--danger);padding:10px 14px;border-radius:9px;font-size:12px;font-weight:700;color:var(--danger);margin-bottom:16px;">{{ msg }}</div>
+  {% endfor %}
+  {% endif %}
+
+  {% if es_docente %}
+  <div class="docente-notice">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+    Solo puedes enviar comunicados a tus grupos asignados.
+  </div>
+  {% endif %}
+
+  {# enctype="multipart/form-data" es obligatorio para subir el adjunto #}
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="field">
+      <span class="label">Título</span>
+      <input type="text" name="titulo" class="input" placeholder="Ej. Suspensión de clases el viernes" required>
+    </div>
+
+    <div class="field">
+      <span class="label">Contenido</span>
+      <textarea name="cuerpo" class="textarea" placeholder="Escribe el mensaje del comunicado..." required></textarea>
+    </div>
+
+    {% if not es_docente %}
+    <div class="field">
+      <span class="label">Destinatarios</span>
+      <div class="radio-group">
+        <label class="radio-opt">
+          <input type="radio" name="destinatario" value="TODOS" checked onchange="toggleGrupo(this)">
+          <span>Todos los grupos</span>
+        </label>
+        <label class="radio-opt">
+          <input type="radio" name="destinatario" value="GRUPO" onchange="toggleGrupo(this)">
+          <span>Grupo específico</span>
+        </label>
+        <label class="radio-opt">
+          <input type="radio" name="destinatario" value="DOCENTES" onchange="toggleGrupo(this)">
+          <span>Solo docentes</span>
+        </label>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="field" id="grupo-select">
+      <span class="label">{% if es_docente %}Grupo destinatario *{% else %}Seleccionar grupo{% endif %}</span>
+      <select name="grupo_id" class="select" {% if es_docente %}required{% endif %}>
+        <option value="">— Elige un grupo —</option>
+        {% for g in grupos %}
+        <option value="{{ g.pk }}">{{ g }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <span class="label">Adjunto (opcional)</span>
+      <input type="file" name="adjunto" class="input" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx">
+      <span class="file-hint">PDF, imagen o documento. Máx. 10 MB. Se sube a Cloudinary.</span>
+    </div>
+
+    <div class="footer">
+      <a href="{% url 'lista_comunicados' %}" class="btn-cancel">Cancelar</a>
+      <button type="submit" class="btn-submit">Publicar comunicado</button>
+    </div>
+  </form>
+</div>
+
+<script>
+function toggleGrupo(radio) {
+  document.getElementById('grupo-select').style.display =
+    radio.value === 'GRUPO' ? 'flex' : 'none';
+}
+</script>
+{% endblock %}

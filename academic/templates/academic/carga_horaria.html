@@ -1,0 +1,405 @@
+{% extends 'inicio/base.html' %}
+{% block nav_horarios %}active{% endblock %}
+{% block content %}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@500&family=Outfit:wght@400;500;600;700;800&display=swap');
+  :root {
+    --ink:#0f1117;--ink-2:#4b5563;--ink-3:#9ca3af;
+    --border:#e5e7eb;--bg:#f7f8fc;--white:#fff;
+    --accent:#4361ee;--accent-soft:#eef0fd;
+    --ok:#059669;--ok-soft:#ecfdf5;
+    --danger:#dc2626;--danger-soft:#fef2f2;
+    --warn:#d97706;--purple:#7c3aed;
+  }
+  * { box-sizing:border-box; }
+  body { font-family:'Outfit',sans-serif; }
+
+  .wrap { max-width:960px; margin:0 auto; padding-bottom:60px; }
+
+  /* ── BACK ── */
+  .nav-back {
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.1em; color:var(--ink-3); text-decoration:none;
+    transition:color .15s; margin-bottom:20px;
+  }
+  .nav-back:hover { color:var(--accent); }
+  .back-chip {
+    width:30px; height:30px; border-radius:9px;
+    border:1.5px solid var(--border); background:var(--white);
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* ── HEADER ── */
+  .page-header { margin-bottom:28px; }
+  .page-eyebrow {
+    font-family:'DM Mono',monospace;
+    font-size:10px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--accent); margin-bottom:8px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .page-eyebrow::before { content:''; width:20px; height:2px; background:var(--accent); border-radius:2px; }
+  .page-title { font-family:'DM Serif Display',serif; font-size:32px; color:var(--ink); margin:0 0 6px; line-height:1.1; }
+  .page-title em { font-style:italic; color:var(--accent); }
+  .page-sub { font-size:12px; color:var(--ink-3); font-weight:500; }
+
+  /* ── SEARCH / FILTER BAR ── */
+  .filter-bar {
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:20px; flex-wrap:wrap;
+  }
+  .filter-input-wrap {
+    flex:1; min-width:200px; position:relative;
+  }
+  .filter-input-wrap svg {
+    position:absolute; left:12px; top:50%; transform:translateY(-50%);
+    color:var(--ink-3); pointer-events:none;
+  }
+  .filter-input {
+    width:100%; padding:10px 14px 10px 36px;
+    border:1.5px solid var(--border); border-radius:10px;
+    font-size:13px; font-family:'Outfit',sans-serif; color:var(--ink);
+    background:var(--white); outline:none; transition:border-color .15s, box-shadow .15s;
+  }
+  .filter-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(67,97,238,.1); }
+  .filter-count {
+    font-family:'DM Mono',monospace; font-size:11px;
+    font-weight:500; color:var(--ink-3); white-space:nowrap;
+    padding:10px 14px; background:var(--white);
+    border:1.5px solid var(--border); border-radius:10px;
+  }
+
+  /* ── GRUPO CARD ── */
+  .grupo-card {
+    background:var(--white); border:1.5px solid var(--border);
+    border-radius:16px; padding:18px 22px; margin-bottom:10px;
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:12px;
+    box-shadow:0 1px 3px rgba(0,0,0,.04);
+    transition:box-shadow .15s, transform .15s, border-color .15s;
+    position:relative; overflow:hidden;
+  }
+  .grupo-card::before {
+    content:''; position:absolute; left:0; top:0; bottom:0;
+    width:3px; background:var(--accent); border-radius:16px 0 0 16px;
+    opacity:0; transition:opacity .15s;
+  }
+  .grupo-card:hover { box-shadow:0 4px 18px rgba(67,97,238,.1); transform:translateY(-1px); border-color:#a5b4fc; }
+  .grupo-card:hover::before { opacity:1; }
+
+  .gc-left { display:flex; align-items:center; gap:14px; flex:1; min-width:0; }
+  .gc-icon {
+    width:46px; height:46px; border-radius:12px;
+    background:var(--accent-soft); border:1.5px solid #a5b4fc;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    color:var(--accent);
+  }
+  .gc-info { min-width:0; }
+  .gc-nombre { font-size:15px; font-weight:800; color:var(--ink); }
+  .gc-carrera { font-size:11px; color:var(--ink-2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .gc-tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .gc-tag {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 8px; border-radius:20px; font-size:9px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.07em;
+  }
+  .gc-tag.blue  { background:var(--accent-soft); color:var(--accent); }
+  .gc-tag.green { background:var(--ok-soft); color:var(--ok); }
+
+  /* ── ACTIONS (3 botones) ── */
+  .gc-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+
+  .btn-action {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:8px 13px; border-radius:9px;
+    font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.06em; text-decoration:none; border:none;
+    cursor:pointer; font-family:'Outfit',sans-serif;
+    transition:all .15s; white-space:nowrap;
+  }
+  .btn-action.primary {
+    background:var(--accent); color:#fff;
+    box-shadow:0 2px 8px rgba(67,97,238,.25);
+  }
+  .btn-action.primary:hover { background:#2f4dd4; transform:translateY(-1px); box-shadow:0 4px 12px rgba(67,97,238,.35); }
+
+  .btn-action.ghost {
+    background:var(--white); color:var(--ink-2);
+    border:1.5px solid var(--border);
+  }
+  .btn-action.ghost:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+
+  .btn-action.danger {
+    background:var(--white); color:var(--danger);
+    border:1.5px solid #fca5a5;
+  }
+  .btn-action.danger:hover { background:var(--danger-soft); border-color:var(--danger); transform:translateY(-1px); }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    padding:72px 24px; text-align:center;
+    background:var(--white); border:1.5px solid var(--border);
+    border-radius:18px; margin-top:12px;
+  }
+  .empty-icon {
+    width:56px; height:56px; border-radius:16px;
+    background:var(--bg); border:1.5px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 14px; color:var(--border);
+  }
+  .empty-title { font-family:'DM Serif Display',serif; font-size:22px; color:var(--ink); margin-bottom:6px; }
+  .empty-sub   { font-size:12px; color:var(--ink-2); line-height:1.6; }
+
+  /* ── MODAL ELIMINAR ── */
+  .overlay {
+    display:none; position:fixed; inset:0; z-index:500;
+    background:rgba(15,17,23,.75); backdrop-filter:blur(10px);
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .overlay.open { display:flex; animation:fade-in .2s ease; }
+  @keyframes fade-in { from{opacity:0} to{opacity:1} }
+
+  .modal-del {
+    background:var(--white); border-radius:20px;
+    max-width:380px; width:100%; padding:32px;
+    box-shadow:0 20px 60px rgba(0,0,0,.2);
+    text-align:center;
+    animation:pop-up .22s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes pop-up { from{opacity:0;transform:translateY(20px) scale(.96)} to{opacity:1;transform:none} }
+
+  .del-icon {
+    width:56px; height:56px; border-radius:15px;
+    background:var(--danger-soft); border:1.5px solid #fca5a5;
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 16px; color:var(--danger);
+  }
+  .del-title { font-family:'DM Serif Display',serif; font-size:22px; color:var(--ink); margin-bottom:6px; }
+  .del-sub   { font-size:12px; color:var(--ink-2); margin-bottom:24px; line-height:1.6; }
+  .del-btns  { display:flex; gap:8px; }
+  .btn-cancel {
+    flex:1; padding:13px; background:var(--bg);
+    border:1.5px solid var(--border); border-radius:12px;
+    font-size:12px; font-weight:700; color:var(--ink-2);
+    cursor:pointer; font-family:'Outfit',sans-serif; transition:all .15s;
+  }
+  .btn-cancel:hover { border-color:var(--ink); color:var(--ink); }
+  .btn-confirmar-del {
+    flex:1; padding:13px; background:var(--danger); color:#fff;
+    border:none; border-radius:12px;
+    font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.08em;
+    cursor:pointer; font-family:'Outfit',sans-serif; transition:all .15s;
+  }
+  .btn-confirmar-del:hover { background:#b91c1c; transform:translateY(-1px); }
+
+  /* ── HIDDEN FORM ── */
+  #form-eliminar-grupo { display:none; }
+</style>
+
+<div class="wrap">
+
+  <a href="{% url 'dashboard' %}" class="nav-back">
+    <div class="back-chip">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+    </div>
+    Dashboard
+  </a>
+
+  <div class="page-header">
+    <div class="page-eyebrow">Gestión de horarios</div>
+    <h1 class="page-title">Grupos del <em>plantel</em></h1>
+    <p class="page-sub">
+      Selecciona un grupo para ver o gestionar su horario semanal.
+    </p>
+  </div>
+
+  {% if grupos_sec or grupos_prepa %}
+
+    <!-- FILTRO -->
+    <div class="filter-bar">
+      <div class="filter-input-wrap">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input class="filter-input" type="text" id="buscador" placeholder="Buscar grupo, carrera…" oninput="filtrarGrupos(this.value)">
+      </div>
+      <div class="filter-count" id="contador-grupos">
+        {{ grupos_sec.count|add:grupos_prepa.count }} grupos
+      </div>
+    </div>
+
+    <!-- SECUNDARIA -->
+    {% if grupos_sec %}
+    <div class="nivel-section" data-nivel="sec">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span style="font-size:9.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:4px 12px;border-radius:6px;">Secundaria</span>
+        <div style="flex:1;height:1px;border-top:1px dashed var(--border);"></div>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-3);">{{ grupos_sec.count }} grupos</span>
+      </div>
+
+      {% for grupo in grupos_sec %}
+      <div class="grupo-card" data-nombre="{{ grupo.nombre|lower }} {{ grupo.grado }}" data-carrera="{{ grupo.carrera.nombre|lower }}">
+        <div class="gc-left">
+          <div class="gc-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+          </div>
+          <div class="gc-info">
+            <div class="gc-nombre">{{ grupo.grado }}° {{ grupo.nombre }}</div>
+            <div class="gc-carrera">{{ grupo.carrera.nombre }}</div>
+            <div class="gc-tags">
+              <span class="gc-tag blue">
+                <svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                {{ grupo.alumnos.count }} alumnos
+              </span>
+              <span class="gc-tag green">
+                <svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/></svg>
+                {{ grupo.docentes.count }} docentes
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="gc-actions">
+          <a href="{% url 'gestionar_horario' grupo.id %}" class="btn-action primary">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Horario
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- PREPARATORIA -->
+    {% if grupos_prepa %}
+    <div class="nivel-section" data-nivel="prepa" style="margin-top:28px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span style="font-size:9.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#1a3a8f;background:#eff6ff;padding:4px 12px;border-radius:6px;">Preparatoria</span>
+        <div style="flex:1;height:1px;border-top:1px dashed var(--border);"></div>
+        <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-3);">{{ grupos_prepa.count }} grupos</span>
+      </div>
+
+      {% for grupo in grupos_prepa %}
+      <div class="grupo-card" data-nombre="{{ grupo.nombre|lower }} {{ grupo.grado }}" data-carrera="{{ grupo.carrera.nombre|lower }}">
+        <div class="gc-left">
+          <div class="gc-icon" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+          </div>
+          <div class="gc-info">
+            <div class="gc-nombre">{{ grupo.grado }}° {{ grupo.nombre }}</div>
+            <div class="gc-carrera">{{ grupo.carrera.nombre }}</div>
+            <div class="gc-tags">
+              <span class="gc-tag blue">
+                <svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                {{ grupo.alumnos.count }} alumnos
+              </span>
+              <span class="gc-tag green">
+                <svg width="9" height="9" fill="currentColor" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/></svg>
+                {{ grupo.docentes.count }} docentes
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="gc-actions">
+          <a href="{% url 'gestionar_horario' grupo.id %}" class="btn-action primary">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Horario
+          </a>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  {% else %}
+    <div class="empty">
+      <div class="empty-icon">
+        <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+        </svg>
+      </div>
+      <div class="empty-title">Sin grupos registrados</div>
+      <p class="empty-sub">Aún no hay grupos en este plantel.<br>Crea el primer grupo para comenzar.</p>
+    </div>
+  {% endif %}
+
+</div>
+
+<!-- MODAL ELIMINAR GRUPO -->
+<div id="overlay-del" class="overlay">
+  <div class="modal-del">
+    <div class="del-icon">
+      <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+        <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+      </svg>
+    </div>
+    <div class="del-title">Eliminar grupo</div>
+    <p class="del-sub" id="del-texto">¿Confirmas eliminar este grupo? Esta acción no se puede deshacer.</p>
+    <div class="del-btns">
+      <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-confirmar-del" id="btn-confirmar-del">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<form id="form-eliminar-grupo" method="POST">{% csrf_token %}</form>
+
+<script>
+const ELIM_URL = "{% url 'eliminar_grupo' 0 %}".replace('/0/', '/');
+
+let pendingId = null;
+
+function abrirModalEliminar(id, nombre) {
+  pendingId = id;
+  document.getElementById('del-texto').textContent =
+    `¿Confirmas eliminar el grupo "${nombre}"? Se eliminarán también sus horarios, asistencias y calificaciones asociadas.`;
+  document.getElementById('overlay-del').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarModal() {
+  document.getElementById('overlay-del').classList.remove('open');
+  document.body.style.overflow = '';
+  pendingId = null;
+}
+
+document.getElementById('btn-confirmar-del').addEventListener('click', () => {
+  if (!pendingId) return;
+  const f = document.getElementById('form-eliminar-grupo');
+  f.action = ELIM_URL + pendingId + '/';
+  f.submit();
+});
+
+document.getElementById('overlay-del').addEventListener('click', e => {
+  if (e.target === e.currentTarget) cerrarModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') cerrarModal();
+});
+
+// ── FILTRO EN TIEMPO REAL ──
+function filtrarGrupos(q) {
+  const term = q.toLowerCase().trim();
+  let visible = 0;
+  document.querySelectorAll('.grupo-card').forEach(card => {
+    const nombre  = card.dataset.nombre  || '';
+    const carrera = card.dataset.carrera || '';
+    const match   = !term || nombre.includes(term) || carrera.includes(term);
+    card.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  document.getElementById('contador-grupos').textContent = visible + ' grupos';
+}
+</script>
+
+{% endblock %}

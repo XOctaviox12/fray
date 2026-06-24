@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ alumno.get_full_name }} — Portal Padres</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f5f9;margin:0;color:#111318}
+    .topbar{background:#fff;border-bottom:1px solid #e8eaf0;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+    .logo{display:flex;align-items:center;gap:8px;font-family:'Instrument Serif',serif;font-size:18px;color:#111318}
+    .logo-icon{width:30px;height:30px;border-radius:8px;background:#10b981;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;font-family:'Plus Jakarta Sans',sans-serif}
+    .back{font-size:12px;font-weight:700;color:#6b7280;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+    .logout{font-size:12px;font-weight:700;color:#dc2626;background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:6px 14px;text-decoration:none}
+    .main{max-width:900px;margin:0 auto;padding:28px 20px}
+    .hero{background:#10131c;border-radius:16px;padding:1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:16px}
+    .hero-avatar{width:56px;height:56px;border-radius:14px;background:rgba(16,185,129,.2);color:#34d399;font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .hero-name{font-size:18px;font-weight:700;color:#fff;margin-bottom:6px}
+    .pill{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-right:6px}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+    .kpi{background:#fff;border:1px solid #e8eaf0;border-radius:14px;padding:1rem;text-align:center}
+    .kpi-num{font-size:26px;font-weight:700;line-height:1}
+    .kpi-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-top:4px}
+    .card{background:#fff;border:1px solid #e8eaf0;border-radius:14px;overflow:hidden;margin-bottom:1.25rem}
+    .card-header{padding:.875rem 1.25rem;border-bottom:1px solid #e8eaf0;background:#f7f8fc;display:flex;align-items:center;justify-content:space-between}
+    .card-title{font-size:13px;font-weight:700;color:#111318}
+    .card-meta{font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em}
+    .parcial-header{background:#10131c;padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between}
+    .parcial-titulo{font-size:12px;font-weight:700;color:#fff}
+    table{width:100%;border-collapse:collapse}
+    th{padding:.6rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;text-align:left;background:#f7f8fc;border-bottom:1px solid #e8eaf0}
+    td{padding:.75rem 1.25rem;font-size:13px;border-bottom:1px solid #f2f3f7}
+    tr:last-child td{border-bottom:none}
+    .nota-alta{color:#059669;font-weight:700;font-size:16px}
+    .nota-media{color:#d97706;font-weight:700;font-size:16px}
+    .nota-baja{color:#dc2626;font-weight:700;font-size:16px}
+    .asist-row{display:flex;align-items:center;justify-content:space-between;padding:8px 1.25rem;border-bottom:1px solid #f2f3f7;font-size:12px}
+    .asist-row:last-child{border-bottom:none}
+    .est-P{background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+    .est-R{background:#fef3c7;color:#78350f;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+    .est-A{background:#fee2e2;color:#7f1d1d;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+    .comunicado{padding:1rem 1.25rem;border-bottom:1px solid #f2f3f7}
+    .comunicado:last-child{border-bottom:none}
+    .tarea-item{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;border-bottom:1px solid #f2f3f7}
+    .tarea-item:last-child{border-bottom:none}
+    .vence-pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap}
+    .empty-inner{padding:2rem;text-align:center;font-size:13px;color:#9ca3af}
+    .rubro-pill{font-size:10px;font-weight:600;color:#6b7280;background:#f3f4f6;padding:2px 7px;border-radius:20px}
+    @media(max-width:600px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><div class="logo-icon">F</div>FRAY</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <a href="{% url 'tutor:dashboard' %}" class="back">← Mis hijos</a>
+    <a href="{% url 'tutor:logout' %}" class="logout">Salir</a>
+  </div>
+</div>
+
+<div class="main">
+
+  {# Hero #}
+  <div class="hero">
+    <div class="hero-avatar">{{ alumno.first_name|first|upper }}{{ alumno.last_name|first|upper }}</div>
+    <div>
+      <div class="hero-name">{{ alumno.get_full_name }}</div>
+      <div>
+        {% if grupo %}<span class="pill" style="background:rgba(79,110,247,.25);color:#8ba4fa">{{ grupo }}</span>{% endif %}
+        <span class="pill" style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)">{{ alumno.username }}</span>
+      </div>
+    </div>
+  </div>
+
+  {# KPIs asistencia #}
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-num" style="color:{% if pct_mes == None %}#9ca3af{% elif pct_mes >= 80 %}#059669{% elif pct_mes >= 60 %}#d97706{% else %}#dc2626{% endif %}">
+        {% if pct_mes == None %}—{% else %}{{ pct_mes }}%{% endif %}
+      </div>
+      <div class="kpi-label">Asistencia mes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-num" style="color:#059669">{{ pres_mes }}</div>
+      <div class="kpi-label">Presentes</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-num" style="color:#d97706">{{ ret_mes }}</div>
+      <div class="kpi-label">Retardos</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-num" style="color:#dc2626">{{ aus_mes }}</div>
+      <div class="kpi-label">Ausencias</div>
+    </div>
+  </div>
+
+  {# Tareas pendientes #}
+  {% if tareas_activas %}
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">⚠️ Tareas Pendientes</span>
+      <span class="card-meta">{{ tareas_activas|length }} sin entregar</span>
+    </div>
+    {% for t in tareas_activas %}
+    <div class="tarea-item">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#111318">{{ t.titulo }}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">📚 {{ t.asignatura }}</div>
+      </div>
+      <span class="vence-pill">Vence {{ t.fecha_entrega|date:"d/m/Y" }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# Calificaciones por parcial #}
+  {% if boletas_por_parcial %}
+    {% for parcial_num, boletas in boletas_por_parcial.items %}
+    <div class="card">
+      <div class="parcial-header">
+        <span class="parcial-titulo">
+          {% if parcial_num == 1 %}📋 Primer Parcial
+          {% elif parcial_num == 2 %}📋 Segundo Parcial
+          {% elif parcial_num == 3 %}📋 Tercer Parcial
+          {% else %}📋 Cuarto Parcial{% endif %}
+        </span>
+        <span style="background:rgba(16,185,129,.2);color:#34d399;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">
+          {{ boletas|length }} asignatura{% if boletas|length != 1 %}s{% endif %}
+        </span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Asignatura</th>
+            <th style="text-align:center">Tareas</th>
+            <th style="text-align:center">Actividades</th>
+            <th style="text-align:center">Asistencia</th>
+            <th style="text-align:center">Examen</th>
+            <th style="text-align:center">Proyecto</th>
+            <th style="text-align:center;color:#111318;font-weight:800">Calificación Final</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in boletas %}
+          <tr>
+            <td style="font-weight:600">{{ b.asignatura }}</td>
+            <td style="text-align:center">
+              {% if b.nota_tareas %}<span class="rubro-pill">{{ b.nota_tareas }}</span>{% else %}<span style="color:#9ca3af">—</span>{% endif %}
+            </td>
+            <td style="text-align:center">
+              {% if b.nota_actividades %}<span class="rubro-pill">{{ b.nota_actividades }}</span>{% else %}<span style="color:#9ca3af">—</span>{% endif %}
+            </td>
+            <td style="text-align:center">
+              {% if b.nota_asistencia %}<span class="rubro-pill">{{ b.nota_asistencia }}</span>{% else %}<span style="color:#9ca3af">—</span>{% endif %}
+            </td>
+            <td style="text-align:center">
+              {% if b.nota_examen %}<span class="rubro-pill">{{ b.nota_examen }}</span>{% else %}<span style="color:#9ca3af">—</span>{% endif %}
+            </td>
+            <td style="text-align:center">
+              {% if b.nota_proyecto %}<span class="rubro-pill">{{ b.nota_proyecto }}</span>{% else %}<span style="color:#9ca3af">—</span>{% endif %}
+            </td>
+            <td style="text-align:center">
+              <span class="{% if b.calificacion_final >= 9 %}nota-alta{% elif b.calificacion_final >= 6 %}nota-media{% else %}nota-baja{% endif %}">
+                {{ b.calificacion_final }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="card">
+    <div class="card-header"><span class="card-title">Calificaciones Parciales</span></div>
+    <div class="empty-inner">
+      🔒 Aún no hay calificaciones publicadas.<br>
+      <span style="font-size:11px;color:#9ca3af;margin-top:4px;display:block">El docente las publicará al finalizar el parcial.</span>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Historial asistencia #}
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Historial de Asistencia</span>
+      <span class="card-meta">Últimos 30 registros</span>
+    </div>
+    {% if asistencias %}
+      {% for a in asistencias %}
+      <div class="asist-row">
+        <div>
+          <span style="font-weight:600">{{ a.fecha|date:"d/m/Y" }}</span>
+          {% if a.asignatura %}<span style="color:#9ca3af;margin-left:8px;font-size:11px">{{ a.asignatura }}</span>{% endif %}
+        </div>
+        <span class="est-{{ a.estado }}">
+          {% if a.estado == 'P' %}Presente{% elif a.estado == 'R' %}Retardo{% else %}Ausente{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="empty-inner">Sin registros de asistencia.</div>
+    {% endif %}
+  </div>
+
+  {# Comunicados #}
+  <div class="card">
+    <div class="card-header"><span class="card-title">Comunicados del Grupo</span></div>
+    {% if comunicados %}
+      {% for c in comunicados %}
+      <div class="comunicado">
+        <div style="font-size:13px;font-weight:700;color:#111318;margin-bottom:3px">{{ c.titulo }}</div>
+        {% if c.contenido %}<div style="font-size:12px;color:#6b7280;margin-top:4px">{{ c.contenido|truncatechars:150 }}</div>{% endif %}
+        <div style="font-size:10px;color:#9ca3af;margin-top:6px">{{ c.creado_en|date:"d/m/Y H:i" }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="empty-inner">Sin comunicados recientes.</div>
+    {% endif %}
+  </div>
+
+</div>
+</body>
+</html>

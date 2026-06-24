@@ -1,0 +1,82 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Horarios PDF{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+  <div>
+    <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:2px">Horarios de Grupos</h1>
+    <p style="font-size:13px;color:var(--ink-2)">Gestiona los horarios PDF de cada grupo</p>
+  </div>
+  <a href="{% url 'subir_horario_pdf' %}"
+    style="height:38px;padding:0 20px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px;text-decoration:none">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    Subir Horario
+  </a>
+</div>
+
+<div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="background:#f7f8fc;border-bottom:1px solid var(--border)">
+        <th style="padding:.75rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:left">Grupo</th>
+        <th style="padding:.75rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Horario</th>
+        <th style="padding:.75rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Subido por</th>
+        <th style="padding:.75rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Fecha</th>
+        <th style="padding:.75rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in filas %}
+      <tr style="border-bottom:1px solid #f2f3f7">
+        <td style="padding:.75rem 1.25rem">
+          <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ fila.grupo }}</div>
+          <div style="font-size:11px;color:var(--ink-3)">Grado {{ fila.grupo.grado }}</div>
+        </td>
+        <td style="padding:.75rem 1.25rem;text-align:center">
+          {% if fila.horario %}
+          <a href="{{ fila.horario.archivo.url }}" target="_blank"
+            style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--accent);text-decoration:none">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Ver PDF
+          </a>
+          {% else %}
+          <span style="font-size:12px;color:var(--ink-3)">Sin horario</span>
+          {% endif %}
+        </td>
+        <td style="padding:.75rem 1.25rem;text-align:center">
+          {% if fila.horario %}
+          <span style="font-size:12px;color:var(--ink-2)">{{ fila.horario.subido_por.get_full_name|default:"—" }}</span>
+          {% else %}
+          <span style="font-size:12px;color:var(--ink-3)">—</span>
+          {% endif %}
+        </td>
+        <td style="padding:.75rem 1.25rem;text-align:center">
+          {% if fila.horario %}
+          <span style="font-size:12px;color:var(--ink-3)">{{ fila.horario.subido_en|date:"d/m/Y H:i" }}</span>
+          {% else %}
+          <span style="font-size:12px;color:var(--ink-3)">—</span>
+          {% endif %}
+        </td>
+        <td style="padding:.75rem 1.25rem;text-align:center">
+          <div style="display:flex;gap:8px;justify-content:center">
+            <a href="{% url 'subir_horario_pdf' %}?grupo_id={{ fila.grupo.pk }}"
+              style="height:30px;padding:0 12px;background:var(--accent-2);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:8px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;text-decoration:none">
+              {% if fila.horario %}Reemplazar{% else %}Subir{% endif %}
+            </a>
+            {% if fila.horario %}
+            <form method="post" action="{% url 'eliminar_horario_pdf' fila.horario.pk %}" onsubmit="return confirm('¿Eliminar horario?')">
+              {% csrf_token %}
+              <button type="submit"
+                style="height:30px;padding:0 12px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+                Eliminar
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

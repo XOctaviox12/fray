@@ -1,0 +1,115 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Tareas{% endblock %}
+{% block nav_tareas %}active{% endblock %}
+
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+  <div>
+    <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:2px">Tareas</h1>
+    <p style="font-size:13px;color:var(--ink-2)">Gestiona las tareas de tus grupos</p>
+  </div>
+  <a href="{% url 'crear_tarea' %}"
+    style="height:38px;padding:0 20px;background:var(--accent);color:#fff;border-radius:9px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    Nueva Tarea
+  </a>
+</div>
+
+{# Filtros #}
+<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem 1.5rem;margin-bottom:1.25rem">
+  <form method="get" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap">
+    <div style="flex:2;min-width:200px">
+      <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Filtrar por grupo/asignatura</label>
+      <select name="_sel" onchange="filtrarTareas(this)"
+        style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
+        <option value="">— Todos —</option>
+        {% for a in asignaciones %}
+        <option value="{{ a.grupo.pk }}-{{ a.asignatura.pk }}"
+          {% if grupo_id == a.grupo.pk|stringformat:"s" and asignatura_id == a.asignatura.pk|stringformat:"s" %}selected{% endif %}>
+          {{ a.grupo }} · {{ a.asignatura }}
+        </option>
+        {% endfor %}
+      </select>
+      <input type="hidden" name="grupo_id" id="fGrupo" value="{{ grupo_id }}">
+      <input type="hidden" name="asignatura_id" id="fAsig" value="{{ asignatura_id }}">
+    </div>
+    <button type="submit" style="height:38px;padding:0 18px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">Filtrar</button>
+  </form>
+</div>
+
+{# Tabs #}
+<div style="display:flex;gap:4px;margin-bottom:1.25rem;background:#fff;border:1px solid var(--border);border-radius:12px;padding:4px;width:fit-content">
+  <button onclick="mostrarTab('activas')" id="tab-activas"
+    style="height:32px;padding:0 16px;border:none;border-radius:9px;font-size:12px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;background:var(--accent);color:#fff">
+    Activas <span style="background:rgba(255,255,255,.25);border-radius:20px;padding:1px 7px;font-size:10px;margin-left:4px">{{ activas|length }}</span>
+  </button>
+  <button onclick="mostrarTab('vencidas')" id="tab-vencidas"
+    style="height:32px;padding:0 16px;border:none;border-radius:9px;font-size:12px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;background:transparent;color:var(--ink-2)">
+    Vencidas <span style="background:var(--border);border-radius:20px;padding:1px 7px;font-size:10px;margin-left:4px">{{ vencidas|length }}</span>
+  </button>
+  <button onclick="mostrarTab('borradores')" id="tab-borradores"
+    style="height:32px;padding:0 16px;border:none;border-radius:9px;font-size:12px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;background:transparent;color:var(--ink-2)">
+    Borradores <span style="background:var(--border);border-radius:20px;padding:1px 7px;font-size:10px;margin-left:4px">{{ borradores|length }}</span>
+  </button>
+</div>
+
+{# Panel activas #}
+<div id="panel-activas">
+  {% if activas %}
+  <div style="display:flex;flex-direction:column;gap:10px">
+    {% for t in activas %}{% include "docente/_card_tarea.html" with t=t %}{% endfor %}
+  </div>
+  {% else %}
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:3rem;text-align:center">
+    <p style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px">Sin tareas activas</p>
+    <p style="font-size:12px;color:var(--ink-3)">Las tareas publicadas con fecha futura aparecerán aquí.</p>
+  </div>
+  {% endif %}
+</div>
+
+{# Panel vencidas #}
+<div id="panel-vencidas" style="display:none">
+  {% if vencidas %}
+  <div style="display:flex;flex-direction:column;gap:10px">
+    {% for t in vencidas %}{% include "docente/_card_tarea.html" with t=t %}{% endfor %}
+  </div>
+  {% else %}
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:3rem;text-align:center">
+    <p style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px">Sin tareas vencidas</p>
+  </div>
+  {% endif %}
+</div>
+
+{# Panel borradores #}
+<div id="panel-borradores" style="display:none">
+  {% if borradores %}
+  <div style="display:flex;flex-direction:column;gap:10px">
+    {% for t in borradores %}{% include "docente/_card_tarea.html" with t=t %}{% endfor %}
+  </div>
+  {% else %}
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:3rem;text-align:center">
+    <p style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px">Sin borradores</p>
+    <p style="font-size:12px;color:var(--ink-3)">Crea una tarea y guárdala sin publicar.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filtrarTareas(sel) {
+  const [g, a] = (sel.value || '-').split('-');
+  document.getElementById('fGrupo').value = g || '';
+  document.getElementById('fAsig').value  = a || '';
+}
+function mostrarTab(nombre) {
+  ['activas','vencidas','borradores'].forEach(t => {
+    document.getElementById('panel-' + t).style.display = t === nombre ? 'block' : 'none';
+    const tab = document.getElementById('tab-' + t);
+    tab.style.background = t === nombre ? 'var(--accent)' : 'transparent';
+    tab.style.color      = t === nombre ? '#fff' : 'var(--ink-2)';
+  });
+}
+</script>
+{% endblock %}

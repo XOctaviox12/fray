@@ -1,0 +1,115 @@
+lista_asignaturas.html
+{% extends 'inicio/base.html' %}
+{% block nav_materias %}active{% endblock %}
+{% block content %}
+<style>
+  :root {
+    --ink:#111318;--ink-2:#6b7280;--ink-3:#9ca3af;
+    --border:#e8eaf0;--bg:#f4f5f9;--white:#fff;
+    --accent:#4f6ef7;--purple:#7c3aed;
+  }
+  .back-link { display:inline-flex;align-items:center;gap:7px;text-decoration:none;color:var(--ink-3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;transition:color .15s;margin-bottom:14px; }
+  .back-link:hover { color:var(--accent); }
+  .back-link:hover svg { transform:translateX(-2px); }
+  .back-link svg { transition:transform .15s; }
+  .back-icon { width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center; }
+
+  .page-header { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:22px; }
+  .page-title { font-family:'Instrument Serif',serif;font-size:26px;font-weight:400;color:var(--ink);margin:0;letter-spacing:-.02em; }
+  .page-sub { font-size:12px;color:var(--ink-2);margin:2px 0 0; }
+  .btn-add { display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:var(--purple);color:#fff;border-radius:10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;text-decoration:none;transition:all .16s;font-family:'Plus Jakarta Sans',sans-serif; }
+  .btn-add:hover { background:#6d28d9;box-shadow:0 4px 14px rgba(109,40,217,.28); }
+
+  .carrera-block { background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:16px; }
+  .carrera-head { padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;background:var(--bg); }
+  .carrera-icon { width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#eef0fe;color:var(--accent); }
+  .carrera-name { font-family:'Instrument Serif',serif;font-size:18px;font-weight:400;color:var(--ink);margin:0;letter-spacing:-.01em; }
+  .carrera-nivel { display:inline-flex;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;background:#eef0fe;color:var(--accent);margin-left:8px; }
+  .carrera-body { padding:18px 22px; }
+
+  .grados-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:14px; }
+  .grado-card { background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:16px; }
+  .grado-title { font-size:11px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.09em;margin-bottom:10px;display:flex;align-items:center;gap:6px; }
+  .grado-dot { width:7px;height:7px;border-radius:50%;background:var(--accent); }
+  .section-label { font-size:9.5px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--border); }
+
+  .materia-item { background:var(--white);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:flex-start;gap:9px;transition:border-color .14s; }
+  .materia-item:last-child { margin-bottom:0; }
+  .materia-item:hover { border-color:var(--purple); }
+  .materia-bar { width:3px;min-height:24px;border-radius:99px;background:var(--border);flex-shrink:0;transition:background .14s;margin-top:2px; }
+  .materia-item:hover .materia-bar { background:var(--purple); }
+  .materia-name { font-size:11.5px;font-weight:700;color:var(--ink);line-height:1.3; }
+  .materia-clave { font-size:9.5px;font-family:monospace;color:var(--ink-3);text-transform:uppercase;margin-top:2px; }
+  .grupo-tag { display:inline-flex;padding:2px 6px;background:var(--bg);border:1px solid var(--border);border-radius:5px;font-size:8.5px;font-weight:700;color:var(--ink-2);margin:3px 3px 0 0; }
+
+  .empty-materia { padding:14px;text-align:center;background:rgba(255,255,255,.5);border:1px dashed var(--border);border-radius:10px; }
+  .empty-materia p { font-size:10px;color:var(--ink-3);font-style:italic;margin:0; }
+
+  @media(max-width:900px) { .grados-grid { grid-template-columns:repeat(2,1fr); } }
+  @media(max-width:600px) { .grados-grid { grid-template-columns:1fr; } }
+</style>
+
+<div>
+  <a href="{% url 'dashboard' %}" class="back-link">
+    <div class="back-icon"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></div>
+    Panel Principal
+  </a>
+
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Plan de Estudios</h2>
+      <p class="page-sub">Materias organizadas por nivel y grupos registrados.</p>
+    </div>
+    <a href="{% url 'crear_materia' %}" class="btn-add">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Nueva Materia
+    </a>
+  </div>
+
+  {% for carrera in carreras %}
+  <div class="carrera-block">
+    <div class="carrera-head">
+      <div class="carrera-icon">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+      </div>
+      <div>
+        <span class="carrera-name">{{ carrera.nombre }}</span>
+        <span class="carrera-nivel">{{ carrera.nivel }}</span>
+      </div>
+    </div>
+    <div class="carrera-body">
+      <div class="grados-grid">
+        {% regroup carrera.grupos.all|dictsort:"grado" by grado as grados_list %}
+        {% for grado in grados_list %}
+        <div class="grado-card">
+          <div class="grado-title">
+            <span class="grado-dot"></span>
+            {{ grado.grouper }}º {% if "SECUNDARIA" in carrera.nivel|upper %}Grado{% else %}Semestre{% endif %}
+          </div>
+          {% for grupo in grado.list %}
+          <div style="margin-bottom:12px;">
+            <div class="section-label">Sección {{ grupo.nombre }}</div>
+            {% for materia in grupo.asignaturas.all %}
+            <div class="materia-item">
+              <div class="materia-bar"></div>
+              <div style="min-width:0;">
+                <div class="materia-name">{{ materia.nombre }}</div>
+                {% if materia.clave %}<div class="materia-clave">{{ materia.clave }}</div>{% endif %}
+                <div style="margin-top:4px;">
+                  {% for g in materia.grupos.all %}<span class="grupo-tag">Gpo {{ g.nombre }}</span>{% endfor %}
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="empty-materia"><p>Sin materias</p></div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

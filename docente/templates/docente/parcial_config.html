@@ -1,0 +1,119 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Configurar Evaluación{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1rem">
+  <a href="{% url 'docente_parcial_detalle' grupo.pk asignatura.pk %}" style="font-size:12px;color:var(--ink-3);text-decoration:none">← Volver</a>
+</div>
+
+<div style="max-width:520px">
+  <h1 style="font-size:20px;font-weight:700;color:var(--ink);margin-bottom:4px">Configurar Evaluación</h1>
+  <p style="font-size:13px;color:var(--ink-2);margin-bottom:1.5rem">{{ asignatura }} — {{ grupo }}</p>
+
+  {% if messages %}
+    {% for msg in messages %}
+    <div style="background:#d1fae5;color:#065f46;padding:.75rem 1rem;border-radius:9px;margin-bottom:1rem;font-size:13px">{{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1rem">Porcentajes de evaluación</div>
+      <p style="font-size:11px;color:var(--ink-3);margin-bottom:14px">La suma debe ser 100%. Puedes ajustar según tu criterio.</p>
+
+      {% for label, name, val in forloop_data %}
+      {% endfor %}
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#f7f8fc;border-radius:9px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">Tareas</div>
+            <div style="font-size:11px;color:var(--ink-3)">Promedio de entregas calificadas</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" name="pct_tareas" value="{{ config.pct_tareas }}" min="0" max="100" step="1"
+              style="width:70px;height:36px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-size:14px;font-weight:700;text-align:center;background:#fff;color:var(--ink);outline:none">
+            <span style="font-size:13px;color:var(--ink-3)">%</span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#f7f8fc;border-radius:9px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">Actividades</div>
+            <div style="font-size:11px;color:var(--ink-3)">Promedio de actividades calificadas</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" name="pct_actividades" value="{{ config.pct_actividades }}" min="0" max="100" step="1"
+              style="width:70px;height:36px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-size:14px;font-weight:700;text-align:center;background:#fff;color:var(--ink);outline:none">
+            <span style="font-size:13px;color:var(--ink-3)">%</span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#f7f8fc;border-radius:9px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">Asistencia</div>
+            <div style="font-size:11px;color:var(--ink-3)">Basado en % de asistencia registrada</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" name="pct_asistencia" value="{{ config.pct_asistencia }}" min="0" max="100" step="1"
+              style="width:70px;height:36px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-size:14px;font-weight:700;text-align:center;background:#fff;color:var(--ink);outline:none">
+            <span style="font-size:13px;color:var(--ink-3)">%</span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#f7f8fc;border-radius:9px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">Examen</div>
+            <div style="font-size:11px;color:var(--ink-3)">Captura manual por alumno</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" name="pct_examen" value="{{ config.pct_examen }}" min="0" max="100" step="1"
+              style="width:70px;height:36px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-size:14px;font-weight:700;text-align:center;background:#fff;color:var(--ink);outline:none">
+            <span style="font-size:13px;color:var(--ink-3)">%</span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#f7f8fc;border-radius:9px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--ink)">Proyecto</div>
+            <div style="font-size:11px;color:var(--ink-3)">Captura manual por alumno</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" name="pct_proyecto" value="{{ config.pct_proyecto }}" min="0" max="100" step="1"
+              style="width:70px;height:36px;border:1px solid var(--border);border-radius:8px;padding:0 8px;font-size:14px;font-weight:700;text-align:center;background:#fff;color:var(--ink);outline:none">
+            <span style="font-size:13px;color:var(--ink-3)">%</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="totalPct" style="margin-top:14px;padding:.75rem 1rem;border-radius:9px;background:#eef0fe;font-size:13px;font-weight:700;color:var(--accent);text-align:right">
+        Total: <span id="totalNum">{{ config.total }}</span>%
+      </div>
+    </div>
+
+    <button type="submit"
+      style="height:42px;padding:0 28px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+      Guardar configuración
+    </button>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const inputs = document.querySelectorAll('input[type=number]');
+function actualizarTotal() {
+  let suma = 0;
+  inputs.forEach(i => suma += parseFloat(i.value) || 0);
+  document.getElementById('totalNum').textContent = suma;
+  const div = document.getElementById('totalPct');
+  div.style.background = suma === 100 ? '#d1fae5' : suma > 100 ? '#fee2e2' : '#eef0fe';
+  div.style.color = suma === 100 ? '#065f46' : suma > 100 ? '#991b1b' : 'var(--accent)';
+}
+inputs.forEach(i => i.addEventListener('input', actualizarTotal));
+actualizarTotal();
+</script>
+{% endblock %}

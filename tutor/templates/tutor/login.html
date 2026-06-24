@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portal de Padres — FRAY</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    body{font-family:'Plus Jakarta Sans',sans-serif;background:#f4f5f9;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+    .card{background:#fff;border-radius:20px;padding:2.5rem;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.1)}
+    .logo{display:flex;align-items:center;gap:10px;margin-bottom:2rem;justify-content:center}
+    .logo-icon{width:40px;height:40px;border-radius:12px;background:#10b981;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-size:18px;color:#fff}
+    .logo-name{font-family:'Instrument Serif',serif;font-size:22px;color:#111318}
+    h1{font-size:20px;font-weight:700;color:#111318;text-align:center;margin-bottom:6px}
+    p.sub{font-size:13px;color:#6b7280;text-align:center;margin-bottom:2rem}
+    label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;margin-bottom:6px}
+    .code-input{
+      width:100%;height:56px;border:2px solid #e8eaf0;border-radius:12px;
+      font-size:22px;font-weight:700;text-align:center;letter-spacing:.2em;
+      font-family:'Plus Jakarta Sans',sans-serif;color:#111318;outline:none;
+      text-transform:uppercase;background:#f7f8fc;transition:border .2s;
+    }
+    .code-input:focus{border-color:#10b981;background:#fff;box-shadow:0 0 0 3px rgba(16,185,129,.1)}
+    .btn{width:100%;height:48px;background:#10b981;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;margin-top:1.25rem;transition:background .15s}
+    .btn:hover{background:#059669}
+    .error{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:600;margin-bottom:1rem;text-align:center}
+    .hint{font-size:11px;color:#9ca3af;text-align:center;margin-top:1.25rem;line-height:1.5}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">F</div>
+    <span class="logo-name">FRAY</span>
+  </div>
+  <h1>Portal de Padres</h1>
+  <p class="sub">Ingresa el código de acceso que te proporcionó la institución</p>
+
+  {% if error %}
+  <div class="error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <label for="codigo">Código de acceso</label>
+    <input type="text" name="codigo" id="codigo" class="code-input"
+      placeholder="ej. AB12CD34" maxlength="12" autocomplete="off"
+      autofocus oninput="this.value=this.value.toUpperCase()">
+    <button type="submit" class="btn">Entrar al portal</button>
+  </form>
+
+  <p class="hint">¿No tienes tu código? Comunícate con la dirección de la escuela.</p>
+</div>
+</body>
+</html>

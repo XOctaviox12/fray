@@ -1,0 +1,255 @@
+{% extends 'inicio/base.html' %}
+{% block content %}
+<style>
+  .dash-header { display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px; }
+  .dash-header h1 { font-family:'Instrument Serif',serif;font-size:26px;font-weight:400;color:var(--ink);letter-spacing:-.02em;margin:0; }
+  .dash-header p { font-size:12px;color:var(--ink-2);margin:3px 0 0; }
+
+  .quick-strip {
+    display:flex;align-items:center;
+    background:linear-gradient(135deg,#1a2242 0%,#2d3a6e 100%);
+    border-radius:14px;overflow:hidden;
+    box-shadow:0 4px 20px rgba(79,110,247,.18);margin-bottom:18px;
+  }
+  .qs-item { display:flex;flex-direction:column;align-items:center;flex:1;padding:18px 12px;position:relative; }
+  .qs-item+.qs-item::before { content:'';position:absolute;left:0;top:20%;bottom:20%;width:1px;background:rgba(255,255,255,.12); }
+  .qs-num { font-family:'Instrument Serif',serif;font-size:26px;font-weight:400;line-height:1;color:#fff; }
+  .qs-label { font-size:9px;font-weight:700;opacity:.5;text-transform:uppercase;letter-spacing:.1em;margin-top:4px;color:#fff; }
+
+  .card { background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04); }
+  .card-header { padding:16px 20px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border); }
+  .card-title { font-size:13px;font-weight:700;color:var(--ink); }
+  .card-meta { font-size:10px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em; }
+  .card-body { padding:16px 20px; }
+
+  .content-grid { display:grid;grid-template-columns:1fr 300px;gap:16px; }
+
+  .grupo-item {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 14px;border-radius:12px;border:1px solid var(--border);
+    margin-bottom:8px;transition:all .16s;text-decoration:none;
+  }
+  .grupo-item:last-child { margin-bottom:0; }
+  .grupo-item:hover { border-color:var(--accent);background:#f8f9ff; }
+  .grupo-badge { width:38px;height:38px;border-radius:10px;background:#eef0fe;color:var(--accent);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+  .grupo-name { font-size:13px;font-weight:700;color:var(--ink); }
+  .grupo-sub { font-size:10.5px;color:var(--ink-3);margin-top:2px; }
+  .grupo-arrow { color:#e5e9f0;transition:color .16s; }
+  .grupo-item:hover .grupo-arrow { color:var(--accent); }
+
+  .notif-item {
+    display:flex;align-items:flex-start;gap:10px;
+    padding:10px 12px;border-radius:11px;border:1px solid transparent;
+    transition:all .16s;text-decoration:none;margin-bottom:6px;
+  }
+  .notif-item:last-child { margin-bottom:0; }
+  .notif-item:hover { background:#f7f8fc;border-color:var(--border); }
+  .notif-icon { width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:1px; }
+  .notif-title { font-size:12px;font-weight:700;color:var(--ink);line-height:1.3; }
+  .notif-sub { font-size:10.5px;color:var(--ink-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px; }
+  .notif-time { font-size:9.5px;color:var(--ink-3);margin-top:3px; }
+
+  .empty-state { padding:28px 16px;text-align:center;background:var(--bg);border-radius:12px; }
+  .empty-title { font-size:13px;font-weight:700;color:var(--ink); }
+  .empty-sub { font-size:11px;color:var(--ink-2);margin-top:3px; }
+
+  .qaction {
+    display:flex;align-items:center;gap:12px;padding:13px 14px;
+    border-radius:12px;border:1px solid var(--border);background:#fff;
+    text-decoration:none;transition:all .16s;margin-bottom:8px;
+  }
+  .qaction:last-child { margin-bottom:0; }
+  .qaction:hover { border-color:var(--accent);background:#f8f9ff;transform:translateX(2px); }
+  .qaction-icon { width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+  .qaction-name { font-size:12.5px;font-weight:700;color:var(--ink); }
+  .qaction-desc { font-size:10px;color:var(--ink-3);margin-top:1px; }
+
+  .profile-card {
+    background:var(--ink);border-radius:14px;padding:22px;
+    color:#fff;text-align:center;margin-bottom:14px;
+    box-shadow:0 4px 20px rgba(17,19,24,.15);position:relative;overflow:hidden;
+  }
+  .profile-card::after { content:'';position:absolute;bottom:-30px;right:-30px;width:100px;height:100px;background:rgba(79,110,247,.2);border-radius:50%;filter:blur(30px); }
+  .profile-avatar { width:60px;height:60px;border-radius:16px;background:rgba(79,110,247,.25);border:1px solid rgba(79,110,247,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-family:'Instrument Serif',serif;font-size:24px;color:#a5b4fc;position:relative;z-index:1; }
+  .profile-name { font-size:14px;font-weight:700;color:#fff;position:relative;z-index:1; }
+  .profile-role { font-size:10px;color:rgba(255,255,255,.4);margin-top:3px;text-transform:uppercase;letter-spacing:.1em;position:relative;z-index:1; }
+  .profile-plantel { font-size:11px;color:rgba(255,255,255,.3);margin-top:6px;position:relative;z-index:1; }
+
+  .pulse-dot { width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;animation:livepulse 1.6s infinite; }
+  @keyframes livepulse { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.5)} }
+
+  @media(max-width:900px) { .content-grid { grid-template-columns:1fr; } }
+</style>
+
+<div style="display:flex;flex-direction:column;gap:0">
+
+  <!-- Header -->
+  <div class="dash-header">
+    <div>
+      <h1>Bienvenido, {{ user.first_name }}</h1>
+      <p><strong style="color:var(--ink);font-weight:600">{{ user.plantel.nombre }}</strong> &nbsp;·&nbsp; {% now "l d \d\e F, Y" %}</p>
+    </div>
+  </div>
+
+  <!-- Strip KPIs -->
+  <div class="quick-strip">
+    <div class="qs-item">
+      <span class="qs-num">{{ grupos|length }}</span>
+      <span class="qs-label">Mis Grupos</span>
+    </div>
+    <div class="qs-item">
+      <span class="qs-num">{{ total_alumnos }}</span>
+      <span class="qs-label">Alumnos</span>
+    </div>
+    <div class="qs-item">
+      <span class="qs-num">{{ tareas_activas }}</span>
+      <span class="qs-label">Tareas Activas</span>
+    </div>
+    <div class="qs-item">
+      <span class="qs-num">{{ asistencia_hoy }}</span>
+      <span class="qs-label">Asistencia Hoy</span>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="content-grid">
+
+    <!-- Izquierda -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+
+      <!-- Mis grupos -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Mis Grupos</span>
+          <span class="card-meta">{{ grupos|length }} asignado{% if grupos|length != 1 %}s{% endif %}</span>
+        </div>
+        <div class="card-body">
+          {% for grupo in grupos %}
+          <a href="{% url 'detalle_grupo' grupo.pk %}" class="grupo-item">
+            <div class="grupo-badge">{{ grupo.grado }}°</div>
+            <div style="flex:1;margin-left:12px">
+              <div class="grupo-name">{{ grupo }}</div>
+              <div class="grupo-sub">
+                {{ grupo.alumnos.count }} alumno{% if grupo.alumnos.count != 1 %}s{% endif %}
+                &nbsp;·&nbsp;
+                {% for asig in asignaciones %}{% if asig.grupo.pk == grupo.pk %}{{ asig.asignatura }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}
+              </div>
+            </div>
+            <svg class="grupo-arrow" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+          </a>
+          {% empty %}
+          <div class="empty-state">
+            <p class="empty-title">Sin grupos asignados</p>
+            <p class="empty-sub">Contacta al coordinador para que te asigne grupos.</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Notificaciones recientes -->
+      <div class="card">
+        <div class="card-header">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="pulse-dot"></span>
+            <span class="card-title">Actividad Reciente</span>
+          </div>
+          <span class="card-meta">Últimas 10</span>
+        </div>
+        <div class="card-body">
+          {% if notificaciones %}
+            {% for n in notificaciones %}
+            <a href="{{ n.url }}" class="notif-item">
+              <div class="notif-icon" style="background:{{ n.bg }};color:{{ n.color }}">{{ n.icono }}</div>
+              <div style="flex:1;min-width:0">
+                <div class="notif-title">{{ n.titulo }}</div>
+                <div class="notif-sub">{{ n.sub }}</div>
+                <div class="notif-time">{{ n.fecha|timesince }} ago</div>
+              </div>
+            </a>
+            {% endfor %}
+          {% else %}
+          <div class="empty-state">
+            <p class="empty-title">Sin actividad reciente</p>
+            <p class="empty-sub">Aquí aparecerán entregas y comentarios de tus alumnos.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Derecha -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+
+      <!-- Perfil -->
+      <div class="profile-card">
+        <div class="profile-avatar">{{ user.first_name|first|upper }}</div>
+        <div class="profile-name">{{ user.get_full_name }}</div>
+        <div class="profile-role">Docente</div>
+        <div class="profile-plantel">{{ user.plantel.nombre }}</div>
+      </div>
+
+      <!-- Acciones rápidas -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Acciones Rápidas</span>
+        </div>
+        <div class="card-body">
+
+          <a href="{% url 'docente_lista_asistencia' %}" class="qaction">
+            <div class="qaction-icon" style="background:#ecfdf5;color:#059669">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            </div>
+            <div>
+              <div class="qaction-name">Pasar Lista</div>
+              <div class="qaction-desc">Registrar asistencia hoy</div>
+            </div>
+          </a>
+
+          <a href="{% url 'crear_tarea' %}" class="qaction">
+            <div class="qaction-icon" style="background:#eef0fe;color:var(--accent)">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            </div>
+            <div>
+              <div class="qaction-name">Nueva Tarea</div>
+              <div class="qaction-desc">Crear y publicar tarea</div>
+            </div>
+          </a>
+
+          <a href="{% url 'subir_material' %}" class="qaction">
+            <div class="qaction-icon" style="background:#fef3c7;color:#d97706">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div>
+              <div class="qaction-name">Subir Material</div>
+              <div class="qaction-desc">PDF, video, enlace</div>
+            </div>
+          </a>
+
+          <a href="{% url 'crear_actividad' %}" class="qaction">
+            <div class="qaction-icon" style="background:#ede9fe;color:#7c3aed">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div>
+              <div class="qaction-name">Nueva Actividad</div>
+              <div class="qaction-desc">Ejercicio o cuestionario</div>
+            </div>
+          </a>
+
+          <a href="{% url 'docente_horario' %}" class="qaction">
+            <div class="qaction-icon" style="background:#f0fdf4;color:#16a34a">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            </div>
+            <div>
+              <div class="qaction-name">Mi Horario</div>
+              <div class="qaction-desc">Ver carga horaria</div>
+            </div>
+          </a>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

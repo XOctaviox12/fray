@@ -1,0 +1,232 @@
+{% extends 'inicio/base.html' %}
+{% block title %}{{ actividad.titulo }}{% endblock %}
+{% block nav_actividades %}active{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1rem">
+  <a href="{% url 'docente_actividades' %}" style="font-size:12px;color:var(--ink-3);text-decoration:none">← Volver</a>
+</div>
+
+{# Header #}
+<div style="background:#10131c;border-radius:14px;padding:1.5rem;margin-bottom:1.25rem">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <h1 style="font-size:20px;font-weight:700;color:#fff;margin:0">{{ actividad.titulo }}</h1>
+        {% if actividad.vencida %}
+        <span style="background:rgba(220,38,38,.2);color:#f87171;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">Vencida</span>
+        {% else %}
+        <span style="background:rgba(16,185,129,.2);color:#34d399;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">Activa</span>
+        {% endif %}
+        <span style="background:rgba(139,92,246,.2);color:#a78bfa;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">{{ actividad.get_tipo_display }}</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="background:rgba(79,110,247,.25);color:#8ba4fa;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">{{ actividad.asignatura }}</span>
+        <span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">{{ actividad.grupo }}</span>
+        <span style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px">📅 {{ actividad.fecha_entrega|date:"d/m/Y H:i" }}</span>
+      </div>
+      {% if actividad.instrucciones %}
+      <p style="font-size:13px;color:rgba(255,255,255,.5);margin:0">{{ actividad.instrucciones }}</p>
+      {% endif %}
+      {% if actividad.url_interactiva %}
+      <a href="{{ actividad.url_interactiva }}" target="_blank"
+        style="display:inline-flex;align-items:center;gap:5px;margin-top:10px;font-size:12px;font-weight:600;color:#8ba4fa;text-decoration:none">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Abrir ejercicio interactivo
+      </a>
+      {% endif %}
+    </div>
+
+    {# ── Botones — CADA UNO EN SU PROPIO FORM, nunca anidados ── #}
+    <div style="display:flex;gap:8px;flex-shrink:0">
+
+      {# Publicar / Ocultar #}
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" name="toggle_publicar" value="1"
+          style="height:32px;padding:0 14px;background:{% if actividad.publicada %}rgba(16,185,129,.15){% else %}rgba(79,110,247,.15){% endif %};color:{% if actividad.publicada %}#34d399{% else %}#8ba4fa{% endif %};border:1px solid {% if actividad.publicada %}rgba(16,185,129,.25){% else %}rgba(79,110,247,.25){% endif %};border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+          {% if actividad.publicada %}✓ Publicada — Ocultar{% else %}Publicar{% endif %}
+        </button>
+      </form>
+
+      {# Eliminar #}
+      <form method="post" action="{% url 'eliminar_actividad' actividad.pk %}" onsubmit="return confirm('¿Eliminar esta actividad?')">
+        {% csrf_token %}
+        <button type="submit"
+          style="height:32px;padding:0 14px;background:rgba(220,38,38,.15);color:#f87171;border:1px solid rgba(220,38,38,.25);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+          Eliminar
+        </button>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+{# Preguntas si las hay #}
+{% if preguntas %}
+<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.25rem">
+  <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1rem">Preguntas de la actividad</div>
+  {% for p in preguntas %}
+  <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #f2f3f7">
+    <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px">{{ forloop.counter }}. {{ p.texto }} <span style="font-size:11px;color:var(--ink-3);font-weight:400">({{ p.puntos }} pts)</span></div>
+    {% if p.opciones.all %}
+    <div style="display:flex;flex-direction:column;gap:4px;padding-left:16px">
+      {% for op in p.opciones.all %}
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:{% if op.es_correcta %}#059669{% else %}var(--ink-2){% endif %}">
+        {% if op.es_correcta %}✅{% else %}○{% endif %} {{ op.texto }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# KPIs #}
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem">
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem;text-align:center">
+    <div style="font-size:28px;font-weight:700;color:var(--accent)">{{ total_alumnos }}</div>
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-top:3px">Alumnos</div>
+  </div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem;text-align:center">
+    <div style="font-size:28px;font-weight:700;color:#059669">{{ total_entregaron }}</div>
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-top:3px">Entregaron</div>
+  </div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem;text-align:center">
+    <div style="font-size:28px;font-weight:700;color:#dc2626">{{ total_pendientes }}</div>
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-top:3px">Pendientes</div>
+  </div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem;text-align:center">
+    <div style="font-size:28px;font-weight:700;color:#d97706">{{ total_calificadas }}</div>
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-top:3px">Calificadas</div>
+  </div>
+</div>
+
+{# Tabla entregas #}
+<div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+  <div style="padding:.75rem 1.5rem;border-bottom:1px solid var(--border);background:#f7f8fc">
+    <span style="font-size:12px;font-weight:700;color:var(--ink)">Entregas de alumnos</span>
+  </div>
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="background:#f7f8fc;border-bottom:1px solid var(--border)">
+        <th style="padding:.6rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:left">Alumno</th>
+        <th style="padding:.6rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Estado</th>
+        <th style="padding:.6rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Entrega</th>
+        <th style="padding:.6rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Calificación</th>
+        <th style="padding:.6rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Acción</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in filas %}
+      <tr style="border-bottom:1px solid #f2f3f7">
+        <td style="padding:.75rem 1.25rem">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:32px;height:32px;border-radius:8px;background:var(--accent-2);color:var(--accent);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              {{ fila.alumno.first_name|first|upper }}{{ fila.alumno.last_name|first|upper }}
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ fila.alumno.get_full_name }}</div>
+              <div style="font-size:11px;color:var(--ink-3)">{{ fila.alumno.username }}</div>
+            </div>
+          </div>
+        </td>
+        <td style="padding:.75rem 1.25rem;text-align:center">
+          {% if fila.estado == 'CALIFICADA' %}
+            <span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">Calificada</span>
+          {% elif fila.estado == 'ENTREGADA' %}
+            <span style="background:#dbeafe;color:#1e40af;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">Entregada</span>
+          {% else %}
+            <span style="background:#f3f4f6;color:#6b7280;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">Pendiente</span>
+          {% endif %}
+        </td>
+        <td style="padding:.75rem 1.25rem;text-align:center">
+          {% if fila.entrega %}
+            {% if fila.entrega.archivo_url %}
+            <a href="{% url 'ver_pdf' fila.entrega.pk 'actividad' %}" target="_blank"
+              style="font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Ver archivo
+            </a>
+            {% else %}
+            <span style="font-size:12px;color:var(--ink-3)">Respondida</span>
+            {% endif %}
+          {% else %}
+            <span style="font-size:12px;color:var(--ink-3)">—</span>
+          {% endif %}
+        </td>
+        <td style="padding:.75rem 1.25rem;text-align:center">
+          {% if fila.entrega.calificacion %}
+            <span style="font-size:18px;font-weight:700;color:{% if fila.entrega.calificacion >= 6 %}#059669{% else %}#dc2626{% endif %}">
+              {{ fila.entrega.calificacion }}
+            </span>
+          {% else %}
+            <span style="font-size:12px;color:var(--ink-3)">—</span>
+          {% endif %}
+        </td>
+        <td style="padding:.75rem 1.25rem;text-align:center">
+          {% if fila.entrega %}
+          <button onclick="abrirCalificar({{ fila.entrega.pk }}, '{{ fila.alumno.get_full_name }}', {{ fila.entrega.calificacion|default:'null' }}, '{{ fila.entrega.feedback|escapejs }}')"
+            style="height:30px;padding:0 12px;background:var(--accent-2);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+            {% if fila.estado == 'CALIFICADA' %}Editar nota{% else %}Calificar{% endif %}
+          </button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# Modal calificar #}
+<div id="modalCalificar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:1.5rem;width:100%;max-width:420px;margin:16px">
+    <h3 style="font-size:16px;font-weight:700;color:var(--ink);margin-bottom:4px">Calificar entrega</h3>
+    <p id="modalAlumno" style="font-size:12px;color:var(--ink-3);margin-bottom:16px"></p>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="calificar" value="1">
+      <input type="hidden" name="entrega_id" id="modalEntregaId">
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Calificación (0–10)</label>
+        <input type="number" name="calificacion" id="modalCal" min="0" max="10" step="0.1"
+          style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:20px;font-weight:700;text-align:center;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Retroalimentación (opcional)</label>
+        <textarea name="feedback" id="modalFeedback" rows="3"
+          style="width:100%;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none;resize:none"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" onclick="cerrarModal()"
+          style="height:36px;padding:0 16px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;color:var(--ink-2)">
+          Cancelar
+        </button>
+        <button type="submit"
+          style="height:36px;padding:0 20px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function abrirCalificar(entregaId, nombre, cal, feedback) {
+  document.getElementById('modalEntregaId').value = entregaId;
+  document.getElementById('modalAlumno').textContent = nombre;
+  document.getElementById('modalCal').value = cal !== 'None' ? cal : '';
+  document.getElementById('modalFeedback').value = feedback || '';
+  document.getElementById('modalCalificar').style.display = 'flex';
+}
+function cerrarModal() {
+  document.getElementById('modalCalificar').style.display = 'none';
+}
+document.getElementById('modalCalificar').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModal();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,352 @@
+calificaciones_form.html
+{% extends 'inicio/base.html' %}
+
+{% block content %}
+<style>
+  :root {
+    --ink:    #111318;
+    --ink-2:  #6b7280;
+    --ink-3:  #9ca3af;
+    --border: #e8eaf0;
+    --bg:     #f4f5f9;
+    --white:  #ffffff;
+    --accent: #4f6ef7;
+    --ok:     #10b981;
+    --warn:   #f59e0b;
+    --danger: #e53e3e;
+    --r: 16px;
+  }
+
+  /* Page header */
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 20px;
+  }
+  .back-btn {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: var(--white); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-2); text-decoration: none; transition: all .16s;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    flex-shrink: 0;
+  }
+  .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .page-title { font-family: 'Instrument Serif', serif; font-size: 22px; font-weight: 400; color: var(--ink); letter-spacing: -.02em; margin: 0; }
+  .page-sub { font-size: 11.5px; color: var(--ink-2); margin: 2px 0 0; }
+
+  .btn-outline {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; background: var(--white);
+    border: 1px solid var(--border); color: var(--ink-2);
+    border-radius: 10px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em;
+    cursor: pointer; text-decoration: none; transition: all .16s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+  .btn-outline:hover { border-color: var(--ink); color: var(--ink); }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; background: var(--ink); color: #fff;
+    border: none; border-radius: 10px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em;
+    cursor: pointer; text-decoration: none; transition: all .16s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  .btn-primary:hover { background: var(--accent); box-shadow: 0 4px 14px rgba(79,110,247,.28); }
+
+  /* KPIs */
+  .kpi-strip {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 18px;
+  }
+  .kpi-mini {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: var(--r); padding: 18px 16px; text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .kpi-mini-num {
+    font-family: 'Instrument Serif', serif;
+    font-size: 34px; font-weight: 400; line-height: 1;
+    letter-spacing: -.03em;
+  }
+  .kpi-mini-label {
+    font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .09em; margin-top: 5px;
+  }
+
+  /* Table card */
+  .table-card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    margin-bottom: 18px;
+  }
+  .print-header { display: none; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead tr { background: var(--ink); }
+  thead th {
+    padding: 13px 14px; text-align: center;
+    font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,.7);
+  }
+  thead th:first-child { text-align: left; padding-left: 20px; color: #fff; }
+  thead th { border-left: 1px solid rgba(255,255,255,.08); }
+  thead th:first-child { border-left: none; }
+
+  tbody tr { transition: background .15s; border-bottom: 1px solid #f3f4f6; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #fafbff; }
+
+  td { padding: 12px 14px; }
+  td:first-child { padding-left: 20px; }
+  td { border-left: 1px solid #f3f4f6; }
+  td:first-child { border-left: none; }
+
+  .student-name { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .student-id { font-size: 10px; color: var(--ink-3); margin-top: 1px; }
+
+  .grade-link {
+    display: inline-block; font-size: 14px; font-weight: 800;
+    text-decoration: none; transition: opacity .15s; border-radius: 6px;
+    padding: 1px 6px;
+  }
+  .grade-link:hover { opacity: .7; }
+  .grade-ok   { color: var(--ok);   background: #ecfdf5; }
+  .grade-warn { color: #d97706;     background: #fffbeb; }
+  .grade-bad  { color: var(--danger); background: #fff5f5; }
+  .grade-empty { color: #d1d5db; font-size: 13px; font-weight: 700; }
+
+  .avg-cell { background: #fafbff; }
+  .avg-num { font-size: 15px; font-weight: 800; }
+
+  tfoot tr { background: #f8f9fc; border-top: 2px solid var(--border); }
+  tfoot td {
+    padding: 11px 14px; font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3);
+  }
+  tfoot td:first-child { padding-left: 20px; }
+
+  /* Quick access */
+  .section-label {
+    font-size: 9.5px; font-weight: 700; color: var(--ink-3);
+    text-transform: uppercase; letter-spacing: .12em; margin-bottom: 10px;
+  }
+  .subject-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .subject-card {
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px;
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none; transition: all .18s;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  }
+  .subject-card:hover {
+    border-color: var(--accent); background: #eef0fe;
+    transform: translateY(-2px); box-shadow: 0 6px 18px rgba(79,110,247,.1);
+  }
+  .subject-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all .18s;
+    background: #eef0fe; color: var(--accent);
+  }
+  .subject-card:hover .subject-icon { background: var(--accent); color: #fff; }
+  .subject-name { font-size: 12px; font-weight: 700; color: var(--ink); }
+  .subject-avg { font-size: 10px; color: var(--ink-3); margin-top: 1px; }
+
+  @media (max-width: 900px) {
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .subject-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .subject-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* Print */
+  @media print {
+    header, footer, aside, .print\:hidden { display: none !important; }
+    #page-wrap { margin-left: 0 !important; }
+    #page-content { padding: 0 !important; }
+    body { background: white !important; }
+    .table-card { border-radius: 0 !important; border: 1px solid #e2e8f0 !important; box-shadow: none !important; }
+    .print-header { display: block !important; padding: 20px 24px; border-bottom: 1px solid #e2e8f0; }
+    th, td { font-size: 10px !important; padding: 6px 10px !important; }
+    thead { background: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .kpi-strip, .page-header .flex { display: none !important; }
+    .btn-outline, .btn-primary { display: none !important; }
+  }
+</style>
+
+<div style="display:flex;flex-direction:column;gap:0;max-width:100%;">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <a href="{% url 'detalle_grupo' grupo.pk %}" class="back-btn print:hidden">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+      </a>
+      <div>
+        <h2 class="page-title">Reporte de Calificaciones</h2>
+        <p class="page-sub">{{ grupo }} &nbsp;·&nbsp; {{ grupo.carrera.nombre }}</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;" class="print:hidden">
+      <button onclick="window.print()" class="btn-outline">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+        Imprimir
+      </button>
+      <a href="{% url 'pasar_lista' grupo.pk %}" class="btn-primary">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+        Pasar Lista
+      </a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-strip print:hidden">
+    <div class="kpi-mini">
+      <div class="kpi-mini-num" style="color:var(--ink);">{{ alumnos.count }}</div>
+      <div class="kpi-mini-label" style="color:var(--ink-3);">Total alumnos</div>
+    </div>
+    <div class="kpi-mini" style="background:#ecfdf5;border-color:#a7f3d0;">
+      <div class="kpi-mini-num" id="kpi-aprobados" style="color:var(--ok);">—</div>
+      <div class="kpi-mini-label" style="color:#059669;">Aprobados</div>
+    </div>
+    <div class="kpi-mini" style="background:#fff5f5;border-color:#fecaca;">
+      <div class="kpi-mini-num" id="kpi-reprobados" style="color:var(--danger);">—</div>
+      <div class="kpi-mini-label" style="color:var(--danger);">Reprobados</div>
+    </div>
+    <div class="kpi-mini" style="background:#eef0fe;border-color:#c7d2fe;">
+      <div class="kpi-mini-num" id="kpi-promedio" style="color:var(--accent);">—</div>
+      <div class="kpi-mini-label" style="color:var(--accent);">Promedio general</div>
+    </div>
+  </div>
+
+  <!-- Main table -->
+  <div class="table-card">
+    <!-- Print header -->
+    <div class="print-header">
+      <h1 style="font-family:'Instrument Serif',serif;font-size:20px;color:#111318;margin:0;">Acta de Calificaciones — {{ grupo }}</h1>
+      <p style="font-size:12px;color:#6b7280;margin:4px 0 0;">{{ grupo.carrera.nombre }} · Ciclo escolar 2026</p>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left;min-width:180px;">Alumno</th>
+            {% for asig in asignaturas %}
+            <th style="min-width:90px;">{{ asig.nombre|truncatechars:14 }}</th>
+            {% endfor %}
+            <th style="min-width:90px;background:rgba(255,255,255,.06);">Promedio</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for alumno in alumnos %}
+          {% with prom=promedios|default:{}|get:alumno.id %}
+          <tr>
+            <td style="position:sticky;left:0;background:#fff;border-right:1px solid #f3f4f6;">
+              <div class="student-name">{{ alumno.get_full_name }}</div>
+              <div class="student-id print:hidden">@{{ alumno.username }}</div>
+            </td>
+            {% for asig in asignaturas %}
+            {% with nota=tabla|default:{}|get:alumno.id|default:{}|get:asig.id %}
+            <td style="text-align:center;">
+              {% if nota is not None %}
+                <a href="{% url 'registrar_calificaciones' grupo.pk asig.pk %}"
+                   class="grade-link {% if nota >= 8 %}grade-ok{% elif nota >= 6 %}grade-warn{% else %}grade-bad{% endif %}">
+                  {{ nota|floatformat:1 }}
+                </a>
+              {% else %}
+                <a href="{% url 'registrar_calificaciones' grupo.pk asig.pk %}" class="grade-empty print:hidden">—</a>
+                <span class="print:inline" style="display:none;color:#d1d5db;">—</span>
+              {% endif %}
+            </td>
+            {% endwith %}
+            {% endfor %}
+            <td style="text-align:center;" class="avg-cell">
+              {% if prom is not None %}
+              <span class="avg-num {% if prom >= 8 %}grade-ok{% elif prom >= 6 %}grade-warn{% else %}grade-bad{% endif %}" style="background:transparent;">{{ prom }}</span>
+              {% else %}
+              <span style="color:#d1d5db;font-weight:700;">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+          {% empty %}
+          <tr>
+            <td colspan="{{ asignaturas.count|add:2 }}" style="padding:48px;text-align:center;color:var(--ink-3);font-style:italic;">
+              No hay alumnos en este grupo.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        {% if asignaturas %}
+        <tfoot>
+          <tr>
+            <td>Promedio grupo</td>
+            {% for asig in asignaturas %}
+            {% with pa=prom_asig|default:{}|get:asig.id %}
+            <td style="text-align:center;">
+              {% if pa is not None %}
+              <span style="font-weight:800;font-size:13px;" class="{% if pa >= 8 %}grade-ok{% elif pa >= 6 %}grade-warn{% else %}grade-bad{% endif %}" style="background:transparent;">{{ pa }}</span>
+              {% else %}<span style="color:#d1d5db;">—</span>{% endif %}
+            </td>
+            {% endwith %}
+            {% endfor %}
+            <td></td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+
+  <!-- Quick access subjects -->
+  <div class="print:hidden">
+    <p class="section-label">Registrar notas por materia</p>
+    <div class="subject-grid">
+      {% for asig in asignaturas %}
+      <a href="{% url 'registrar_calificaciones' grupo.pk asig.pk %}" class="subject-card">
+        <div class="subject-icon">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+        </div>
+        <div style="min-width:0;">
+          <div class="subject-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ asig.nombre }}</div>
+          {% with pa=prom_asig|default:{}|get:asig.id %}
+          <div class="subject-avg">Promedio: {% if pa %}{{ pa }}{% else %}sin datos{% endif %}</div>
+          {% endwith %}
+        </div>
+      </a>
+      {% empty %}
+      <p style="color:var(--ink-3);font-size:12px;font-style:italic;grid-column:1/-1;">No hay asignaturas asignadas.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const promedios = [
+    {% for alumno in alumnos %}
+    {% with p=promedios|default:{}|get:alumno.id %}
+    {% if p is not None %}{{ p }},{% endif %}
+    {% endwith %}
+    {% endfor %}
+  ];
+  if (!promedios.length) return;
+  const aprobados  = promedios.filter(p => p >= 6).length;
+  const reprobados = promedios.filter(p => p < 6).length;
+  const prom = (promedios.reduce((a,b) => a+b, 0) / promedios.length).toFixed(1);
+  document.getElementById('kpi-aprobados').textContent  = aprobados;
+  document.getElementById('kpi-reprobados').textContent = reprobados;
+  document.getElementById('kpi-promedio').textContent   = prom;
+});
+</script>
+{% endblock %}

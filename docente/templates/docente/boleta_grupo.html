@@ -1,10 +1,10 @@
 {% extends 'inicio/base.html' %}
-{% block title %}Boleta — {{ grupo }}{% endblock %}
+{% block title %}Boleta — {{ grupo }} — {{ asignatura.nombre }}{% endblock %}
 {% block nav_boleta %}active{% endblock %}
 
 {% block content %}
 <div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
-  <a href="{% url 'docente_boleta' %}" style="font-size:12px;color:var(--ink-3);text-decoration:none">← Volver</a>
+  <a href="{% url 'docente_boleta_lista' %}" style="font-size:12px;color:var(--ink-3);text-decoration:none">← Volver</a>
   <a href="{% url 'docente_concentrado' %}?grupo_id={{ grupo.pk }}"
     style="height:34px;padding:0 16px;background:var(--accent-2);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:9px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;text-decoration:none">
     Ver concentrado →
@@ -12,14 +12,14 @@
 </div>
 
 <div style="margin-bottom:1.25rem">
-  <h1 style="font-size:20px;font-weight:700;color:var(--ink);margin-bottom:2px">{{ grupo }}</h1>
-  <p style="font-size:13px;color:var(--ink-2)">Boleta de calificaciones</p>
-   <a href="{% url 'pdf_boleta_grupo' grupo.pk %}"
-          style="height:30px;padding:0 12px;background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px;text-decoration:none;"
-          target="_blank">
-          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-          Exportar mes
-        </a>
+  <h1 style="font-size:20px;font-weight:700;color:var(--ink);margin-bottom:2px">{{ grupo.grado }}° {{ grupo.nombre }}</h1>
+  <p style="font-size:13px;color:var(--ink-2)">Boleta de calificaciones — {{ asignatura.nombre }}</p>
+  <a href="{% url 'pdf_boleta_grupo' grupo.pk %}"
+    style="height:30px;padding:0 12px;background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px;text-decoration:none;margin-top:6px"
+    target="_blank">
+    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+    Exportar mes
+  </a>
 </div>
 
 {% if messages %}
@@ -34,52 +34,40 @@
     <table style="width:100%;border-collapse:collapse;min-width:600px">
       <thead>
         <tr style="background:#f7f8fc;border-bottom:1px solid var(--border)">
-          <th style="padding:.75rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:left;position:sticky;left:0;background:#f7f8fc">Alumno</th>
-          {% for asig in asignaturas %}
-          <th colspan="4" style="padding:.75rem 1rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center;border-left:2px solid var(--border)">
-            {{ asig.nombre }}
-          </th>
-          {% endfor %}
-        </tr>
-        <tr style="background:#f7f8fc;border-bottom:1px solid var(--border)">
-          <th style="padding:.4rem 1.25rem;position:sticky;left:0;background:#f7f8fc"></th>
-          {% for asig in asignaturas %}
-          <th style="padding:.4rem .75rem;font-size:9px;color:var(--ink-3);font-weight:600;text-align:center;border-left:2px solid var(--border)">Tareas</th>
-          <th style="padding:.4rem .75rem;font-size:9px;color:var(--ink-3);font-weight:600;text-align:center">Actividades</th>
-          <th style="padding:.4rem .75rem;font-size:9px;color:var(--ink-3);font-weight:600;text-align:center">Manual</th>
-          <th style="padding:.4rem .75rem;font-size:9px;color:var(--ink-3);font-weight:600;text-align:center">Final</th>
-          {% endfor %}
+          <th style="padding:.75rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:left">Alumno</th>
+          <th style="padding:.75rem .75rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center;border-left:2px solid var(--border)">Tareas</th>
+          <th style="padding:.75rem .75rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Actividades</th>
+          <th style="padding:.75rem .75rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Manual</th>
+          <th style="padding:.75rem .75rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Final</th>
         </tr>
       </thead>
       <tbody>
         {% for fila in filas %}
         <tr style="border-bottom:1px solid #f2f3f7">
-          <td style="padding:.75rem 1.25rem;position:sticky;left:0;background:#fff">
+          <td style="padding:.75rem 1.25rem">
             <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ fila.alumno.get_full_name }}</div>
             <div style="font-size:11px;color:var(--ink-3)">{{ fila.alumno.username }}</div>
           </td>
-          {% for col in fila.cols %}
           <td style="padding:.75rem .5rem;text-align:center;border-left:2px solid var(--border)">
-            <span style="font-size:13px;color:var(--ink-3)">{{ col.prom_tareas|default:"—" }}</span>
+            <span style="font-size:13px;color:var(--ink-3)">{{ fila.prom_tareas|default:"—" }}</span>
           </td>
           <td style="padding:.75rem .5rem;text-align:center">
-            <span style="font-size:13px;color:var(--ink-3)">{{ col.prom_activ|default:"—" }}</span>
+            <span style="font-size:13px;color:var(--ink-3)">{{ fila.prom_activ|default:"—" }}</span>
           </td>
           <td style="padding:.5rem .5rem;text-align:center">
-            <input type="number" name="cal_{{ fila.alumno.pk }}_{{ col.asignatura.pk }}"
-              value="{{ col.manual|default:'' }}" min="0" max="10" step="0.1"
+            <input type="number" name="cal_{{ fila.alumno.pk }}"
+              value="{{ fila.manual|default:'' }}" min="0" max="10" step="0.1"
               style="width:60px;height:32px;border:1px solid var(--border);border-radius:7px;padding:0 6px;font-size:13px;font-weight:600;text-align:center;background:#f7f8fc;color:var(--ink);outline:none">
           </td>
           <td style="padding:.75rem .5rem;text-align:center">
-            {% if col.final %}
-            <span style="font-size:15px;font-weight:700;color:{% if col.final >= 6 %}#059669{% else %}#dc2626{% endif %}">
-              {{ col.final }}
+            {% if fila.final %}
+            <span style="font-size:15px;font-weight:700;color:{% if fila.final >= 6 %}#059669{% else %}#dc2626{% endif %}">
+              {{ fila.final }}
             </span>
             {% else %}
             <span style="font-size:13px;color:var(--ink-3)">—</span>
             {% endif %}
           </td>
-          {% endfor %}
         </tr>
         {% endfor %}
       </tbody>

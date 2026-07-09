@@ -913,90 +913,74 @@ def boleta(request):
     asignaciones = (
         DocenteGrupo.objects
         .filter(docente=request.user, activo=True, grupo__plantel=request.user.plantel)
-        .select_related('grupo')
-        .values('grupo__pk', 'grupo__nombre')
+        .select_related('grupo', 'asignatura')
+        .values('grupo__pk', 'grupo__nombre', 'grupo__grado', 'asignatura__pk', 'asignatura__nombre')
         .distinct()
+        .order_by('grupo__grado', 'grupo__nombre', 'asignatura__nombre')
     )
-    return render(request, 'docente/boleta.html', {'grupos': asignaciones})
-
+    return render(request, 'docente/boleta.html', {'asignaciones': asignaciones})
 
 @docente_required
-def boleta_grupo(request, grupo_id):
-    from academic.models import Grupo, Calificacion, EntregaTarea, EntregaActividad
+def boleta_grupo(request, grupo_id, asignatura_id):
+    from academic.models import Grupo, Asignatura, Calificacion, EntregaTarea, EntregaActividad
+    from users.models import DocenteGrupo, User
+    from django.db.models import Avg
 
-    # Fix crítico: verificar plantel + pertenencia del docente
-    grupo = get_object_or_404(
-        Grupo,
-        pk=grupo_id,
-        plantel=request.user.plantel,                 # Fix: filtro plantel
-    )
+    grupo = get_object_or_404(Grupo, pk=grupo_id, plantel=request.user.plantel)
+    asignatura = get_object_or_404(Asignatura, pk=asignatura_id)
 
-    asignaciones = (
-        DocenteGrupo.objects
-        .filter(docente=request.user, activo=True, grupo=grupo)
-        .select_related('asignatura')
-    )
-    if not asignaciones.exists():
-        messages.error(request, 'No tienes acceso a este grupo.')
-        return redirect('docente_boleta')
+    tiene_acceso = DocenteGrupo.objects.filter(
+        docente=request.user, grupo=grupo, asignatura=asignatura, activo=True
+    ).exists()
+    if not tiene_acceso:
+        messages.error(request, 'No tienes acceso a esta materia en este grupo.')
+        return redirect('docente_boleta_lista')
 
-    asignaturas = [a.asignatura for a in asignaciones]
-    alumnos     = grupo.alumnos.filter(estatus='ACTIVO', rol='ALUMNO').order_by('last_name', 'first_name')
+    alumnos = User.objects.filter(
+        rol='ALUMNO', alumno_grupo=grupo, plantel=request.user.plantel
+    ).order_by('last_name', 'first_name')
 
     if request.method == 'POST':
-        for key, value in request.POST.items():
-            if key.startswith('cal_'):
-                _, alumno_id, asig_id = key.split('_')
-                try:
-                    nota = float(value)
-                    if 0 <= nota <= 10:
-                        Calificacion.objects.update_or_create(
-                            alumno_id=alumno_id,
-                            asignatura_id=asig_id,
-                            grupo=grupo,
-                            tipo='MANUAL',
-                            defaults={'nota': nota, 'docente': request.user}
-                        )
-                except (ValueError, TypeError):
-                    pass
+        for alumno in alumnos:
+            valor = request.POST.get(f'cal_{alumno.pk}')
+            if valor:
+                Calificacion.objects.update_or_create(
+                    alumno=alumno, asignatura=asignatura, grupo=grupo, tipo='MANUAL',
+                    defaults={'nota': valor, 'docente': request.user}
+                )
         messages.success(request, 'Calificaciones guardadas.')
-        return redirect('docente_boleta_grupo', grupo_id=grupo_id)
+        return redirect('docente_boleta_grupo', grupo_id=grupo.pk, asignatura_id=asignatura.pk)
 
     filas = []
     for alumno in alumnos:
-        cols = []
-        for asig in asignaturas:
-            prom_tareas = EntregaTarea.objects.filter(
-                alumno=alumno, tarea__asignatura=asig,
-                tarea__grupo=grupo, calificacion__isnull=False,
-            ).aggregate(p=Avg('calificacion'))['p']
+        prom_tareas = EntregaTarea.objects.filter(
+            alumno=alumno, tarea__grupo=grupo, tarea__asignatura=asignatura, calificacion__isnull=False
+        ).aggregate(p=Avg('calificacion'))['p']
 
-            prom_actividades = EntregaActividad.objects.filter(
-                alumno=alumno, actividad__asignatura=asig,
-                actividad__grupo=grupo, calificacion__isnull=False,
-            ).aggregate(p=Avg('calificacion'))['p']
+        prom_activ = EntregaActividad.objects.filter(
+            alumno=alumno, actividad__grupo=grupo, actividad__asignatura=asignatura, calificacion__isnull=False
+        ).aggregate(p=Avg('calificacion'))['p']
 
-            cal_manual = Calificacion.objects.filter(
-                alumno=alumno, asignatura=asig, grupo=grupo, tipo='MANUAL',
-            ).first()
+        manual_obj = Calificacion.objects.filter(
+            alumno=alumno, asignatura=asignatura, grupo=grupo, tipo='MANUAL'
+        ).order_by('-fecha').first()
+        manual_val = manual_obj.nota if manual_obj else None
 
-            valores = [v for v in [
-                prom_tareas, prom_actividades,
-                cal_manual.nota if cal_manual else None,
-            ] if v is not None]
-            promedio_final = round(sum(valores) / len(valores), 2) if valores else None
+        partes = [v for v in [prom_tareas, prom_activ, manual_val] if v is not None]
+        final = round(sum(partes) / len(partes), 2) if partes else None
 
-            cols.append({
-                'asignatura':  asig,
-                'prom_tareas': round(float(prom_tareas), 2) if prom_tareas else None,
-                'prom_activ':  round(float(prom_actividades), 2) if prom_actividades else None,
-                'manual':      float(cal_manual.nota) if cal_manual else None,
-                'final':       promedio_final,
-            })
-        filas.append({'alumno': alumno, 'cols': cols})
+        filas.append({
+            'alumno': alumno,
+            'prom_tareas': round(prom_tareas, 2) if prom_tareas else None,
+            'prom_activ': round(prom_activ, 2) if prom_activ else None,
+            'manual': manual_val,
+            'final': final,
+        })
 
     return render(request, 'docente/boleta_grupo.html', {
-        'grupo': grupo, 'asignaturas': asignaturas, 'filas': filas,
+        'grupo': grupo,
+        'asignatura': asignatura,
+        'filas': filas,
     })
 
 

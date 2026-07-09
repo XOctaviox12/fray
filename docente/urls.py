@@ -30,8 +30,8 @@ urlpatterns = [
     # ── Calificaciones ────────────────────────────────────────────────────────
     path('calificar/tareas/',            views.calificar_tareas,         name='docente_calificar_tareas'),
     path('calificar/actividades/',       views.calificar_actividades,    name='docente_calificar_actividades'),
-    path('boleta/',                      views.boleta,                   name='docente_boleta'),
-    path('boleta/<int:grupo_id>/',       views.boleta_grupo,             name='docente_boleta_grupo'),
+    path('boleta/', views.boleta, name='docente_boleta_lista'),
+    path('boleta/<int:grupo_id>/<int:asignatura_id>/', views.boleta_grupo, name='docente_boleta_grupo'),
     path('concentrado/',                 views.concentrado,              name='docente_concentrado'),
 
     # ── Material de Apoyo ─────────────────────────────────────────────────────

@@ -211,12 +211,13 @@ def detalle_grupo(request, pk):
     grupo = get_object_or_404(Grupo, pk=pk, plantel=request.user.plantel)
     # Si es docente, verificar que tenga asignación en este grupo
     if request.user.rol == 'DOCENTE':
-        tiene_acceso = grupo.docentes_asignados.filter(
-            docente=request.user, activo=True
+        from users.models import DocenteGrupo
+        tiene_acceso = DocenteGrupo.objects.filter(
+            docente=request.user, grupo=grupo, activo=True
         ).exists()
-        if not tiene_acceso:
-            messages.error(request, 'No tienes acceso a este grupo.')
-            return redirect('docente_mis_grupos')
+    if not tiene_acceso:
+        messages.error(request, 'No tienes acceso a este grupo.')
+        return redirect('docente_mis_grupos')
 
     promedio   = grupo.promedio_general
     asistencia = grupo.asistencia_mensual

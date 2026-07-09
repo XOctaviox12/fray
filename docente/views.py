@@ -133,9 +133,9 @@ def mis_grupos(request):
     grupos = (
         Grupo.objects
         .filter(
-            plantel=request.user.plantel,             # Fix: filtro plantel
-            docentes_asignados__docente=request.user,
-            docentes_asignados__activo=True,
+            plantel=request.user.plantel,
+            docentes=request.user,
+            asignaturas__docentes=request.user,   # ← solo grupos donde también imparte alguna materia
         )
         .distinct()
         .prefetch_related('alumnos', 'asignaturas')

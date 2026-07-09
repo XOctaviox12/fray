@@ -1,0 +1,21 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Nuevo Plantel{% endblock %}
+
+{% block content %}
+<div style="max-width:560px">
+  <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:1.5rem">Nuevo Plantel</h1>
+  {% if messages %}{% for msg in messages %}
+  <div style="background:#fee2e2;color:#991b1b;padding:.75rem 1rem;border-radius:9px;margin-bottom:1rem;font-size:13px">{{ msg }}</div>
+  {% endfor %}{% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
+      {{ form.as_p }}
+    </div>
+    <button type="submit"
+      style="height:42px;padding:0 28px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+      Crear Plantel
+    </button>
+  </form>
+</div>
+{% endblock %}

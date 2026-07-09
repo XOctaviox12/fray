@@ -507,8 +507,6 @@ class ComentarioMaterial(models.Model):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class PlanClase(models.Model):
-    """Plan de clase semanal/mensual creado por un docente para una asignatura y grupo."""
-
     PERIODOS = [
         ('SEMANA',    'Semanal'),
         ('QUINCENA',  'Quincenal'),
@@ -517,7 +515,7 @@ class PlanClase(models.Model):
         ('SEMESTRE',  'Semestral'),
         ('ANUAL',     'Anual'),
     ]
-
+ 
     docente    = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -544,15 +542,15 @@ class PlanClase(models.Model):
     publicado      = models.BooleanField(default=False)
     creado_en      = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
-
+ 
     class Meta:
         verbose_name        = 'Plan de Clase'
         verbose_name_plural = 'Planes de Clase'
         ordering            = ['-fecha_inicio']
-
+ 
     def __str__(self):
         return f"{self.titulo} — {self.asignatura} ({self.grupo})"
-
+ 
     @property
     def progreso(self):
         """Porcentaje de temas marcados como completados."""
@@ -561,11 +559,18 @@ class PlanClase(models.Model):
             return 0
         completados = self.temas.filter(completado=True).count()
         return int((completados / total) * 100)
-
-
+ 
+ 
 class TemaClase(models.Model):
-    """Tema/sesión individual dentro de un PlanClase."""
-
+ 
+    ESTADOS = [
+        ('borrador',   'Borrador'),
+        ('activa',     'Activa'),
+        ('finalizada', 'Finalizada'),
+    ]
+ 
+    TIPOS_BLOQUE = ('texto', 'pdf', 'video', 'actividad', 'imagen', 'link')
+ 
     plan        = models.ForeignKey(PlanClase, on_delete=models.CASCADE, related_name='temas')
     numero      = models.PositiveIntegerField(verbose_name='# Sesión')
     titulo      = models.CharField(max_length=200)
@@ -576,16 +581,111 @@ class TemaClase(models.Model):
     evaluacion  = models.TextField(blank=True, verbose_name='Instrumento de evaluación')
     completado  = models.BooleanField(default=False)
     notas_docente = models.TextField(blank=True)
-
+ 
+    # ── Campos agregados para Clase en Vivo ─────────────────────────
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='borrador')
+ 
+    # Copia de docente/grupo/asignatura del plan padre. Se llenan solos
+    # en save(). Existen porque Supabase Realtime solo puede filtrar por
+    # columnas de la propia tabla (no puede filtrar a través de un JOIN
+    # con PlanClase), así que la app móvil necesita estos campos aquí
+    # mismo para saber a quién mostrarle la sesión en vivo.
+    docente    = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='temas_clase',
+        editable=False,
+        null=True, blank=True,
+    )
+    grupo      = models.ForeignKey(
+        Grupo,
+        on_delete=models.CASCADE,
+        related_name='temas_clase',
+        editable=False,
+        null=True, blank=True,
+    )
+    asignatura = models.ForeignKey(
+        Asignatura,
+        on_delete=models.CASCADE,
+        related_name='temas_clase',
+        editable=False,
+        null=True, blank=True,
+    )
+ 
+    # Contenido en vivo: lista de bloques ordenados.
+    # Ej: [{"id": "b1", "tipo": "texto", "titulo": "", "contenido": "...", "orden": 1}, ...]
+    bloques = models.JSONField(default=list, blank=True)
+ 
+    iniciada_en   = models.DateTimeField(null=True, blank=True)
+    finalizada_en = models.DateTimeField(null=True, blank=True)
+ 
     class Meta:
         verbose_name        = 'Tema / Sesión'
         verbose_name_plural = 'Temas / Sesiones'
         ordering            = ['numero']
         unique_together     = [['plan', 'numero']]
-
+        constraints = [
+            # Un docente solo puede tener UNA sesión activa (transmitiendo)
+            # a la vez, sin importar de qué plan/grupo/materia sea.
+            models.UniqueConstraint(
+                fields=['docente'],
+                condition=models.Q(estado='activa'),
+                name='uq_temaclase_docente_una_activa',
+            ),
+        ]
+ 
     def __str__(self):
         return f"Sesión {self.numero}: {self.titulo}"
-    
+ 
+    def save(self, *args, **kwargs):
+        # Denormaliza docente/grupo/asignatura desde el plan padre
+        if self.plan_id:
+            self.docente_id    = self.plan.docente_id
+            self.grupo_id      = self.plan.grupo_id
+            self.asignatura_id = self.plan.asignatura_id
+        super().save(*args, **kwargs)
+ 
+    # ── Helpers de transmisión en vivo ──────────────────────────────
+ 
+    def iniciar_transmision(self):
+        """Activa esta sesión y finaliza cualquier otra activa del mismo docente."""
+        from django.utils import timezone
+ 
+        TemaClase.objects.filter(
+            docente_id=self.docente_id, estado='activa'
+        ).exclude(pk=self.pk).update(estado='finalizada', finalizada_en=timezone.now())
+ 
+        self.estado = 'activa'
+        self.iniciada_en = timezone.now()
+        self.save(update_fields=['estado', 'iniciada_en'])
+ 
+    def finalizar_transmision(self):
+        from django.utils import timezone
+ 
+        self.estado = 'finalizada'
+        self.finalizada_en = timezone.now()
+        self.completado = True
+        self.save(update_fields=['estado', 'finalizada_en', 'completado'])
+ 
+    def agregar_bloque(self, tipo, contenido, titulo=''):
+        if tipo not in self.TIPOS_BLOQUE:
+            raise ValueError(f'Tipo de bloque inválido: {tipo}')
+ 
+        import uuid
+        nuevo = {
+            'id': uuid.uuid4().hex[:8],
+            'tipo': tipo,
+            'titulo': titulo,
+            'contenido': contenido,
+            'orden': len(self.bloques) + 1,
+        }
+        self.bloques = [*self.bloques, nuevo]
+        self.save(update_fields=['bloques'])
+        return nuevo
+ 
+    def eliminar_bloque(self, bloque_id):
+        self.bloques = [b for b in self.bloques if b.get('id') != bloque_id]
+        self.save(update_fields=['bloques']) 
 # ══════════════════════════════════════════════════════════════════════════════
 # 1. MODELO — agregar al final de academic/models.py
 # ══════════════════════════════════════════════════════════════════════════════
@@ -596,7 +696,17 @@ class Comunicado(models.Model):
         ('GRUPO',    'Grupo específico'),
         ('DOCENTES', 'Solo docentes'),
     ]
- 
+
+    # A quién le llega dentro del destinatario elegido: solo alumnos,
+    # solo padres/tutores, o ambos. Corresponde a la columna `publico`
+    # agregada directamente en Supabase con:
+    #   ALTER TABLE academic_comunicado ADD COLUMN publico varchar DEFAULT 'AMBOS';
+    PUBLICO_OPCIONES = [
+        ('ALUMNOS', 'Solo alumnos'),
+        ('PADRES',  'Solo padres'),
+        ('AMBOS',   'Alumnos y padres'),
+    ]
+
     plantel     = models.ForeignKey(
         'campuses.Plantel',
         on_delete=models.CASCADE,
@@ -610,12 +720,29 @@ class Comunicado(models.Model):
     titulo      = models.CharField(max_length=200)
     cuerpo      = models.TextField()
     destinatario = models.CharField(max_length=10, choices=DESTINATARIOS, default='TODOS')
+    publico     = models.CharField(
+        max_length=10,
+        choices=PUBLICO_OPCIONES,
+        default='AMBOS',
+        help_text='A quién le llega: solo alumnos, solo padres, o ambos.',
+    )
     grupo       = models.ForeignKey(
         'Grupo',
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='comunicados',
         help_text='Solo si destinatario es GRUPO',
+    )
+    # Django genera automáticamente la columna `asignatura_id`, igual a la
+    # que se agregó por SQL con:
+    #   ALTER TABLE academic_comunicado ADD COLUMN asignatura_id int8
+    #     REFERENCES academic_asignatura(id);
+    asignatura  = models.ForeignKey(
+        'Asignatura',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='comunicados',
+        help_text='Materia relacionada (opcional). Vacío = comunicado general.',
     )
     adjunto     = CloudinaryField(
         'adjunto',
@@ -625,14 +752,15 @@ class Comunicado(models.Model):
     )
     creado_en   = models.DateTimeField(auto_now_add=True)
     activo      = models.BooleanField(default=True)
- 
+
     class Meta:
         ordering = ['-creado_en']
         verbose_name = 'Comunicado'
         verbose_name_plural = 'Comunicados'
- 
+
     def __str__(self):
         return f"{self.titulo} — {self.plantel}"
+    
 class HorarioPDF(models.Model):
     grupo    = models.OneToOneField(Grupo, on_delete=models.CASCADE, related_name='horario_pdf')
     plantel  = models.ForeignKey(Plantel, on_delete=models.CASCADE, related_name='horarios_pdf')
@@ -735,3 +863,82 @@ class BoletaParcial(models.Model):
 
     def __str__(self):
         return f"{self.alumno} — {self.asignatura} P{self.parcial}: {self.calificacion_final}"
+
+class SesionClase(models.Model):
+    """
+    Sesión de clase en vivo iniciada por un docente.
+    Los alumnos del grupo la ven en tiempo real desde la app.
+    """
+
+    class Estado(models.TextChoices):
+        BORRADOR    = 'borrador', 'Borrador'
+        ACTIVA      = 'activa', 'Activa'
+        FINALIZADA  = 'finalizada', 'Finalizada'
+
+    docente    = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={'rol': 'DOCENTE'},
+        related_name='sesiones_clase',
+    )
+    grupo      = models.ForeignKey(
+        Grupo, on_delete=models.CASCADE,
+        related_name='sesiones_clase',
+    )
+    asignatura = models.ForeignKey(
+        Asignatura, on_delete=models.CASCADE,
+        related_name='sesiones_clase',
+    )
+    titulo     = models.CharField(max_length=200)
+    estado     = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.BORRADOR,
+    )
+    fecha      = models.DateField(auto_now_add=True)
+    creada_en  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name        = 'Sesión de Clase'
+        verbose_name_plural = 'Sesiones de Clase'
+        ordering            = ['-creada_en']
+
+    def __str__(self):
+        emoji = {
+            self.Estado.BORRADOR: '📝',
+            self.Estado.ACTIVA: '🟢',
+            self.Estado.FINALIZADA: '🔴',
+        }.get(self.estado, '')
+        return f"{self.titulo} — {self.grupo} [{emoji} {self.get_estado_display()}]"
+class BloqueClase(models.Model):
+    """
+    Bloque de contenido publicado durante una SesionClase.
+    Puede ser texto, PDF, video, imagen, enlace o instrucción de actividad.
+    """
+    TIPOS = [
+        ('texto',     'Texto / Indicación'),
+        ('pdf',       'PDF / Documento'),
+        ('video',     'Video'),
+        ('imagen',    'Imagen'),
+        ('link',      'Enlace externo'),
+        ('actividad', 'Actividad'),
+    ]
+ 
+    sesion    = models.ForeignKey(
+        SesionClase, on_delete=models.CASCADE,
+        related_name='bloques',
+    )
+    tipo      = models.CharField(max_length=20, choices=TIPOS)
+    titulo    = models.CharField(max_length=200, blank=True)
+    contenido = models.TextField()          # texto plano o URL según el tipo
+    orden     = models.IntegerField(default=0)
+    activo    = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+ 
+    class Meta:
+        verbose_name        = 'Bloque de Clase'
+        verbose_name_plural = 'Bloques de Clase'
+        ordering            = ['orden', 'creado_en']
+ 
+    def __str__(self):
+        return f"[{self.get_tipo_display()}] {self.titulo or self.contenido[:40]}"

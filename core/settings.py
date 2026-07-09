@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'tutor',
 ]
 
+
 #──  cloudary ────────────────────────────────────────────────────────────────
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),

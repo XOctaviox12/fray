@@ -127,7 +127,7 @@ def dashboard_view(request):
     docentes_pendientes = User.objects.filter(
         rol='DOCENTE',
         plantel=plantel,
-        asignaturas_impartidas__in=asignaturas_sin_notas,
+        materias_impartidas__in=asignaturas_sin_notas,
     ).distinct().count()
 
     # ── Actividad reciente ────────────────────────────────────────────

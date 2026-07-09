@@ -1,0 +1,80 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Búsqueda — {{ query }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1.5rem">
+  <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:2px">Resultados de búsqueda</h1>
+  <p style="font-size:13px;color:var(--ink-2)">{{ total }} resultado{{ total|pluralize }} para "<strong>{{ query }}</strong>"</p>
+</div>
+
+{% if alumnos %}
+<div style="margin-bottom:1.5rem">
+  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:.75rem">Alumnos</div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+    {% for alumno in alumnos %}
+    <a href="{% url 'detalle_alumno' alumno.pk %}"
+      style="display:flex;align-items:center;gap:12px;padding:.75rem 1.25rem;border-bottom:1px solid #f2f3f7;text-decoration:none;transition:background .1s"
+      onmouseover="this.style.background='#f7f8fc'" onmouseout="this.style.background=''">
+      <div style="width:34px;height:34px;border-radius:9px;background:var(--accent-2);color:var(--accent);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        {{ alumno.first_name|first|upper }}{{ alumno.last_name|first|upper }}
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ alumno.get_full_name }}</div>
+        <div style="font-size:11px;color:var(--ink-3)">{{ alumno.username }} · {{ alumno.alumno_grupo }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if docentes %}
+<div style="margin-bottom:1.5rem">
+  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:.75rem">Docentes</div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+    {% for docente in docentes %}
+    <a href="{% url 'detalle_docente' docente.pk %}"
+      style="display:flex;align-items:center;gap:12px;padding:.75rem 1.25rem;border-bottom:1px solid #f2f3f7;text-decoration:none"
+      onmouseover="this.style.background='#f7f8fc'" onmouseout="this.style.background=''">
+      <div style="width:34px;height:34px;border-radius:9px;background:rgba(16,185,129,.15);color:#059669;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        {{ docente.first_name|first|upper }}{{ docente.last_name|first|upper }}
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ docente.get_full_name }}</div>
+        <div style="font-size:11px;color:var(--ink-3)">{{ docente.email|default:docente.username }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if grupos %}
+<div style="margin-bottom:1.5rem">
+  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:.75rem">Grupos</div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+    {% for grupo in grupos %}
+    <a href="{% url 'detalle_grupo' grupo.pk %}"
+      style="display:flex;align-items:center;gap:12px;padding:.75rem 1.25rem;border-bottom:1px solid #f2f3f7;text-decoration:none"
+      onmouseover="this.style.background='#f7f8fc'" onmouseout="this.style.background=''">
+      <div style="width:34px;height:34px;border-radius:9px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        {{ grupo.nombre|first|upper }}
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ grupo }}</div>
+        <div style="font-size:11px;color:var(--ink-3)">Grado {{ grupo.grado }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if not alumnos and not docentes and not grupos %}
+<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:4rem;text-align:center">
+  <p style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px">Sin resultados</p>
+  <p style="font-size:13px;color:var(--ink-3)">No se encontró nada para "{{ query }}"</p>
+</div>
+{% endif %}
+{% endblock %}
+I'm seeing the roo

@@ -255,7 +255,7 @@ def lista_personal(request):
 
     return render(request, 'users/lista_personal.html', {
         'personal': personal,
-    })
+   })
 
 
 @login_required
@@ -265,7 +265,6 @@ def editar_permisos(request, pk):
 
     plantel = request.user.plantel
     usuario = get_object_or_404(User, pk=pk, plantel=plantel)
-
     # Obtener o crear permisos del usuario
     permisos, _ = PermisoPersonal.objects.get_or_create(
         usuario=usuario,
@@ -274,7 +273,7 @@ def editar_permisos(request, pk):
 
     ROLES_DISPONIBLES = [
         ('DIRECTOR',  'Director'),
-        ('COORD',     'Coordinador'),
+        ('COORD',     'Coordinador'),        
         ('DOCENTE',   'Docente'),
         ('TUTOR',     'Padre/Tutor'),
     ]
@@ -304,3 +303,4 @@ def editar_permisos(request, pk):
         'permisos':          permisos,
         'roles_disponibles': ROLES_DISPONIBLES,
     })
+

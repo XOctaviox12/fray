@@ -1,0 +1,30 @@
+{% extends 'inicio/base.html' %}
+{% block title %}Calificar Tareas{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:1.5rem">
+  <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:2px">Calificar Tareas</h1>
+  <p style="font-size:13px;color:var(--ink-2)">Selecciona un grupo para calificar entregas</p>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+  {% for a in asignaciones %}
+  <a href="{% url 'docente_tareas' %}?grupo_id={{ a.grupo.pk }}&asignatura_id={{ a.asignatura.pk }}"
+    style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;text-decoration:none;display:flex;align-items:center;gap:14px;transition:box-shadow .15s"
+    onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.07)'" onmouseout="this.style.boxShadow=''">
+    <div style="width:42px;height:42px;border-radius:10px;background:var(--accent-2);color:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:14px;font-weight:700;color:var(--ink)">{{ a.asignatura }}</div>
+      <div style="font-size:12px;color:var(--ink-3);margin-top:2px">{{ a.grupo }}</div>
+    </div>
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--ink-3);flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
+  </a>
+  {% empty %}
+  <div style="grid-column:1/-1;background:#fff;border:1px solid var(--border);border-radius:14px;padding:3rem;text-align:center">
+    <p style="font-size:14px;color:var(--ink-3)">No tienes grupos asignados.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

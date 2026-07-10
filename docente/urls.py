@@ -19,7 +19,8 @@ urlpatterns = [
     path('tareas/<int:pk>/',             views.detalle_tarea,        name='detalle_tarea'),
     path('tareas/<int:pk>/editar/',      views.editar_tarea,         name='editar_tarea'),
     path('tareas/<int:pk>/eliminar/',    views.eliminar_tarea,       name='eliminar_tarea'),
-
+    path('tareas/<int:pk>/publicar/', views.publicar_tarea, name='publicar_tarea'),
+    
     # ── Actividades ───────────────────────────────────────────────────────────
     path('actividades/',                 views.actividades,              name='docente_actividades'),
     path('actividades/crear/',           views.crear_actividad,          name='crear_actividad'),

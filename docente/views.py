@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from django.db.models import Count, Q, Avg
-
+from django.views.decorators.http import require_POST
 # ReportLab — para PDFs
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -290,6 +290,13 @@ def lista_asistencia(request):
 # ─────────────────────────────────────────────────────────────────────────────
 # TAREAS
 # ─────────────────────────────────────────────────────────────────────────────
+@docente_required
+@require_POST
+def publicar_tarea(request, pk):
+    tarea = get_object_or_404(Tarea, pk=pk, docente=request.user)
+    tarea.publicada = True
+    tarea.save(update_fields=['publicada'])
+    return redirect('docente_tareas')
 
 @docente_required
 def tareas(request):

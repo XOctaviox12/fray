@@ -2273,17 +2273,17 @@ def parcial_detalle(request, grupo_id, asig_id):
     )
     from users.models import DocenteGrupo
     from django.db.models import Avg, Count, Q
-
+ 
     grupo      = get_object_or_404(Grupo, pk=grupo_id)
     asignatura = get_object_or_404(Asignatura, pk=asig_id)
-
+ 
     asignacion = DocenteGrupo.objects.filter(
         docente=request.user, grupo=grupo, asignatura=asignatura, activo=True
     ).first()
     if not asignacion:
         messages.error(request, 'No tienes acceso a ese grupo/asignatura.')
         return redirect('docente_parcial')
-
+ 
     config, _ = ConfigEvaluacion.objects.get_or_create(
         docente=request.user, grupo=grupo, asignatura=asignatura,
         defaults={
@@ -2291,26 +2291,26 @@ def parcial_detalle(request, grupo_id, asig_id):
             'pct_asistencia': 10, 'pct_examen': 30, 'pct_proyecto': 20,
         }
     )
-
+ 
     # Parcial seleccionado (1-4)
     parcial_num = int(request.GET.get('parcial', 1))
     if parcial_num not in [1, 2, 3, 4]:
         parcial_num = 1
-
+ 
     alumnos = grupo.alumnos.filter(
         estatus='ACTIVO', rol='ALUMNO'
     ).order_by('last_name', 'first_name')
-
+ 
     tareas = Tarea.objects.filter(
         grupo=grupo, asignatura=asignatura,
         docente=request.user, publicada=True
     ).order_by('creada_en')
-
+ 
     actividades = Actividad.objects.filter(
         grupo=grupo, asignatura=asignatura,
         docente=request.user, publicada=True
     ).order_by('creada_en')
-
+ 
     # ── Guardar examen/proyecto manual ───────────────────────────────────────
     if request.method == 'POST' and 'guardar_notas' in request.POST:
         for alumno in alumnos:
@@ -2330,7 +2330,7 @@ def parcial_detalle(request, grupo_id, asig_id):
                         pass
         messages.success(request, 'Calificaciones guardadas.')
         return redirect(f"{request.path}?parcial={parcial_num}")
-
+ 
     # ── Publicar boleta del parcial ───────────────────────────────────────────
     if request.method == 'POST' and 'publicar_parcial' in request.POST:
         publicar = request.POST.get('publicar_parcial') == '1'
@@ -2348,26 +2348,23 @@ def parcial_detalle(request, grupo_id, asig_id):
         estado = 'publicadas' if publicar else 'ocultadas'
         messages.success(request, f'Boletas del Parcial {parcial_num} {estado} para {count} alumnos.')
         return redirect(f"{request.path}?parcial={parcial_num}")
-
+ 
     # ── Calcular y guardar boleta ─────────────────────────────────────────────
     if request.method == 'POST' and 'calcular_parcial' in request.POST:
         guardadas = 0
         for alumno in alumnos:
-            # Promedios tareas
             vals_t = list(EntregaTarea.objects.filter(
                 tarea__in=tareas, alumno=alumno,
                 calificacion__isnull=False
             ).values_list('calificacion', flat=True))
             prom_t = round(sum(float(v) for v in vals_t) / len(vals_t), 2) if vals_t else None
-
-            # Promedios actividades
+ 
             vals_a = list(EntregaActividad.objects.filter(
                 actividad__in=actividades, alumno=alumno,
                 calificacion__isnull=False
             ).values_list('calificacion', flat=True))
             prom_a = round(sum(float(v) for v in vals_a) / len(vals_a), 2) if vals_a else None
-
-            # Asistencia
+ 
             total_clases = Asistencia.objects.filter(
                 alumno=alumno, grupo=grupo, asignatura=asignatura
             ).count()
@@ -2376,8 +2373,7 @@ def parcial_detalle(request, grupo_id, asig_id):
             ).count()
             pct_asist  = round((presentes / total_clases) * 100, 1) if total_clases > 0 else 0
             nota_asist = round(pct_asist / 10, 2)
-
-            # Examen y proyecto
+ 
             examen   = EvaluacionParcial.objects.filter(
                 alumno=alumno, grupo=grupo, asignatura=asignatura, rubro='EXAMEN'
             ).first()
@@ -2386,14 +2382,13 @@ def parcial_detalle(request, grupo_id, asig_id):
             ).first()
             nota_ex  = float(examen.nota)   if examen   else None
             nota_pr  = float(proyecto.nota) if proyecto else None
-
-            # Ponderación
+ 
             def pond(nota, pct):
                 return (nota * float(pct) / 100) if nota is not None else 0
-
+ 
             total_pct  = 0
             cal_final  = 0
-
+ 
             if prom_t is not None:
                 cal_final += pond(prom_t, config.pct_tareas)
                 total_pct += float(config.pct_tareas)
@@ -2409,13 +2404,13 @@ def parcial_detalle(request, grupo_id, asig_id):
             if nota_pr is not None:
                 cal_final += pond(nota_pr, config.pct_proyecto)
                 total_pct += float(config.pct_proyecto)
-
+ 
             if total_pct > 0:
                 if total_pct < 100:
                     cal_final = round(cal_final * 100 / total_pct, 2)
                 else:
                     cal_final = round(cal_final, 2)
-
+ 
                 BoletaParcial.objects.update_or_create(
                     alumno=alumno, grupo=grupo,
                     asignatura=asignatura, parcial=parcial_num,
@@ -2431,68 +2426,107 @@ def parcial_detalle(request, grupo_id, asig_id):
                     }
                 )
                 guardadas += 1
-
+ 
         messages.success(request, f'✅ Calificación del Parcial {parcial_num} calculada para {guardadas} alumnos. Revisa y publica cuando estés listo.')
         return redirect(f"{request.path}?parcial={parcial_num}")
-
-    # ── Construir filas ───────────────────────────────────────────────────────
+ 
+    # ── Construir filas (GET) ───────────────────────────────────────────────
+    # Precarga todo en bloque (evita N+1 queries) y arma las listas
+    # notas_tareas / notas_actividades ALINEADAS con las columnas T1..Tn
+    # y A1..An que pinta la plantilla, más nota_asistencia individual.
     boletas_existentes = {
         b.alumno_id: b
         for b in BoletaParcial.objects.filter(
             grupo=grupo, asignatura=asignatura, parcial=parcial_num
         )
     }
-
+ 
+    mapa_tareas = {}  # {alumno_id: {tarea_id: nota}}
+    for e in EntregaTarea.objects.filter(
+        tarea__in=tareas, alumno__in=alumnos, calificacion__isnull=False
+    ).values('alumno_id', 'tarea_id', 'calificacion'):
+        mapa_tareas.setdefault(e['alumno_id'], {})[e['tarea_id']] = float(e['calificacion'])
+ 
+    mapa_activ = {}  # {alumno_id: {actividad_id: nota}}
+    for e in EntregaActividad.objects.filter(
+        actividad__in=actividades, alumno__in=alumnos, calificacion__isnull=False
+    ).values('alumno_id', 'actividad_id', 'calificacion'):
+        mapa_activ.setdefault(e['alumno_id'], {})[e['actividad_id']] = float(e['calificacion'])
+ 
+    mapa_asist = {
+        a['alumno_id']: a
+        for a in Asistencia.objects.filter(
+            alumno__in=alumnos, grupo=grupo, asignatura=asignatura
+        ).values('alumno_id').annotate(
+            total=Count('id'),
+            presentes=Count('id', filter=Q(estado='P')),
+        )
+    }
+ 
+    mapa_examen = {
+        e.alumno_id: float(e.nota)
+        for e in EvaluacionParcial.objects.filter(
+            alumno__in=alumnos, grupo=grupo, asignatura=asignatura, rubro='EXAMEN'
+        )
+    }
+    mapa_proyecto = {
+        e.alumno_id: float(e.nota)
+        for e in EvaluacionParcial.objects.filter(
+            alumno__in=alumnos, grupo=grupo, asignatura=asignatura, rubro='PROYECTO'
+        )
+    }
+ 
+    tareas_list = list(tareas)
+    actividades_list = list(actividades)
+ 
     filas = []
     for alumno in alumnos:
-        vals_t = list(EntregaTarea.objects.filter(
-            tarea__in=tareas, alumno=alumno, calificacion__isnull=False
-        ).values_list('calificacion', flat=True))
-        prom_t = round(sum(float(v) for v in vals_t) / len(vals_t), 2) if vals_t else None
-
-        vals_a = list(EntregaActividad.objects.filter(
-            actividad__in=actividades, alumno=alumno, calificacion__isnull=False
-        ).values_list('calificacion', flat=True))
-        prom_a = round(sum(float(v) for v in vals_a) / len(vals_a), 2) if vals_a else None
-
-        total_clases = Asistencia.objects.filter(
-            alumno=alumno, grupo=grupo, asignatura=asignatura
-        ).count()
-        presentes    = Asistencia.objects.filter(
-            alumno=alumno, grupo=grupo, asignatura=asignatura, estado='P'
-        ).count()
+        notas_alumno_tareas = mapa_tareas.get(alumno.pk, {})
+        notas_tareas = [
+            {'nota': notas_alumno_tareas.get(t.pk)} for t in tareas_list
+        ]
+        vals_t = [v for v in notas_alumno_tareas.values()]
+        prom_t = round(sum(vals_t) / len(vals_t), 2) if vals_t else None
+ 
+        notas_alumno_activ = mapa_activ.get(alumno.pk, {})
+        notas_actividades = [
+            {'nota': notas_alumno_activ.get(a.pk)} for a in actividades_list
+        ]
+        vals_a = [v for v in notas_alumno_activ.values()]
+        prom_a = round(sum(vals_a) / len(vals_a), 2) if vals_a else None
+ 
+        asist = mapa_asist.get(alumno.pk, {'total': 0, 'presentes': 0})
+        total_clases = asist['total']
+        presentes    = asist['presentes']
         pct_asist    = round((presentes / total_clases) * 100, 1) if total_clases > 0 else 0
-
-        examen   = EvaluacionParcial.objects.filter(
-            alumno=alumno, grupo=grupo, asignatura=asignatura, rubro='EXAMEN'
-        ).first()
-        proyecto = EvaluacionParcial.objects.filter(
-            alumno=alumno, grupo=grupo, asignatura=asignatura, rubro='PROYECTO'
-        ).first()
-
+        nota_asist   = round(pct_asist / 10, 2)
+ 
         boleta = boletas_existentes.get(alumno.pk)
-
+ 
         filas.append({
-            'alumno':          alumno,
-            'prom_tareas':     prom_t,
-            'prom_actividades': prom_a,
-            'pct_asistencia':  pct_asist,
-            'nota_examen':     float(examen.nota)   if examen   else None,
-            'nota_proyecto':   float(proyecto.nota) if proyecto else None,
-            'boleta':          boleta,
+            'alumno':            alumno,
+            'notas_tareas':      notas_tareas,
+            'prom_tareas':       prom_t,
+            'notas_actividades': notas_actividades,
+            'prom_actividades':  prom_a,
+            'pct_asistencia':    pct_asist,
+            'nota_asistencia':   nota_asist,
+            'nota_examen':       mapa_examen.get(alumno.pk),
+            'nota_proyecto':     mapa_proyecto.get(alumno.pk),
+            'boleta':            boleta,
             'calificacion_final': float(boleta.calificacion_final) if boleta else None,
-            'publicada':       boleta.publicada if boleta else False,
+            'publicada':         boleta.publicada if boleta else False,
         })
-
+ 
     parcial_publicado = all(f['publicada'] for f in filas if f['boleta'])
     total_con_boleta  = sum(1 for f in filas if f['boleta'])
-
+ 
     return render(request, 'docente/parcial_detalle.html', {
         'grupo':             grupo,
         'asignatura':        asignatura,
         'config':            config,
-        'tareas':            tareas,
-        'actividades':       actividades,
+        'tareas':            tareas_list,
+        'actividades':       actividades_list,
         'filas':             filas,
         'parcial_num':       parcial_num,
         'parciales':         [1, 2, 3, 4],

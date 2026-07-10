@@ -150,16 +150,55 @@
   </div>
   <div style="padding:1rem 1.5rem;display:flex;flex-direction:column;gap:10px">
     {% for c in comentarios %}
-    <div style="display:flex;gap:10px">
+    <div style="display:flex;gap:10px" id="comentario-{{ c.pk }}">
       <div style="width:30px;height:30px;border-radius:8px;background:{% if c.autor.rol == 'DOCENTE' %}linear-gradient(135deg,#10b981,#34d399){% else %}var(--accent-2){% endif %};color:{% if c.autor.rol == 'DOCENTE' %}#fff{% else %}var(--accent){% endif %};font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         {{ c.autor.first_name|first|upper }}{{ c.autor.last_name|first|upper }}
       </div>
       <div style="background:#f7f8fc;border-radius:10px;padding:8px 12px;flex:1">
-        <div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:3px">
-          {{ c.autor.get_full_name }}
-          {% if c.autor.rol == 'DOCENTE' %}<span style="font-size:9px;color:#10b981;font-weight:700"> · Docente</span>{% endif %}
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:3px">
+            {{ c.autor.get_full_name }}
+            {% if c.autor.rol == 'DOCENTE' %}<span style="font-size:9px;color:#10b981;font-weight:700"> · Docente</span>{% endif %}
+          </div>
+          {% if c.autor_id == request.user.id %}
+          <div style="display:flex;gap:4px;flex-shrink:0">
+            <button type="button" onclick="editarComentario({{ c.pk }})"
+              style="background:none;border:none;cursor:pointer;color:var(--ink-3);font-size:11px;padding:2px 4px" title="Editar">
+              ✏️
+            </button>
+            <form method="post" style="margin:0" onsubmit="return confirm('¿Eliminar este comentario?')">
+              {% csrf_token %}
+              <input type="hidden" name="comentario_id" value="{{ c.pk }}">
+              <button type="submit" name="eliminar_comentario"
+                style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:11px;padding:2px 4px" title="Eliminar">
+                🗑️
+              </button>
+            </form>
+          </div>
+          {% endif %}
         </div>
-        <div style="font-size:12px;color:var(--ink-2)">{{ c.texto }}</div>
+
+        <div id="texto-{{ c.pk }}" style="font-size:12px;color:var(--ink-2)">{{ c.texto }}</div>
+
+        {% if c.autor_id == request.user.id %}
+        <form id="form-editar-{{ c.pk }}" method="post" style="display:none;margin-top:6px;gap:6px;flex-direction:column">
+          {% csrf_token %}
+          <input type="hidden" name="comentario_id" value="{{ c.pk }}">
+          <textarea name="texto_editado" rows="2"
+            style="width:100%;border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:var(--ink);outline:none;resize:none">{{ c.texto }}</textarea>
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            <button type="button" onclick="cancelarEdicion({{ c.pk }})"
+              style="height:28px;padding:0 10px;background:#fff;border:1px solid var(--border);border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;color:var(--ink-2)">
+              Cancelar
+            </button>
+            <button type="submit" name="editar_comentario"
+              style="height:28px;padding:0 12px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">
+              Guardar
+            </button>
+          </div>
+        </form>
+        {% endif %}
+
         <div style="font-size:10px;color:var(--ink-3);margin-top:4px">{{ c.creado_en|date:"d/m/Y H:i" }}</div>
       </div>
     </div>
@@ -177,7 +216,6 @@
     </form>
   </div>
 </div>
-
 {# Modal calificar #}
 <div id="modalCalificar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:16px;padding:1.5rem;width:100%;max-width:420px;margin:16px">
@@ -227,5 +265,14 @@ function cerrarModal() {
 document.getElementById('modalCalificar').addEventListener('click', function(e) {
   if (e.target === this) cerrarModal();
 });
+
+function editarComentario(id) {
+  document.getElementById('texto-' + id).style.display = 'none';
+  document.getElementById('form-editar-' + id).style.display = 'flex';
+}
+function cancelarEdicion(id) {
+  document.getElementById('texto-' + id).style.display = 'block';
+  document.getElementById('form-editar-' + id).style.display = 'none';
+}
 </script>
 {% endblock %}

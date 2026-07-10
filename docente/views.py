@@ -401,7 +401,6 @@ def fix_pdf_url(url):
     return url
 
 
-@docente_required
 def detalle_tarea(request, pk):
     from academic.models import Tarea, EntregaTarea, ComentarioTarea
 
@@ -447,6 +446,33 @@ def detalle_tarea(request, pk):
         texto = request.POST.get('texto', '').strip()
         if texto:
             ComentarioTarea.objects.create(tarea=tarea, autor=request.user, texto=texto)
+        return redirect('detalle_tarea', pk=pk)
+
+    # ── Editar comentario propio ──
+    if request.method == 'POST' and 'editar_comentario' in request.POST:
+        comentario_id = request.POST.get('comentario_id')
+        texto_nuevo    = request.POST.get('texto_editado', '').strip()
+        try:
+            comentario = ComentarioTarea.objects.get(pk=comentario_id, tarea=tarea, autor=request.user)
+            if texto_nuevo:
+                comentario.texto = texto_nuevo
+                comentario.save(update_fields=['texto'])
+                messages.success(request, 'Comentario actualizado.')
+            else:
+                messages.error(request, 'El comentario no puede quedar vacío.')
+        except ComentarioTarea.DoesNotExist:
+            messages.error(request, 'No puedes editar este comentario.')
+        return redirect('detalle_tarea', pk=pk)
+
+    # ── Eliminar comentario propio ──
+    if request.method == 'POST' and 'eliminar_comentario' in request.POST:
+        comentario_id = request.POST.get('comentario_id')
+        try:
+            comentario = ComentarioTarea.objects.get(pk=comentario_id, tarea=tarea, autor=request.user)
+            comentario.delete()
+            messages.success(request, 'Comentario eliminado.')
+        except ComentarioTarea.DoesNotExist:
+            messages.error(request, 'No puedes eliminar este comentario.')
         return redirect('detalle_tarea', pk=pk)
 
     comentarios       = tarea.comentarios.select_related('autor').all()

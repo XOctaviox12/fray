@@ -361,10 +361,9 @@ def lista_comunicados(request):
         'grupos':      grupos,
     })
  
- 
 @login_required
 def crear_comunicado(request):
-    from academic.models import Comunicado, Grupo
+    from academic.models import Comunicado, Grupo, Asignatura
     import cloudinary.uploader
 
     plantel      = request.user.plantel
@@ -375,70 +374,107 @@ def crear_comunicado(request):
         messages.error(request, 'No tienes permiso para crear comunicados.')
         return redirect('lista_comunicados')
 
-    # Docentes solo ven sus grupos; directivos ven todos los del plantel
+    # Materias: docente solo las que imparte; directivo todas las del plantel
+    # Materias: docente solo las que imparte; directivo todas las del plantel
     if es_docente:
-        grupos = Grupo.objects.filter(
-            plantel=plantel, docentes=request.user
-        ).order_by('grado', 'nombre')
+        asignaturas = Asignatura.objects.filter(
+            carrera__plantel=plantel, docentes=request.user
+        ).distinct().order_by('nombre')
     else:
-        grupos = Grupo.objects.filter(plantel=plantel).order_by('grado', 'nombre')
+        asignaturas = Asignatura.objects.filter(carrera__plantel=plantel).order_by('nombre')
+
+    # Grupos base: docente solo los suyos; directivo todos los del plantel
+    if es_docente:
+        grupos_base = Grupo.objects.filter(plantel=plantel, docentes=request.user)
+    else:
+        grupos_base = Grupo.objects.filter(plantel=plantel)
+
+    grupos = grupos_base.prefetch_related('asignaturas').order_by('grado', 'nombre').distinct()
 
     if request.method == 'POST':
-        titulo       = request.POST.get('titulo', '').strip()
-        cuerpo       = request.POST.get('cuerpo', '').strip()
-        destinatario = request.POST.get('destinatario', 'TODOS')
-        grupo_id     = request.POST.get('grupo_id') or None
-        adjunto_file = request.FILES.get('adjunto')
+        titulo        = request.POST.get('titulo', '').strip()
+        cuerpo        = request.POST.get('cuerpo', '').strip()
+        destinatario  = request.POST.get('destinatario', 'TODOS')
+        publico       = request.POST.get('publico', 'AMBOS')
+        asignatura_id = request.POST.get('asignatura_id') or None
+        grupo_ids     = request.POST.getlist('grupo_ids')
+        adjunto_file  = request.FILES.get('adjunto')
 
-        # Docentes solo pueden enviar a un grupo específico
         if es_docente:
-            destinatario = 'GRUPO'
+            destinatario = 'GRUPO'  # docente solo manda a grupo(s)
+
+        if destinatario == 'DOCENTES':
+            publico = 'AMBOS'  # publico no aplica cuando es "solo docentes"
+
+        asignatura = None
+        if asignatura_id:
+            asignatura = Asignatura.objects.filter(pk=asignatura_id, carrera__plantel=plantel).first()
+
+        contexto_error = {
+            'grupos': grupos, 'asignaturas': asignaturas,
+            'es_docente': es_docente, 'es_directivo': es_directivo,
+        }
 
         if not titulo or not cuerpo:
             messages.error(request, 'El título y el contenido son obligatorios.')
-        elif es_docente and not grupo_id:
-            messages.error(request, 'Selecciona el grupo destinatario.')
+            return render(request, 'inicio/crear_comunicado.html', contexto_error)
+
+        if destinatario == 'GRUPO' and not grupo_ids:
+            messages.error(request, 'Selecciona al menos un grupo destinatario.')
+            return render(request, 'inicio/crear_comunicado.html', contexto_error)
+
+        # Subir adjunto una sola vez, se reutiliza en todos los registros
+        adjunto_resultado = None
+        if adjunto_file:
+            try:
+                adjunto_resultado = cloudinary.uploader.upload(
+                    adjunto_file, folder='fray/comunicados/', resource_type='auto',
+                )
+            except Exception as e:
+                messages.warning(request, f'El adjunto no se pudo subir: {e}')
+
+        creados = []
+        if destinatario == 'GRUPO':
+            grupos_validos = grupos_base.filter(pk__in=grupo_ids)
+            if asignatura_id:
+                grupos_validos = grupos_validos.filter(asignaturas=asignatura_id)
+            grupos_validos = grupos_validos.distinct()
+
+            for grupo in grupos_validos:
+                c = Comunicado(
+                    plantel=plantel, autor=request.user, titulo=titulo, cuerpo=cuerpo,
+                    destinatario='GRUPO', publico=publico, grupo=grupo, asignatura=asignatura,
+                )
+                if adjunto_resultado:
+                    c.adjunto = adjunto_resultado['secure_url']
+                creados.append(c)
         else:
-            grupo = None
-            if destinatario == 'GRUPO' and grupo_id:
-                grupo = get_object_or_404(grupos, pk=grupo_id)
-
-            comunicado = Comunicado(
-                plantel=plantel,
-                autor=request.user,
-                titulo=titulo,
-                cuerpo=cuerpo,
-                destinatario=destinatario,
-                grupo=grupo,
+            c = Comunicado(
+                plantel=plantel, autor=request.user, titulo=titulo, cuerpo=cuerpo,
+                destinatario=destinatario, publico=publico, grupo=None, asignatura=asignatura,
             )
+            if adjunto_resultado:
+                c.adjunto = adjunto_resultado['secure_url']
+            creados.append(c)
 
-            if adjunto_file:
-                try:
-                    resultado = cloudinary.uploader.upload(
-                        adjunto_file,
-                        folder='fray/comunicados/',
-                        resource_type='auto',
-                    )
-                    comunicado.adjunto = resultado['public_id']
-                except Exception as e:
-                    messages.warning(request, f'El adjunto no se pudo subir: {e}')
-
-            comunicado.save()
-            messages.success(request, f'✅ Comunicado "{titulo}" publicado.')
+        if creados:
+            Comunicado.objects.bulk_create(creados)
+            n = len(creados)
+            messages.success(request, f'✅ Comunicado "{titulo}" publicado ({n} grupo{"s" if n != 1 else ""}).')
             return redirect('lista_comunicados')
 
     return render(request, 'inicio/crear_comunicado.html', {
         'grupos':       grupos,
+        'asignaturas':  asignaturas,
         'es_docente':   es_docente,
         'es_directivo': es_directivo,
     })
- 
  
 @login_required
 def eliminar_comunicado(request, pk):
     from academic.models import Comunicado
     comunicado = get_object_or_404(Comunicado, pk=pk, plantel=request.user.plantel)
-    if request.user.rol not in ('DIRECTOR', 'COORD', 'ADMIN'):
+    if request.user.rol not in ('DOCENTE','DIRECTOR', 'COORD', 'ADMIN'):
         messages.error(request, 'Sin permiso.')
         return redirect('lista_comunicados')
     if request.method == 'POST':
@@ -446,3 +482,65 @@ def eliminar_comunicado(request, pk):
         comunicado.save()
         messages.success(request, 'Comunicado eliminado.')
     return redirect('lista_comunicados')
+@login_required
+def ver_adjunto_comunicado(request, pk):
+    from academic.models import Comunicado
+    import requests as req
+    from django.conf import settings
+    from django.http import HttpResponse
+
+    comunicado = get_object_or_404(Comunicado, pk=pk, plantel=request.user.plantel)
+
+    valor = str(comunicado.adjunto) if comunicado.adjunto else None
+    if not valor:
+        return redirect('lista_comunicados')
+
+    content_types = {
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+        'gif': 'image/gif', 'webp': 'image/webp', 'pdf': 'application/pdf',
+    }
+
+    # Si ya es una URL completa, usarla directo
+    if valor.startswith('http://') or valor.startswith('https://'):
+        candidatos = [valor]
+    else:
+        cloud = settings.CLOUDINARY_STORAGE['CLOUD_NAME']
+        nombre = valor.rsplit('/', 1)[-1]
+        tiene_ext = '.' in nombre
+
+        # Variantes de valor a probar: tal cual, y con extensiones comunes agregadas
+        valores_a_probar = [valor]
+        if not tiene_ext:
+            valores_a_probar += [f'{valor}.jpg', f'{valor}.png', f'{valor}.pdf']
+
+        # Probar cada valor contra los dos resource_types más comunes
+        candidatos = []
+        for v in valores_a_probar:
+            candidatos.append(f'https://res.cloudinary.com/{cloud}/raw/upload/{v}')
+            candidatos.append(f'https://res.cloudinary.com/{cloud}/image/upload/{v}')
+
+    r = None
+    url_exitosa = None
+    for url in candidatos:
+        try:
+            r = req.get(url, timeout=8)
+        except req.RequestException:
+            continue
+        if r.status_code == 200:
+            url_exitosa = url
+            break
+
+    if not url_exitosa:
+        return HttpResponse(
+            'No se pudo obtener el archivo de Cloudinary. '
+            f'Se intentaron {len(candidatos)} variantes sin éxito.',
+            status=502
+        )
+
+    ext = url_exitosa.rsplit('.', 1)[-1].lower() if '.' in url_exitosa.rsplit('/', 1)[-1] else ''
+    content_type = content_types.get(ext, 'application/octet-stream')
+
+    response = HttpResponse(r.content, content_type=content_type)
+    response['Content-Disposition'] = 'inline; filename="comunicado.' + (ext or 'bin') + '"'
+    response['X-Frame-Options'] = 'SAMEORIGIN'
+    return response

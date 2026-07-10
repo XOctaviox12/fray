@@ -25,6 +25,13 @@
   #grupo-select { display:{% if es_docente %}flex{% else %}none{% endif %}; }
   .file-hint { font-size:10px;color:var(--ink-3);margin-top:3px; }
   .docente-notice { background:#f0fdf4;border:1px solid #a7f3d0;border-radius:10px;padding:10px 14px;font-size:12px;color:#065f46;margin-bottom:16px;display:flex;align-items:center;gap:8px; }
+  .grupo-checks { display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:10px;background:#f7f8fc; }
+  .grupo-check-opt { display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;transition:background .12s; }
+  .grupo-check-opt:hover { background:#eef0fe; }
+  .grupo-check-opt input { accent-color:var(--accent); }
+  .grupo-check-opt span { font-size:12.5px;font-weight:600;color:var(--ink); }
+  .grupo-check-opt.hidden-by-materia { display:none; }
+  .empty-grupos-hint { font-size:11.5px;color:var(--ink-3);padding:6px 2px; }
 </style>
 
 <div class="top-bar">
@@ -50,7 +57,6 @@
   </div>
   {% endif %}
 
-  {# enctype="multipart/form-data" es obligatorio para subir el adjunto #}
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
@@ -69,29 +75,62 @@
       <span class="label">Destinatarios</span>
       <div class="radio-group">
         <label class="radio-opt">
-          <input type="radio" name="destinatario" value="TODOS" checked onchange="toggleGrupo(this)">
+          <input type="radio" name="destinatario" value="TODOS" checked onchange="toggleDestinatario(this)">
           <span>Todos los grupos</span>
         </label>
         <label class="radio-opt">
-          <input type="radio" name="destinatario" value="GRUPO" onchange="toggleGrupo(this)">
+          <input type="radio" name="destinatario" value="GRUPO" onchange="toggleDestinatario(this)">
           <span>Grupo específico</span>
         </label>
         <label class="radio-opt">
-          <input type="radio" name="destinatario" value="DOCENTES" onchange="toggleGrupo(this)">
+          <input type="radio" name="destinatario" value="DOCENTES" onchange="toggleDestinatario(this)">
           <span>Solo docentes</span>
         </label>
       </div>
     </div>
     {% endif %}
 
-    <div class="field" id="grupo-select">
-      <span class="label">{% if es_docente %}Grupo destinatario *{% else %}Seleccionar grupo{% endif %}</span>
-      <select name="grupo_id" class="select" {% if es_docente %}required{% endif %}>
-        <option value="">— Elige un grupo —</option>
-        {% for g in grupos %}
-        <option value="{{ g.pk }}">{{ g }}</option>
+    <div class="field" id="publico-field">
+      <span class="label">Público</span>
+      <div class="radio-group">
+        <label class="radio-opt">
+          <input type="radio" name="publico" value="AMBOS" checked>
+          <span>Alumnos y padres</span>
+        </label>
+        <label class="radio-opt">
+          <input type="radio" name="publico" value="ALUMNOS">
+          <span>Solo alumnos</span>
+        </label>
+        <label class="radio-opt">
+          <input type="radio" name="publico" value="PADRES">
+          <span>Solo padres</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="field" id="materia-field">
+      <span class="label">Materia (opcional)</span>
+      <select name="asignatura_id" id="asignatura-select" class="select" onchange="filtrarGruposPorMateria()">
+        <option value="">— General, sin materia —</option>
+        {% for a in asignaturas %}
+        <option value="{{ a.pk }}">{{ a.nombre }}</option>
         {% endfor %}
       </select>
+    </div>
+
+    <div class="field" id="grupo-select">
+      <span class="label">{% if es_docente %}Grupo(s) destinatario(s) *{% else %}Grupos{% endif %}</span>
+      <div class="grupo-checks" id="grupo-checks-container">
+        {% for g in grupos %}
+        <label class="grupo-check-opt"
+               data-materias="{% for a in g.asignaturas.all %}{{ a.pk }}{% if not forloop.last %},{% endif %}{% endfor %}">
+          <input type="checkbox" name="grupo_ids" value="{{ g.pk }}">
+          <span>{{ g }}</span>
+        </label>
+        {% empty %}
+        <span class="empty-grupos-hint">No tienes grupos asignados.</span>
+        {% endfor %}
+      </div>
     </div>
 
     <div class="field">
@@ -108,9 +147,34 @@
 </div>
 
 <script>
-function toggleGrupo(radio) {
-  document.getElementById('grupo-select').style.display =
-    radio.value === 'GRUPO' ? 'flex' : 'none';
+function toggleDestinatario(radio) {
+  const esGrupo = radio.value === 'GRUPO';
+  document.getElementById('grupo-select').style.display = esGrupo ? 'flex' : 'none';
+  document.getElementById('materia-field').style.display = esGrupo ? 'flex' : 'none';
+  document.getElementById('publico-field').style.display = radio.value === 'DOCENTES' ? 'none' : 'flex';
 }
+
+function filtrarGruposPorMateria() {
+  const materiaId = document.getElementById('asignatura-select').value;
+  document.querySelectorAll('.grupo-check-opt').forEach(function (opt) {
+    if (!materiaId) {
+      opt.classList.remove('hidden-by-materia');
+      return;
+    }
+    const materias = (opt.dataset.materias || '').split(',');
+    if (materias.includes(materiaId)) {
+      opt.classList.remove('hidden-by-materia');
+    } else {
+      opt.classList.add('hidden-by-materia');
+      opt.querySelector('input[type="checkbox"]').checked = false;
+    }
+  });
+}
+
+// Estado inicial: si el docente solo tiene GRUPO forzado, materia/grupo quedan visibles desde el load
+{% if es_docente %}
+document.getElementById('materia-field').style.display = 'flex';
+document.getElementById('grupo-select').style.display = 'flex';
+{% endif %}
 </script>
 {% endblock %}

@@ -474,18 +474,30 @@ def ver_pdf(request, pk, tipo):
     else:
         return redirect('docente_tareas')
 
-    public_id = str(obj.archivo) if obj.archivo else None
-    if not public_id:
+    valor = str(obj.archivo) if obj.archivo else None
+    if not valor:
         return redirect('docente_tareas')
 
     from django.conf import settings
     from django.http import HttpResponse
-    cloud = settings.CLOUDINARY_STORAGE['CLOUD_NAME']
-    if not public_id.endswith('.pdf'):
-        public_id += '.pdf'
-    url = f'https://res.cloudinary.com/{cloud}/raw/upload/{public_id}'
+
+    # Si ya es una URL completa (caso de EntregaTarea/EntregaActividad desde Ionic),
+    # se usa tal cual. Si es solo un public_id, se construye la URL.
+    if valor.startswith('http://') or valor.startswith('https://'):
+        url = valor
+    else:
+        cloud = settings.CLOUDINARY_STORAGE['CLOUD_NAME']
+        if not valor.endswith('.pdf'):
+            valor += '.pdf'
+        url = f'https://res.cloudinary.com/{cloud}/raw/upload/{valor}'
 
     r = req.get(url)
+    if r.status_code != 200:
+        return HttpResponse(
+            f'No se pudo obtener el archivo de Cloudinary (status {r.status_code}).',
+            status=502
+        )
+
     response = HttpResponse(r.content, content_type='application/pdf')
     response['Content-Disposition'] = 'inline; filename="documento.pdf"'
     response['X-Frame-Options'] = 'SAMEORIGIN'

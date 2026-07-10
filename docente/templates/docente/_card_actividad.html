@@ -41,14 +41,27 @@
       style="height:34px;padding:0 16px;background:var(--accent-2);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:9px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;text-decoration:none">
       Ver detalle →
     </a>
-    {% if not act.publicada or act.vencida %}
+
+    {# ── Publicar: solo en borradores ── #}
+    {% if not act.publicada %}
+    <form method="post" action="{% url 'publicar_actividad' act.pk %}" style="margin:0">
+      {% csrf_token %}
+      <button type="submit"
+        style="height:34px;padding:0 14px;background:rgba(16,185,129,.1);color:#059669;border:1px solid rgba(16,185,129,.25);border-radius:9px;font-size:12px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+        Publicar
+      </button>
+    </form>
+    {% endif %}
+
+    {# ── Editar: en borradores y en publicadas ── #}
     <a href="{% url 'editar_actividad' act.pk %}"
       style="height:34px;padding:0 14px;background:#f7f8fc;color:var(--ink-2);border:1px solid var(--border);border-radius:9px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;text-decoration:none">
       <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       Editar
     </a>
-    {% endif %}
-    {% if not act.publicada %}
+
+    {# ── Eliminar: en borradores y en publicadas ── #}
     <form method="post" action="{% url 'eliminar_actividad' act.pk %}"
       onsubmit="return confirm('¿Eliminar esta actividad?')" style="margin:0">
       {% csrf_token %}
@@ -58,7 +71,6 @@
         Borrar
       </button>
     </form>
-    {% endif %}
   </div>
 
 </div>

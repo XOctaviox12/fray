@@ -22,6 +22,7 @@ urlpatterns = [
     path('tareas/<int:pk>/publicar/', views.publicar_tarea, name='publicar_tarea'),
     
     # ── Actividades ───────────────────────────────────────────────────────────
+    path('actividades/<int:pk>/publicar/', views.publicar_actividad, name='publicar_actividad'),
     path('actividades/',                 views.actividades,              name='docente_actividades'),
     path('actividades/crear/',           views.crear_actividad,          name='crear_actividad'),
     path('actividades/<int:pk>/',        views.detalle_actividad,        name='detalle_actividad'),

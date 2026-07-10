@@ -299,6 +299,17 @@ def publicar_tarea(request, pk):
     return redirect('docente_tareas')
 
 @docente_required
+@require_POST
+def publicar_actividad(request, pk):
+    actividad = get_object_or_404(Actividad, pk=pk, docente=request.user)
+    actividad.publicada = True
+    actividad.publicada_en = timezone.now()
+    actividad.save(update_fields=['publicada', 'publicada_en'])
+    messages.success(request, f'✅ Actividad "{actividad.titulo}" publicada.')
+    return redirect('docente_actividades')
+ 
+
+@docente_required
 def tareas(request):
     from academic.models import Tarea
 

@@ -3,180 +3,358 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    <title>Acceso FRAY</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <title>Acceso · FrayHub</title>
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .serif { font-family: 'Instrument Serif', serif; }
+        :root {
+            --color-primary: #F57C00;
+            --color-primary-dark: #d96900;
+            --color-secondary: #0D47A1;
+            --color-error: #D32F2F;
+            --color-white: #FFFFFF;
+            --bg-main: #F8F9FB;
+            --bg-secondary: #EEF2F7;
+            --text-main: #1F2937;
+            --text-secondary: #6B7280;
+            --border-color: #E5E7EB;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+            --shadow-soft: 0 1px 2px rgba(31,41,55,.04), 0 12px 32px rgba(31,41,55,.08);
+            --shadow-inset: inset 0 1px 2px rgba(31,41,55,.03);
+        }
+
+        * { box-sizing: border-box; }
 
         body {
-            background: #0d1020;
+            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
             min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 900px) {
+            .shell { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); }
+        }
+
+        /* ---------- Brand panel ---------- */
+        .brand-panel {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: clamp(28px, 5vw, 64px);
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 15% 20%, rgba(255,255,255,.14) 0%, transparent 45%),
+                linear-gradient(155deg, var(--color-primary) 0%, #e0660a 42%, var(--color-secondary) 100%);
+            color: #fff;
+            min-height: 220px;
+        }
+
+        @media (min-width: 900px) {
+            .brand-panel { min-height: 100vh; }
+        }
+
+        .brand-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                radial-gradient(circle, rgba(255,255,255,.18) 1.5px, transparent 1.5px);
+            background-size: 26px 26px;
+            opacity: .35;
+            mask-image: radial-gradient(circle at 30% 30%, black, transparent 70%);
+        }
+
+        .brand-top { position: relative; display: flex; align-items: center; gap: 12px; }
+
+        .brand-mark {
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            background: rgba(255,255,255,.16);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,.28);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 17px; letter-spacing: -.02em;
+            flex-shrink: 0;
+        }
+
+        .brand-name { font-weight: 700; font-size: 14.5px; letter-spacing: -.01em; }
+        .brand-sub { font-size: 11px; color: rgba(255,255,255,.7); font-weight: 500; margin-top: 1px; }
+
+        .brand-hero {
+            position: relative;
+            margin-top: 20px;
+        }
+
+        .brand-hero h1 {
+            font-size: clamp(28px, 4vw, 44px);
+            font-weight: 800;
+            line-height: 1.08;
+            letter-spacing: -.03em;
+            margin: 0 0 14px;
+            max-width: 460px;
+        }
+
+        .brand-hero p {
+            font-size: 14px;
+            color: rgba(255,255,255,.82);
+            font-weight: 500;
+            max-width: 380px;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .brand-badges {
+            position: relative;
+            display: none;
+            gap: 10px;
+            margin-top: 32px;
+        }
+
+        @media (min-width: 900px) { .brand-badges { display: flex; flex-wrap: wrap; } }
+
+        .badge-chip {
+            background: rgba(255,255,255,.12);
+            border: 1px solid rgba(255,255,255,.22);
+            backdrop-filter: blur(6px);
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .brand-foot {
+            position: relative;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,.55);
+            letter-spacing: .02em;
+        }
+
+        /* ---------- Form panel ---------- */
+        .form-panel {
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Ambient glow bg */
-        body::before {
-            content: '';
-            position: fixed;
-            width: 600px; height: 600px;
-            background: radial-gradient(circle, rgba(79,110,247,.18) 0%, transparent 70%);
-            top: -100px; left: -100px;
-            pointer-events: none;
-        }
-        body::after {
-            content: '';
-            position: fixed;
-            width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(139,92,246,.12) 0%, transparent 70%);
-            bottom: -80px; right: -80px;
-            pointer-events: none;
+            padding: clamp(28px, 6vw, 56px) 20px;
+            background: var(--bg-main);
         }
 
         .login-card {
-            width: 100%; max-width: 420px;
-            background: rgba(255,255,255,.97);
-            border-radius: 24px;
-            padding: 40px;
-            box-shadow: 0 24px 80px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.06);
-            position: relative;
+            width: 100%;
+            max-width: 380px;
             animation: rise .5s cubic-bezier(.22,1,.36,1) both;
         }
 
         @keyframes rise {
-            from { opacity:0; transform: translateY(20px); }
-            to   { opacity:1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        .logo-mark {
-            width: 48px; height: 48px;
-            background: #111318;
-            border-radius: 14px;
-            display: flex; align-items: center; justify-content: center;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 16px rgba(79,110,247,.25);
-        }
-        .logo-mark span {
-            font-family: 'Instrument Serif', serif;
-            font-size: 22px; color: #fff; line-height: 1;
+        .card-eyebrow {
+            font-size: 10.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .14em;
+            color: var(--color-primary);
+            margin: 0 0 10px;
         }
 
-        .field-label {
-            display: block;
-            font-size: 9.5px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: .12em;
-            color: #9ca3af; margin-bottom: 6px;
-        }
-        .field-input {
-            width: 100%;
-            padding: 11px 14px;
-            border: 1.5px solid #e8eaf0;
-            border-radius: 11px;
-            font-size: 13px; font-weight: 500;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            color: #111318; background: #f8f9fc;
-            outline: none;
-            transition: border .18s, box-shadow .18s, background .18s;
-            box-sizing: border-box;
-        }
-        .field-input:focus {
-            border-color: #4f6ef7;
-            box-shadow: 0 0 0 3px rgba(79,110,247,.1);
-            background: #fff;
+        .card-title {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -.025em;
+            color: var(--text-main);
+            margin: 0 0 6px;
         }
 
-        .btn-submit {
-            width: 100%; padding: 13px;
-            background: #111318; color: #fff;
-            border: none; border-radius: 12px;
-            font-size: 11.5px; font-weight: 800;
-            text-transform: uppercase; letter-spacing: .1em;
-            cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif;
-            transition: background .18s, box-shadow .18s, transform .1s;
-            margin-top: 6px;
+        .card-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin: 0 0 28px;
         }
-        .btn-submit:hover {
-            background: #4f6ef7;
-            box-shadow: 0 8px 24px rgba(79,110,247,.3);
-        }
-        .btn-submit:active { transform: scale(.98); }
 
         .error-box {
             display: flex; align-items: flex-start; gap: 10px;
-            background: #fff5f5; border: 1px solid #fecaca;
-            border-left: 3px solid #e53e3e;
-            border-radius: 10px; padding: 12px 14px;
+            background: #FDEDED;
+            border: 1px solid #F6C7C7;
+            border-left: 3px solid var(--color-error);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
             margin-bottom: 20px;
-        }
-        .error-box p {
-            font-size: 11.5px; font-weight: 700;
-            color: #e53e3e; margin: 0; line-height: 1.5;
+            animation: rise .35s ease both;
         }
 
-        .footer-note {
+        .error-box svg { flex-shrink: 0; margin-top: 1px; }
+
+        .error-box p {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--color-error);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        .field-group { display: flex; flex-direction: column; gap: 18px; }
+
+        .field-label {
+            display: block;
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: var(--text-secondary);
+            margin-bottom: 7px;
+        }
+
+        /* Django widgets render as bare <input>; style them via attribute selector */
+        .field-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 13.5px;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            background: var(--bg-secondary);
+            box-shadow: var(--shadow-inset);
+            outline: none;
+            transition: border-color .2s, box-shadow .2s, background .2s;
+        }
+
+        .field-group input:focus {
+            border-color: var(--color-primary);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(245,124,0,.12);
+        }
+
+        .field-error {
+            font-size: 10.5px;
+            color: var(--color-error);
+            font-weight: 700;
+            margin: 6px 0 0 2px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 13.5px;
+            background: var(--text-main);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 11.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .09em;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            margin-top: 4px;
+            transition: background .2s, box-shadow .2s, transform .1s;
+        }
+
+        .btn-submit:hover {
+            background: var(--color-primary);
+            box-shadow: 0 10px 24px rgba(245,124,0,.28);
+        }
+
+        .btn-submit:active { transform: scale(.98); }
+
+        .card-footnote {
             text-align: center;
-            font-size: 10px; font-weight: 600;
-            color: rgba(255,255,255,.2);
-            margin-top: 24px; letter-spacing: .04em;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-top: 28px;
         }
     </style>
 </head>
 <body>
-    <div>
-        <div class="login-card">
-            <div class="logo-mark">
-                <span>F</span>
-            </div>
-
-            <h1 class="serif" style="font-size:26px;color:#111318;margin:0 0 4px;letter-spacing:-.02em;">Bienvenido</h1>
-            <p style="font-size:12.5px;color:#9ca3af;margin:0 0 28px;font-weight:500;">Ingresa tus credenciales para continuar</p>
-
-            {% if form.errors or form.non_field_errors %}
-            <div class="error-box">
-                <svg width="15" height="15" fill="none" stroke="#e53e3e" stroke-width="2.5" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px;">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
+    <div class="shell">
+        <!-- Brand panel: purely decorative, no functional elements -->
+        <aside class="brand-panel">
+            <div class="brand-top">
+                <div class="brand-mark">F</div>
                 <div>
-                    {% if form.non_field_errors %}
-                        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
-                    {% else %}
-                        <p>Usuario o contraseña incorrectos. Verifica tus datos.</p>
-                    {% endif %}
+                    <div class="brand-name">FrayHub</div>
+                    <div class="brand-sub">Instituto Fray Antonio de Lisboa</div>
                 </div>
             </div>
-            {% endif %}
 
-            <form method="post" style="display:flex;flex-direction:column;gap:16px;">
-                {% csrf_token %}
-
-                <div>
-                    <label class="field-label">Usuario</label>
-                    {{ form.username }}
-                    {% if form.username.errors %}
-                        <p style="font-size:10px;color:#e53e3e;font-weight:700;margin:4px 0 0 2px;">{{ form.username.errors.0 }}</p>
-                    {% endif %}
+            <div class="brand-hero">
+                <h1>La gestión escolar, en un solo lugar.</h1>
+                <p>Tareas, comunicados, calificaciones y clases en vivo, conectados para docentes, alumnos y tutores.</p>
+                <div class="brand-badges">
+                    <span class="badge-chip">Tareas y actividades</span>
+                    <span class="badge-chip">Comunicados</span>
+                    <span class="badge-chip">Clase en vivo</span>
                 </div>
+            </div>
 
-                <div>
-                    <label class="field-label">Contraseña</label>
-                    {{ form.password }}
-                    {% if form.password.errors %}
-                        <p style="font-size:10px;color:#e53e3e;font-weight:700;margin:4px 0 0 2px;">{{ form.password.errors.0 }}</p>
-                    {% endif %}
+            <div class="brand-foot">FRAY &copy; 2026 · Kronerion Design</div>
+        </aside>
+
+        <!-- Form panel -->
+        <main class="form-panel">
+            <div class="login-card">
+                <p class="card-eyebrow">Acceso al sistema</p>
+                <h2 class="card-title">Bienvenido</h2>
+                <p class="card-desc">Ingresa tus credenciales para continuar</p>
+
+                {% if form.errors or form.non_field_errors %}
+                <div class="error-box">
+                    <svg width="15" height="15" fill="none" stroke="#D32F2F" stroke-width="2.5" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <div>
+                        {% if form.non_field_errors %}
+                            {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+                        {% else %}
+                            <p>Usuario o contraseña incorrectos. Verifica tus datos.</p>
+                        {% endif %}
+                    </div>
                 </div>
+                {% endif %}
 
-                <button type="submit" class="btn-submit">Entrar al Sistema</button>
-            </form>
-        </div>
+                <form method="post" class="field-group">
+                    {% csrf_token %}
 
-        <p class="footer-note">FRAY &copy; 2026 · Kronerion Design</p>
+                    <div>
+                        <label class="field-label">Usuario</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <p class="field-error">{{ form.username.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label class="field-label">Contraseña</label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <p class="field-error">{{ form.password.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn-submit">Entrar al sistema</button>
+                </form>
+
+                <p class="card-footnote">FRAY &copy; 2026 · Kronerion Design</p>
+            </div>
+        </main>
     </div>
 </body>
 </html>

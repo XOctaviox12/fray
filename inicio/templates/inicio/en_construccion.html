@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sección en construcción — FRAY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --campus-primary: #333; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    background: #f4f5f7;
+  }
+  .ec-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .ec-canvas-box {
+    width: 100%;
+    max-width: 720px;
+    height: 460px;
+    border: 3px solid #1a1006;
+    box-shadow: 0 14px 0 rgba(0,0,0,0.12);
+    background: #9fb3bd;
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+  }
+  .ec-canvas-box:active { cursor: grabbing; }
+  .ec-canvas-box canvas { display: block; }
+  .ec-hint {
+    position: absolute; bottom: 8px; right: 10px;
+    font-size: 11px; color: rgba(0,0,0,0.45);
+    font-family: monospace; pointer-events: none;
+    background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 3px;
+  }
+  .ec-progress-wrap { margin-top: 26px; width: 260px; max-width: 80vw; }
+  .ec-progress-track {
+    width: 100%; height: 18px; background: #d9d9d9;
+    border: 3px solid #1a1006; box-sizing: border-box; display: flex; gap: 2px; padding: 2px;
+  }
+  .ec-progress-seg { flex: 1; background: #2a2a2a; animation: fill-seg 4.4s steps(1) infinite; }
+  .ec-progress-seg:nth-child(1) { animation-delay: 0s; }
+  .ec-progress-seg:nth-child(2) { animation-delay: 0.55s; }
+  .ec-progress-seg:nth-child(3) { animation-delay: 1.1s; }
+  .ec-progress-seg:nth-child(4) { animation-delay: 1.65s; }
+  .ec-progress-seg:nth-child(5) { animation-delay: 2.2s; }
+  .ec-progress-seg:nth-child(6) { animation-delay: 2.75s; }
+  @keyframes fill-seg { 0% { background: #2a2a2a; } 2% { background: #4caf50; } 100% { background: #4caf50; } }
+
+  .ec-title { margin-top: 22px; font-size: 1.4rem; font-weight: 700; color: var(--campus-primary, #333); }
+  .ec-sub { margin-top: 8px; font-size: 1rem; color: #666; max-width: 420px; }
+  .ec-btn-volver {
+    margin-top: 22px;
+    display: inline-block;
+    padding: 10px 22px;
+    background: var(--campus-primary, #333);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: 3px solid #1a1006;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+    transition: transform 0.1s ease;
+  }
+  .ec-btn-volver:hover { transform: translateY(-2px); }
+  .ec-btn-volver:active { transform: translateY(1px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+</style>
+</head>
+<body>
+
+<div class="ec-wrap">
+  <div class="ec-canvas-box" id="ec-canvas-box">
+    <div class="ec-hint">arrastra para girar la cámara</div>
+  </div>
+
+  <div class="ec-progress-wrap">
+    <div class="ec-progress-track">
+      <div class="ec-progress-seg"></div>
+      <div class="ec-progress-seg"></div>
+      <div class="ec-progress-seg"></div>
+      <div class="ec-progress-seg"></div>
+      <div class="ec-progress-seg"></div>
+      <div class="ec-progress-seg"></div>
+    </div>
+  </div>
+
+<div class="ec-title">🚧 Sección en construcción 🚧</div>
+  <div class="ec-sub">
+    Hasta el perrito está esperando a que terminemos esta parte. Vuelve más tarde.
+  </div>
+  <a href="{% url 'login' %}" class="ec-btn-volver">Volver al login</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    if (typeof THREE === 'undefined') {
+      console.error('Three.js no cargó. Revisa el bloqueo de red/adblock hacia jsdelivr.net.');
+    } else if (typeof THREE.OrbitControls === 'undefined') {
+      console.error('THREE.OrbitControls no se registró. El CDN de addons no respondió a tiempo.');
+    }
+  });
+</script>
+<script>
+(function () {
+  const container = document.getElementById('ec-canvas-box');
+  const width  = container.clientWidth;
+  const height = container.clientHeight;
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x9fb3bd);
+  scene.fog = new THREE.Fog(0x9fb3bd, 8, 22);
+
+  const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
+  camera.position.set(4.2, 2.6, 6.4);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.95;
+  container.insertBefore(renderer.domElement, container.firstChild);
+
+  let controls = null;
+  if (typeof THREE.OrbitControls === 'function') {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0.9, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.6;
+    controls.minDistance = 4;
+    controls.maxDistance = 11;
+    controls.maxPolarAngle = Math.PI / 2.05;
+    controls.enablePan = false;
+  } else {
+    camera.lookAt(0, 0.9, 0);
+  }
+
+  let composer = null;
+  if (typeof THREE.EffectComposer === 'function' && typeof THREE.UnrealBloomPass === 'function') {
+    composer = new THREE.EffectComposer(renderer);
+    composer.addPass(new THREE.RenderPass(scene, camera));
+    composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(width, height), 0.22, 0.7, 0.9));
+  }
+
+  const hemi = new THREE.HemisphereLight(0xcdd8dc, 0x4a5a4f, 0.6);
+  scene.add(hemi);
+
+  const sun = new THREE.DirectionalLight(0xdfe6e8, 0.65);
+  sun.position.set(5, 8, 3);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -6; sun.shadow.camera.right = 6;
+  sun.shadow.camera.top = 6;   sun.shadow.camera.bottom = -6;
+  sun.shadow.camera.near = 1;  sun.shadow.camera.far = 20;
+  sun.shadow.bias = -0.0015;
+  scene.add(sun);
+
+  const groundMat = new THREE.MeshStandardMaterial({ color: 0x5c8a52, roughness: 1 });
+  const ground = new THREE.Mesh(new THREE.CylinderGeometry(11, 11, 0.4, 48), groundMat);
+  ground.position.y = -0.2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  function box(w, h, d, mat) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    return m;
+  }
+
+  const matFur     = new THREE.MeshStandardMaterial({ color: 0xd9d5c9, roughness: 0.95 });
+  const matFurDark = new THREE.MeshStandardMaterial({ color: 0x8f8a7d, roughness: 0.95 });
+  const matSnout   = new THREE.MeshStandardMaterial({ color: 0xc7c2b4, roughness: 0.9 });
+  const matNose    = new THREE.MeshStandardMaterial({ color: 0x1a1006, roughness: 0.5 });
+  const matEye     = new THREE.MeshStandardMaterial({ color: 0x2a2118, roughness: 0.4 });
+  const matCollar  = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.6 });
+  const matTear    = new THREE.MeshStandardMaterial({ color: 0x8fd0ff, roughness: 0.1, transparent: true, opacity: 0.85 });
+
+  const dog = new THREE.Group();
+  scene.add(dog);
+
+  const body = box(0.62, 0.5, 0.85, matFur);
+  body.position.set(0, 0.42, 0);
+  dog.add(body);
+
+  const backPatch = box(0.64, 0.2, 0.5, matFurDark);
+  backPatch.position.set(0, 0.66, -0.05);
+  dog.add(backPatch);
+
+  const headPivot = new THREE.Group();
+  headPivot.position.set(0, 0.66, 0.48);
+  dog.add(headPivot);
+
+  const head = box(0.42, 0.4, 0.42, matFur);
+  head.position.set(0, 0.14, 0.08);
+  headPivot.add(head);
+
+  const snout = box(0.22, 0.2, 0.26, matSnout);
+  snout.position.set(0, 0.04, 0.32);
+  headPivot.add(snout);
+
+  const nose = box(0.08, 0.07, 0.05, matNose);
+  nose.position.set(0, 0.06, 0.45);
+  headPivot.add(nose);
+
+  const eyeL = box(0.06, 0.06, 0.03, matEye); eyeL.position.set(-0.13, 0.18, 0.29); headPivot.add(eyeL);
+  const eyeR = box(0.06, 0.06, 0.03, matEye); eyeR.position.set(0.13, 0.18, 0.29);  headPivot.add(eyeR);
+
+  const earLPivot = new THREE.Group();
+  earLPivot.position.set(-0.19, 0.32, 0.05);
+  headPivot.add(earLPivot);
+  const earL = box(0.12, 0.2, 0.06, matFurDark);
+  earL.position.set(0, -0.1, 0);
+  earLPivot.add(earL);
+  earLPivot.rotation.z = 0.5;
+  earLPivot.rotation.x = 0.35;
+
+  const earRPivot = new THREE.Group();
+  earRPivot.position.set(0.19, 0.32, 0.05);
+  headPivot.add(earRPivot);
+  const earR = box(0.12, 0.2, 0.06, matFurDark);
+  earR.position.set(0, -0.1, 0);
+  earRPivot.add(earR);
+  earRPivot.rotation.z = -0.5;
+  earRPivot.rotation.x = 0.35;
+
+  const collar = box(0.44, 0.08, 0.44, matCollar);
+  collar.position.set(0, -0.08, 0.06);
+  headPivot.add(collar);
+
+  const tear = box(0.03, 0.06, 0.03, matTear);
+  tear.position.set(0.13, 0.08, 0.3);
+  headPivot.add(tear);
+
+  const legFL = box(0.14, 0.34, 0.14, matFur);
+  legFL.position.set(-0.18, 0.17, 0.34);
+  dog.add(legFL);
+  const legFR = box(0.14, 0.34, 0.14, matFur);
+  legFR.position.set(0.18, 0.17, 0.34);
+  dog.add(legFR);
+
+  const legBL = box(0.16, 0.2, 0.18, matFurDark);
+  legBL.position.set(-0.2, 0.1, -0.28);
+  dog.add(legBL);
+  const legBR = box(0.16, 0.2, 0.18, matFurDark);
+  legBR.position.set(0.2, 0.1, -0.28);
+  dog.add(legBR);
+
+  const tailPivot = new THREE.Group();
+  tailPivot.position.set(0, 0.5, -0.42);
+  dog.add(tailPivot);
+  const tail = box(0.12, 0.34, 0.12, matFurDark);
+  tail.position.set(0, -0.17, 0);
+  tailPivot.add(tail);
+  tailPivot.rotation.x = 0.95;
+
+  dog.position.set(0.3, 0, 0.4);
+  dog.rotation.y = 0.35;
+
+  const matDirt = new THREE.MeshStandardMaterial({ color: 0x6b4526, roughness: 1 });
+  const matGrassTop = new THREE.MeshStandardMaterial({ color: 0x5cb85c, roughness: 0.95 });
+  const matPlank = new THREE.MeshStandardMaterial({ color: 0x9c7a4a, roughness: 0.85 });
+
+  const siteGroup = new THREE.Group();
+  scene.add(siteGroup);
+  const blockPositions = [[-1.7, 0, -0.6], [-1.0, 0, -0.9], [-1.7, 0.75, -0.6], [-2.4, 0, -0.4]];
+  blockPositions.forEach(([x, y, z]) => {
+    const g = new THREE.Group();
+    g.position.set(x, y + 0.375, z);
+    g.add(box(0.75, 0.75, 0.75, matDirt));
+    const top = box(0.76, 0.14, 0.76, matGrassTop);
+    top.position.y = 0.32;
+    g.add(top);
+    siteGroup.add(g);
+  });
+  const plank1 = box(1.1, 0.08, 0.2, matPlank);
+  plank1.position.set(-1.6, 1.25, -0.6);
+  plank1.rotation.z = 0.18;
+  siteGroup.add(plank1);
+  const plank2 = box(0.9, 0.08, 0.2, matPlank);
+  plank2.position.set(-2.0, 0.95, -0.1);
+  plank2.rotation.z = -0.22;
+  siteGroup.add(plank2);
+
+  function makeCloud(x, y, z, s, opacity) {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0x8f97a0, roughness: 1, transparent: true, opacity });
+    const offsets = [[0,0,0,0.5],[0.5,0.05,0,0.4],[-0.45,0.02,0.1,0.36],[0.15,0.2,0.05,0.32]];
+    offsets.forEach(([ox,oy,oz,r]) => {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 10), mat);
+      m.position.set(ox, oy, oz);
+      g.add(m);
+    });
+    g.position.set(x, y, z);
+    g.scale.setScalar(s);
+    scene.add(g);
+    return g;
+  }
+  const rainCloud = makeCloud(0.4, 3.1, 0.4, 1.15, 0.95);
+  makeCloud(-4, 5.4, -6, 1.0, 0.6);
+  makeCloud(5, 5.8, -7, 0.85, 0.55);
+
+  const dropGeo = new THREE.CylinderGeometry(0.006, 0.006, 0.14, 4);
+  const dropMat = new THREE.MeshBasicMaterial({ color: 0xaad0e0, transparent: true, opacity: 0.55 });
+  const rainDrops = [];
+  for (let i = 0; i < 60; i++) {
+    const d = new THREE.Mesh(dropGeo, dropMat);
+    d.position.set((Math.random() - 0.5) * 3, Math.random() * 3 + 1, (Math.random() - 0.5) * 3);
+    scene.add(d);
+    rainDrops.push({ mesh: d, speed: 3 + Math.random() * 2 });
+  }
+
+  let t = 0;
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.05);
+    t += dt;
+
+    dog.position.y = Math.sin(t * 0.9) * 0.012;
+    headPivot.rotation.x = 0.55 + Math.sin(t * 0.9) * 0.02;
+
+    const blink = (t % 4.2) > 4.05 ? 0.15 : 1;
+    eyeL.scale.y = blink;
+    eyeR.scale.y = blink;
+
+    tailPivot.rotation.x = 0.95 + Math.sin(t * 0.5) * 0.03;
+
+    earLPivot.rotation.x = 0.35 + Math.sin(t * 0.7) * 0.015;
+    earRPivot.rotation.x = 0.35 + Math.sin(t * 0.7 + 0.3) * 0.015;
+
+    const tearCycle = (t % 2.4) / 2.4;
+    if (tearCycle < 0.6) {
+      tear.visible = true;
+      tear.position.y = 0.08 - tearCycle * 0.25;
+      tear.material.opacity = 0.85 * (1 - tearCycle / 0.6);
+    } else {
+      tear.visible = false;
+    }
+
+    rainDrops.forEach((d) => {
+      d.mesh.position.y -= dt * d.speed;
+      if (d.mesh.position.y < -0.2) {
+        d.mesh.position.y = 3.5;
+        d.mesh.position.x = (Math.random() - 0.5) * 3;
+        d.mesh.position.z = (Math.random() - 0.5) * 3;
+      }
+    });
+    rainCloud.position.y = 3.1 + Math.sin(t * 0.4) * 0.05;
+
+    if (controls) controls.update();
+    if (composer) { composer.render(); } else { renderer.render(scene, camera); }
+  }
+
+  window.addEventListener('resize', () => {
+    const w = container.clientWidth, h = container.clientHeight;
+    renderer.setSize(w, h);
+    if (composer) composer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  });
+
+  animate();
+})();
+</script>
+</body>
+</html>

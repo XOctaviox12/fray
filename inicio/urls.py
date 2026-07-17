@@ -11,4 +11,5 @@ urlpatterns = [
     path('comunicados/nuevo/',        views.crear_comunicado,    name='crear_comunicado'),
     path('comunicados/<int:pk>/eliminar/', views.eliminar_comunicado, name='eliminar_comunicado'),
     path('comunicados/<int:pk>/adjunto/', views.ver_adjunto_comunicado, name='ver_adjunto_comunicado'),
+    path('en-construccion/', views.en_construccion, name='en_construccion'),
 ]

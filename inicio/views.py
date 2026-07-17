@@ -29,6 +29,8 @@ def dashboard_view(request):
 
     if request.user.rol == 'DOCENTE':
         return redirect('dashboard_docente')
+    if request.user.rol == 'DIRECTOR':
+        return redirect('en_construccion')
     plantel = request.user.plantel
     
     if request.method == 'POST' and request.POST.get('accion') == 'inscribir':
@@ -183,6 +185,8 @@ def login_view(request):
 
             user = authenticate(request, username=username, password=password)
             if user:
+                if user.rol == 'DIRECTOR':
+                    return redirect('en_construccion')
                 login(request, user)
                 # ── Redirigir según rol ──
                 if user.is_superuser:
@@ -195,7 +199,6 @@ def login_view(request):
     else:
         form = LoginForm()
     return render(request, 'registration/login.html', {'form': form})
-
 
 # ── Búsqueda global ───────────────────────────────────────────────────
 
@@ -544,3 +547,11 @@ def ver_adjunto_comunicado(request, pk):
     response['Content-Disposition'] = 'inline; filename="comunicado.' + (ext or 'bin') + '"'
     response['X-Frame-Options'] = 'SAMEORIGIN'
     return response
+
+
+def en_construccion(request):
+    if request.user.is_authenticated:
+        theme = get_campus_theme(request.user)
+    else:
+        theme = {}
+    return render(request, 'inicio/en_construccion.html', theme)

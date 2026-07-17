@@ -1,66 +1,134 @@
-<!-- ═══════════════════════════════════════════
-     crear_docente.html  (también editar_docente.html)
-     ═══════════════════════════════════════════ -->
 {% extends 'inicio/base.html' %}
 {% block content %}
 <style>
   :root {
-    --ink: #111318; --ink-2: #6b7280; --ink-3: #9ca3af;
-    --border: #e8eaf0; --bg: #f4f5f9; --white: #fff;
-    --accent: #4f6ef7; --purple: #7c3aed;
+    /* ── Colores principales (Design Tokens oficiales) ── */
+    --color-primary: #F02614;
+    --color-primary-hover: #C71F10;
+    --color-primary-light: #FDE9E6;
+
+    --color-secondary: #161344;
+    --color-secondary-hover: #0F0C30;
+    --color-secondary-light: #E9E8F2;
+
+    /* ── Fondos ── */
+    --bg-page: #F8F9FB;
+    --bg-surface: #FFFFFF;
+    --bg-surface-secondary: #F3F5F8;
+
+    /* ── Texto ── */
+    --text-primary: #1F2937;
+    --text-secondary: #6B7280;
+    --text-muted: #9CA3AF;
+    --text-white: #FFFFFF;
+
+    /* ── Bordes ── */
+    --border-light: #E5E7EB;
+
+    /* ── Sombras ── */
+    --shadow-xs: 0 2px 8px rgba(15,23,42,.05);
+    --shadow-sm: 0 6px 18px rgba(15,23,42,.06);
+
+    /* ── Radios ── */
+    --radius-input: 16px;
+    --radius-button: 16px;
+    --radius-card: 22px;
+    --radius-sm: 10px;
+    --radius-xs: 6px;
+
+    /* ── Espaciado (sistema de 8 puntos) ── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 32px;
+
+    --font-family: "Inter", "SF Pro Display", sans-serif;
+    --transition-fast: 150ms;
   }
+
+  * { font-family: var(--font-family); }
+
   .form-page { max-width: 860px; margin: 0 auto; }
 
-  .back-link { display: inline-flex; align-items: center; gap: 7px; text-decoration: none; color: var(--ink-3); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; transition: color .15s; margin-bottom: 18px; }
-  .back-link:hover { color: var(--purple); }
-  .back-link svg { transition: transform .15s; }
+  .back-link { display: inline-flex; align-items: center; gap: var(--space-2); text-decoration: none; color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; transition: color var(--transition-fast); margin-bottom: var(--space-5); }
+  .back-link:hover { color: var(--color-primary); }
+  .back-link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: var(--radius-xs); }
+  .back-link svg { transition: transform var(--transition-fast); }
   .back-link:hover svg { transform: translateX(-2px); }
-  .back-icon { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); display: flex; align-items: center; justify-content: center; }
+  .back-icon { width: 28px; height: 28px; border-radius: var(--radius-xs); border: 1px solid var(--border-light); background: var(--bg-surface); display: flex; align-items: center; justify-content: center; }
 
-  .form-title { font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; color: var(--ink); margin: 0 0 2px; letter-spacing: -.02em; }
-  .form-sub { font-size: 12px; color: var(--ink-2); margin: 0 0 22px; }
+  .form-title { font-size: 22px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px; letter-spacing: -.01em; }
+  .form-sub { font-size: 12px; color: var(--text-secondary); margin: 0 0 var(--space-6); }
 
-  .form-card { background: var(--white); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+  .form-card { background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-card); overflow: hidden; box-shadow: var(--shadow-xs); }
 
-  .form-section { padding: 24px; border-bottom: 1px solid var(--border); }
+  .form-section { padding: var(--space-6); border-bottom: 1px solid var(--border-light); }
   .form-section:last-child { border-bottom: none; }
-  .form-section-bg { background: #fafbff; }
+  .form-section-bg { background: var(--bg-surface-secondary); }
 
-  .section-header { display: flex; align-items: center; gap: 9px; margin-bottom: 18px; }
-  .section-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .section-label { font-size: 11.5px; font-weight: 700; color: var(--ink); text-transform: uppercase; letter-spacing: .07em; }
+  .section-header { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-5); }
+  .section-icon { width: 28px; height: 28px; border-radius: var(--radius-xs); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .section-label { font-size: 11.5px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: .07em; }
 
-  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .field-group { display: flex; flex-direction: column; gap: 5px; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+  .field-group { display: flex; flex-direction: column; gap: var(--space-1); }
   .field-group.full { grid-column: 1 / -1; }
-  .field-label { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); }
+  .field-label { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-muted); }
 
-  .btn-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  /* Inputs: estilo unificado del design system */
+  .field-group input,
+  .field-group textarea,
+  .field-group select {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-input);
+    padding: var(--space-3) var(--space-4);
+    font-size: 14px;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    font-family: var(--font-family);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .field-group input:focus,
+  .field-group textarea:focus,
+  .field-group select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+  }
+
+  .btn-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 
   .btn-submit {
-    padding: 12px 28px; background: var(--purple); color: #fff;
-    border: none; border-radius: 11px; font-size: 11.5px; font-weight: 800;
-    text-transform: uppercase; letter-spacing: .1em; cursor: pointer;
-    font-family: 'Plus Jakarta Sans', sans-serif; transition: all .16s;
+    min-height: 44px; box-sizing: border-box;
+    padding: 0 var(--space-7); background: var(--color-primary); color: var(--text-white);
+    border: none; border-radius: var(--radius-button); font-size: 11.5px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .08em; cursor: pointer;
+    transition: all var(--transition-fast);
+    display: inline-flex; align-items: center; justify-content: center;
   }
-  .btn-submit:hover { background: #6d28d9; box-shadow: 0 4px 14px rgba(109,40,217,.3); }
+  .btn-submit:hover { background: var(--color-primary-hover); box-shadow: var(--shadow-sm); }
+  .btn-submit:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .btn-submit:active { transform: translateY(1px); }
 
-  input[type="file"] { font-size: 12px; color: var(--ink-2); }
+  input[type="file"] { font-size: 12px; color: var(--text-secondary); border: none; padding: 0; }
   input[type="file"]::file-selector-button {
-    background: var(--bg); color: var(--ink-2); border: 1px solid var(--border);
-    padding: 6px 12px; border-radius: 8px; cursor: pointer;
+    background: var(--bg-page); color: var(--text-secondary); border: 1px solid var(--border-light);
+    padding: var(--space-2) var(--space-3); border-radius: var(--radius-xs); cursor: pointer;
     font-weight: 700; font-size: 10px; text-transform: uppercase;
-    margin-right: 10px; font-family: 'Plus Jakarta Sans', sans-serif;
-    transition: background .15s;
+    margin-right: var(--space-3); font-family: var(--font-family);
+    transition: background var(--transition-fast);
   }
-  input[type="file"]::file-selector-button:hover { background: var(--border); }
+  input[type="file"]::file-selector-button:hover { background: var(--color-secondary-light); }
 
   @media (max-width: 700px) { .field-grid { grid-template-columns: 1fr; } }
 </style>
 
 <div class="form-page">
   <a href="{% url 'lista_docentes' %}" class="back-link">
-    <div class="back-icon"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></div>
+    <div class="back-icon"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg></div>
     Lista de {{ labels.docentes }}
   </a>
 
@@ -74,18 +142,18 @@
       <!-- Access -->
       <div class="form-section form-section-bg">
         <div class="section-header">
-          <div class="section-icon" style="background:#111318;color:#fff;">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          <div class="section-icon" style="background:var(--color-secondary);color:var(--text-white);">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           </div>
           <span class="section-label">Acceso al Sistema</span>
         </div>
         <div class="field-grid">
           <div class="field-group">
-            <label class="field-label">Usuario / Matrícula</label>
+            <label class="field-label" for="{{ form.username.id_for_label }}">Usuario / Matrícula</label>
             {{ form.username }}
           </div>
           <div class="field-group">
-            <label class="field-label">Contraseña Provisional</label>
+            <label class="field-label" for="{{ form.password.id_for_label }}">Contraseña Provisional</label>
             {{ form.password }}
           </div>
         </div>
@@ -94,30 +162,30 @@
       <!-- Personal info -->
       <div class="form-section">
         <div class="section-header">
-          <div class="section-icon" style="background:#faf5ff;color:var(--purple);">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          <div class="section-icon" style="background:var(--color-secondary-light);color:var(--color-secondary);">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
           </div>
           <span class="section-label">Información del {{ labels.docente }}</span>
         </div>
         <div class="field-grid">
           <div class="field-group">
-            <label class="field-label">Nombre(s)</label>
+            <label class="field-label" for="{{ form.first_name.id_for_label }}">Nombre(s)</label>
             {{ form.first_name }}
           </div>
           <div class="field-group">
-            <label class="field-label">Apellidos</label>
+            <label class="field-label" for="{{ form.last_name.id_for_label }}">Apellidos</label>
             {{ form.last_name }}
           </div>
           <div class="field-group">
-            <label class="field-label">Correo Electrónico</label>
+            <label class="field-label" for="{{ form.email.id_for_label }}">Correo Electrónico</label>
             {{ form.email }}
           </div>
           <div class="field-group">
-            <label class="field-label">Teléfono</label>
+            <label class="field-label" for="{{ form.telefono.id_for_label }}">Teléfono</label>
             {{ form.telefono }}
           </div>
           <div class="field-group full">
-            <label class="field-label">Dirección Particular</label>
+            <label class="field-label" for="{{ form.direccion.id_for_label }}">Dirección Particular</label>
             {{ form.direccion }}
           </div>
         </div>
@@ -127,7 +195,7 @@
       <div class="form-section form-section-bg">
         <div class="btn-row">
           <div>
-            <label class="field-label" style="display:block;margin-bottom:6px;">Foto de Perfil</label>
+            <label class="field-label" style="display:block;margin-bottom:6px;" for="{{ form.foto_perfil.id_for_label }}">Foto de Perfil</label>
             {{ form.foto_perfil }}
           </div>
           <button type="submit" class="btn-submit">Guardar {{ labels.docente }}</button>

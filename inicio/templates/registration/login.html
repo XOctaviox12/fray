@@ -11,7 +11,9 @@
         :root {
             --color-primary: #F57C00;
             --color-primary-dark: #d96900;
+            --color-primary-text: #B24E00; /* AA-safe sobre blanco para texto pequeño */
             --color-secondary: #0D47A1;
+            --color-secondary-dark: #0a3a82;
             --color-error: #D32F2F;
             --color-white: #FFFFFF;
             --bg-main: #F8F9FB;
@@ -24,6 +26,8 @@
             --radius-sm: 10px;
             --shadow-soft: 0 1px 2px rgba(31,41,55,.04), 0 12px 32px rgba(31,41,55,.08);
             --shadow-inset: inset 0 1px 2px rgba(31,41,55,.03);
+            --ease: cubic-bezier(.22,1,.36,1);
+            --dur: 200ms;
         }
 
         * { box-sizing: border-box; }
@@ -37,6 +41,23 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        /* Salto al contenido principal para navegación por teclado */
+        .skip-link {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            background: var(--text-main);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 0 0 8px 0;
+            font-size: 13px;
+            font-weight: 700;
+            z-index: 100;
+        }
+        .skip-link:focus {
+            left: 0;
+        }
+
         .shell {
             min-height: 100vh;
             display: grid;
@@ -47,7 +68,7 @@
             .shell { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); }
         }
 
-        /* ---------- Brand panel ---------- */
+        /* ---------- Panel de marca ---------- */
         .brand-panel {
             position: relative;
             display: flex;
@@ -70,8 +91,7 @@
             content: '';
             position: absolute;
             inset: 0;
-            background-image:
-                radial-gradient(circle, rgba(255,255,255,.18) 1.5px, transparent 1.5px);
+            background-image: radial-gradient(circle, rgba(255,255,255,.18) 1.5px, transparent 1.5px);
             background-size: 26px 26px;
             opacity: .35;
             mask-image: radial-gradient(circle at 30% 30%, black, transparent 70%);
@@ -91,12 +111,9 @@
         }
 
         .brand-name { font-weight: 700; font-size: 14.5px; letter-spacing: -.01em; }
-        .brand-sub { font-size: 11px; color: rgba(255,255,255,.7); font-weight: 500; margin-top: 1px; }
+        .brand-sub { font-size: 11px; color: rgba(255,255,255,.75); font-weight: 500; margin-top: 1px; }
 
-        .brand-hero {
-            position: relative;
-            margin-top: 20px;
-        }
+        .brand-hero { position: relative; margin-top: 20px; }
 
         .brand-hero h1 {
             font-size: clamp(28px, 4vw, 44px);
@@ -109,25 +126,19 @@
 
         .brand-hero p {
             font-size: 14px;
-            color: rgba(255,255,255,.82);
+            color: rgba(255,255,255,.85);
             font-weight: 500;
             max-width: 380px;
             line-height: 1.6;
             margin: 0;
         }
 
-        .brand-badges {
-            position: relative;
-            display: none;
-            gap: 10px;
-            margin-top: 32px;
-        }
-
-        @media (min-width: 900px) { .brand-badges { display: flex; flex-wrap: wrap; } }
+        .brand-badges { position: relative; display: none; gap: 10px; margin-top: 32px; flex-wrap: wrap; }
+        @media (min-width: 900px) { .brand-badges { display: flex; } }
 
         .badge-chip {
-            background: rgba(255,255,255,.12);
-            border: 1px solid rgba(255,255,255,.22);
+            background: rgba(255,255,255,.14);
+            border: 1px solid rgba(255,255,255,.24);
             backdrop-filter: blur(6px);
             padding: 8px 14px;
             border-radius: 999px;
@@ -140,11 +151,11 @@
             position: relative;
             font-size: 11px;
             font-weight: 600;
-            color: rgba(255,255,255,.55);
+            color: rgba(255,255,255,.6);
             letter-spacing: .02em;
         }
 
-        /* ---------- Form panel ---------- */
+        /* ---------- Panel del formulario ---------- */
         .form-panel {
             display: flex;
             align-items: center;
@@ -156,7 +167,7 @@
         .login-card {
             width: 100%;
             max-width: 380px;
-            animation: rise .5s cubic-bezier(.22,1,.36,1) both;
+            animation: rise .5s var(--ease) both;
         }
 
         @keyframes rise {
@@ -165,11 +176,11 @@
         }
 
         .card-eyebrow {
-            font-size: 10.5px;
+            font-size: 11px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: .14em;
-            color: var(--color-primary);
+            color: var(--color-primary-text);
             margin: 0 0 10px;
         }
 
@@ -182,12 +193,13 @@
         }
 
         .card-desc {
-            font-size: 13px;
+            font-size: 13.5px;
             color: var(--text-secondary);
             font-weight: 500;
             margin: 0 0 28px;
         }
 
+        /* ---------- Alerta de error ---------- */
         .error-box {
             display: flex; align-items: flex-start; gap: 10px;
             background: #FDEDED;
@@ -196,24 +208,25 @@
             border-radius: var(--radius-sm);
             padding: 12px 14px;
             margin-bottom: 20px;
-            animation: rise .35s ease both;
+            animation: rise .35s var(--ease) both;
         }
 
         .error-box svg { flex-shrink: 0; margin-top: 1px; }
 
         .error-box p {
-            font-size: 12px;
+            font-size: 12.5px;
             font-weight: 600;
-            color: var(--color-error);
+            color: #A82424; /* más oscuro que --color-error para reforzar contraste en texto pequeño */
             margin: 0;
             line-height: 1.5;
         }
 
+        /* ---------- Campos ---------- */
         .field-group { display: flex; flex-direction: column; gap: 18px; }
 
         .field-label {
             display: block;
-            font-size: 10.5px;
+            font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .1em;
@@ -221,72 +234,151 @@
             margin-bottom: 7px;
         }
 
-        /* Django widgets render as bare <input>; style them via attribute selector */
+        .field-shell { position: relative; }
+
+        .field-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 17px;
+            height: 17px;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        /* Django renderiza los widgets como <input> puros; se estilizan por atributo */
         .field-group input {
             width: 100%;
-            padding: 12px 14px;
+            padding: 13px 14px 13px 42px;
+            min-height: 46px;
             border: 1.5px solid var(--border-color);
             border-radius: var(--radius-sm);
-            font-size: 13.5px;
+            font-size: 14px;
             font-weight: 500;
             font-family: 'Inter', sans-serif;
             color: var(--text-main);
             background: var(--bg-secondary);
             box-shadow: var(--shadow-inset);
             outline: none;
-            transition: border-color .2s, box-shadow .2s, background .2s;
+            transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
         }
 
+        .field-group input[type="password"],
+        .field-group input[data-toggled="true"] {
+            padding-right: 44px;
+        }
+
+        .field-group input:hover {
+            border-color: #d6dce6;
+        }
+
+        .field-group input:focus-visible,
         .field-group input:focus {
             border-color: var(--color-primary);
             background: #fff;
-            box-shadow: 0 0 0 4px rgba(245,124,0,.12);
+            box-shadow: 0 0 0 4px rgba(245,124,0,.15);
+        }
+
+        .field-group input[aria-invalid="true"] {
+            border-color: var(--color-error);
         }
 
         .field-error {
-            font-size: 10.5px;
-            color: var(--color-error);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            color: #A82424;
             font-weight: 700;
             margin: 6px 0 0 2px;
         }
 
+        /* Botón para mostrar/ocultar contraseña — solo alterna el atributo type, sin tocar lógica */
+        .toggle-visibility {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+        }
+
+        .toggle-visibility:hover { background: rgba(31,41,55,.06); color: var(--text-main); }
+
+        .toggle-visibility:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+
+        .toggle-visibility svg { width: 18px; height: 18px; }
+        .toggle-visibility .icon-hide { display: none; }
+        .toggle-visibility[aria-pressed="true"] .icon-show { display: none; }
+        .toggle-visibility[aria-pressed="true"] .icon-hide { display: block; }
+
+        /* ---------- Botón principal ---------- */
         .btn-submit {
             width: 100%;
+            min-height: 48px;
             padding: 13.5px;
             background: var(--text-main);
             color: #fff;
             border: none;
             border-radius: var(--radius-sm);
-            font-size: 11.5px;
+            font-size: 12px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: .09em;
             cursor: pointer;
             font-family: 'Inter', sans-serif;
-            margin-top: 4px;
-            transition: background .2s, box-shadow .2s, transform .1s;
+            margin-top: 6px;
+            transition: background var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform 100ms var(--ease);
         }
 
         .btn-submit:hover {
-            background: var(--color-primary);
-            box-shadow: 0 10px 24px rgba(245,124,0,.28);
+            background: var(--color-secondary-dark);
+            box-shadow: 0 10px 24px rgba(13,71,161,.25);
+        }
+
+        .btn-submit:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 3px;
         }
 
         .btn-submit:active { transform: scale(.98); }
 
         .card-footnote {
             text-align: center;
-            font-size: 10.5px;
+            font-size: 11px;
             font-weight: 600;
             color: var(--text-secondary);
             margin-top: 28px;
         }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
+        }
     </style>
 </head>
 <body>
+    <a href="#login-form" class="skip-link">Saltar al formulario de acceso</a>
+
     <div class="shell">
-        <!-- Brand panel: purely decorative, no functional elements -->
-        <aside class="brand-panel">
+        <!-- Panel de marca: decorativo -->
+        <aside class="brand-panel" aria-hidden="true">
             <div class="brand-top">
                 <div class="brand-mark">F</div>
                 <div>
@@ -308,7 +400,7 @@
             <div class="brand-foot">FRAY &copy; 2026 · Kronerion Design</div>
         </aside>
 
-        <!-- Form panel -->
+        <!-- Panel del formulario -->
         <main class="form-panel">
             <div class="login-card">
                 <p class="card-eyebrow">Acceso al sistema</p>
@@ -316,8 +408,8 @@
                 <p class="card-desc">Ingresa tus credenciales para continuar</p>
 
                 {% if form.errors or form.non_field_errors %}
-                <div class="error-box">
-                    <svg width="15" height="15" fill="none" stroke="#D32F2F" stroke-width="2.5" viewBox="0 0 24 24">
+                <div class="error-box" role="alert">
+                    <svg width="15" height="15" fill="none" stroke="#A82424" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
                         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                     </svg>
                     <div>
@@ -330,20 +422,41 @@
                 </div>
                 {% endif %}
 
-                <form method="post" class="field-group">
+                <form method="post" class="field-group" id="login-form">
                     {% csrf_token %}
 
                     <div>
-                        <label class="field-label">Usuario</label>
-                        {{ form.username }}
+                        <label class="field-label" for="id_username">Usuario</label>
+                        <div class="field-shell">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                            {{ form.username }}
+                        </div>
                         {% if form.username.errors %}
                             <p class="field-error">{{ form.username.errors.0 }}</p>
                         {% endif %}
                     </div>
 
                     <div>
-                        <label class="field-label">Contraseña</label>
-                        {{ form.password }}
+                        <label class="field-label" for="id_password">Contraseña</label>
+                        <div class="field-shell">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <rect x="4" y="10" width="16" height="10" rx="2"/>
+                                <path d="M8 10V7a4 4 0 0 1 8 0v3"/>
+                            </svg>
+                            {{ form.password }}
+                            <button type="button" class="toggle-visibility" id="togglePassword" aria-pressed="false" aria-label="Mostrar contraseña" aria-controls="id_password">
+                                <svg class="icon-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                <svg class="icon-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+                                    <line x1="1" y1="1" x2="23" y2="23"/>
+                                </svg>
+                            </button>
+                        </div>
                         {% if form.password.errors %}
                             <p class="field-error">{{ form.password.errors.0 }}</p>
                         {% endif %}
@@ -356,5 +469,25 @@
             </div>
         </main>
     </div>
+
+    <script>
+        // Mejora visual: alterna visibilidad de la contraseña sin tocar lógica de autenticación.
+        (function () {
+            var toggle = document.getElementById('togglePassword');
+            var input = document.getElementById('id_password');
+            if (!toggle || !input) return;
+
+            toggle.addEventListener('click', function () {
+                var isPassword = input.getAttribute('type') === 'password';
+                input.setAttribute('type', isPassword ? 'text' : 'password');
+                toggle.setAttribute('aria-pressed', isPassword ? 'true' : 'false');
+                toggle.setAttribute('aria-label', isPassword ? 'Ocultar contraseña' : 'Mostrar contraseña');
+            });
+
+            // Foco inicial en el primer campo para agilizar el acceso por teclado.
+            var username = document.getElementById('id_username');
+            if (username && !username.value) username.focus();
+        })();
+    </script>
 </body>
 </html>

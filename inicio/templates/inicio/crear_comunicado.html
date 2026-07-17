@@ -1,149 +1,374 @@
 {% extends 'inicio/base.html' %}
 {% block content %}
 <style>
-  :root { --ink:#111318;--ink-2:#6b7280;--ink-3:#9ca3af;--border:#e8eaf0;--bg:#f4f5f9;--white:#fff;--accent:#4f6ef7;--danger:#e53e3e; }
-  .top-bar { display:flex;align-items:center;gap:12px;margin-bottom:22px; }
-  .back-link { display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--ink-3);text-decoration:none;text-transform:uppercase;letter-spacing:.08em;transition:color .14s; }
-  .back-link:hover { color:var(--accent); }
-  .card { background:var(--white);border:1px solid var(--border);border-radius:18px;padding:28px;max-width:640px; }
-  .card-title { font-family:'Instrument Serif',serif;font-size:22px;font-weight:400;color:var(--ink);margin:0 0 20px; }
-  .field { display:flex;flex-direction:column;gap:5px;margin-bottom:14px; }
-  .label { font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3); }
-  .input, .select, .textarea { border:1px solid var(--border);border-radius:10px;padding:10px 13px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:500;color:var(--ink);background:#f7f8fc;outline:none;transition:border .15s;width:100%;box-sizing:border-box; }
-  .input:focus, .select:focus, .textarea:focus { border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,110,247,.08);background:#fff; }
-  .textarea { resize:vertical;min-height:120px; }
-  .radio-group { display:flex;gap:8px;flex-wrap:wrap; }
-  .radio-opt { display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .14s; }
-  .radio-opt:has(input:checked) { border-color:var(--accent);background:#eef0fe; }
-  .radio-opt input { accent-color:var(--accent); }
-  .radio-opt span { font-size:12.5px;font-weight:600;color:var(--ink); }
-  .footer { display:flex;gap:8px;padding-top:18px;border-top:1px solid var(--border);margin-top:6px; }
-  .btn-submit { flex:2;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:11px;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s; }
-  .btn-submit:hover { background:#3b56e8; }
-  .btn-cancel { flex:1;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:11px;font-size:11.5px;font-weight:700;color:var(--ink-2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;text-decoration:none;display:flex;align-items:center;justify-content:center; }
-  .btn-cancel:hover { border-color:var(--ink);color:var(--ink); }
-  #grupo-select { display:{% if es_docente %}flex{% else %}none{% endif %}; }
-  .file-hint { font-size:10px;color:var(--ink-3);margin-top:3px; }
-  .docente-notice { background:#f0fdf4;border:1px solid #a7f3d0;border-radius:10px;padding:10px 14px;font-size:12px;color:#065f46;margin-bottom:16px;display:flex;align-items:center;gap:8px; }
-  .grupo-checks { display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:10px;background:#f7f8fc; }
-  .grupo-check-opt { display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;transition:background .12s; }
-  .grupo-check-opt:hover { background:#eef0fe; }
-  .grupo-check-opt input { accent-color:var(--accent); }
-  .grupo-check-opt span { font-size:12.5px;font-weight:600;color:var(--ink); }
-  .grupo-check-opt.hidden-by-materia { display:none; }
-  .empty-grupos-hint { font-size:11.5px;color:var(--ink-3);padding:6px 2px; }
+  :root {
+    /* ── Paleta (misma escala que la lista de comunicados) ── */
+    --ink: #111318;
+    --ink-2: #5b6172;
+    --ink-3: #8a90a3;
+    --border: #e8eaf0;
+    --border-strong: #d7dae4;
+    --bg: #f4f5f9;
+    --field-bg: #f7f8fc;
+    --white: #fff;
+    --accent: #4f6ef7;
+    --accent-strong: #3b56e8;
+    --accent-soft: #eef0fe;
+    --danger: #dc2626;
+    --danger-soft: #fef2f2;
+    --success: #059669;
+    --success-soft: #f0fdf4;
+
+    /* ── Espaciado (escala 4px) ── */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+    --sp-8: 32px;
+
+    /* ── Radios y sombras ── */
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 18px;
+    --shadow-sm: 0 1px 2px rgba(17, 19, 24, .04);
+    --shadow-md: 0 4px 16px rgba(17, 19, 24, .08);
+
+    --dur: 200ms;
+    --ease: cubic-bezier(.4, 0, .2, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+
+  .comunicado-form-wrap a:focus-visible,
+  .comunicado-form-wrap button:focus-visible,
+  .comunicado-form-wrap input:focus-visible,
+  .comunicado-form-wrap select:focus-visible,
+  .comunicado-form-wrap textarea:focus-visible,
+  .comunicado-form-wrap label.radio-opt:focus-within,
+  .comunicado-form-wrap label.grupo-check-opt:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ── Barra superior ── */
+  .top-bar { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-6); }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 32px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-3);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    transition: color var(--dur) var(--ease);
+  }
+  .back-link:hover { color: var(--accent); }
+
+  /* ── Tarjeta ── */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: var(--sp-8) var(--sp-6);
+    max-width: 640px;
+  }
+  .card-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 24px;
+    font-weight: 400;
+    color: var(--ink);
+    margin: 0 0 var(--sp-6);
+  }
+
+  /* ── Campos ── */
+  .field { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-5); }
+  .label {
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+    color: var(--ink-2);
+  }
+  .label .optional-tag {
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--ink-3);
+  }
+  legend.label { padding: 0; margin-bottom: var(--sp-2); }
+
+  .input, .select, .textarea {
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 11px 14px;
+    font-size: 13.5px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 500;
+    color: var(--ink);
+    background: var(--field-bg);
+    outline: none;
+    transition: border var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 44px;
+  }
+  .input:focus, .select:focus, .textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79, 110, 247, .12);
+    background: #fff;
+  }
+  .textarea { resize: vertical; min-height: 130px; }
+
+  fieldset { border: none; margin: 0; padding: 0; }
+
+  .radio-group { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+  .radio-opt {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 44px;
+    padding: 0 var(--sp-4);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: all var(--dur) var(--ease);
+  }
+  .radio-opt:hover { border-color: var(--border-strong); }
+  .radio-opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .radio-opt input { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
+  .radio-opt span { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+
+  .footer {
+    display: flex;
+    gap: var(--sp-2);
+    padding-top: var(--sp-5);
+    border-top: 1px solid var(--border);
+    margin-top: var(--sp-1);
+  }
+  .btn-submit {
+    flex: 2;
+    min-height: 44px;
+    padding: 0 var(--sp-4);
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--r-md);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    box-shadow: var(--shadow-sm);
+    transition: background var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  }
+  .btn-submit:hover { background: var(--accent-strong); box-shadow: var(--shadow-md); }
+  .btn-cancel {
+    flex: 1;
+    min-height: 44px;
+    padding: 0 var(--sp-4);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-2);
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: all var(--dur) var(--ease);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-cancel:hover { border-color: var(--ink); color: var(--ink); }
+
+  #grupo-select { display: {% if es_docente %}flex{% else %}none{% endif %}; }
+  .file-hint { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+
+  .alert-msg {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-sm);
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-bottom: var(--sp-5);
+  }
+  .alert-error { background: var(--danger-soft); border-left: 3px solid var(--danger); color: var(--danger); }
+
+  .docente-notice {
+    background: var(--success-soft);
+    border: 1px solid #a7f3d0;
+    border-radius: var(--r-sm);
+    padding: var(--sp-3) var(--sp-4);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #065f46;
+    margin-bottom: var(--sp-5);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+
+  /* ── Selector de grupos ── */
+  .grupo-checks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: var(--sp-2);
+    background: var(--field-bg);
+  }
+  .grupo-check-opt {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 40px;
+    padding: 0 var(--sp-2);
+    border-radius: 7px;
+    transition: background var(--dur) var(--ease);
+  }
+  .grupo-check-opt:hover { background: var(--accent-soft); }
+  .grupo-check-opt input { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
+  .grupo-check-opt span { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+  .grupo-check-opt.hidden-by-materia { display: none; }
+  .empty-grupos-hint { font-size: 12px; color: var(--ink-3); padding: var(--sp-2); }
+
+  @media (max-width: 640px) {
+    .card { padding: var(--sp-6) var(--sp-4); }
+    .footer { flex-direction: column-reverse; }
+  }
 </style>
 
-<div class="top-bar">
-  <a href="{% url 'lista_comunicados' %}" class="back-link">
-    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
-    Comunicados
-  </a>
-</div>
+<div class="comunicado-form-wrap">
 
-<div class="card">
-  <div class="card-title">Nuevo Comunicado</div>
-
-  {% if messages %}
-  {% for msg in messages %}
-  <div style="background:#fff5f5;border-left:3px solid var(--danger);padding:10px 14px;border-radius:9px;font-size:12px;font-weight:700;color:var(--danger);margin-bottom:16px;">{{ msg }}</div>
-  {% endfor %}
-  {% endif %}
-
-  {% if es_docente %}
-  <div class="docente-notice">
-    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
-    Solo puedes enviar comunicados a tus grupos asignados.
+  <div class="top-bar">
+    <a href="{% url 'lista_comunicados' %}" class="back-link">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+      Comunicados
+    </a>
   </div>
-  {% endif %}
 
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
+  <div class="card">
+    <h1 class="card-title">Nuevo Comunicado</h1>
 
-    <div class="field">
-      <span class="label">Título</span>
-      <input type="text" name="titulo" class="input" placeholder="Ej. Suspensión de clases el viernes" required>
-    </div>
-
-    <div class="field">
-      <span class="label">Contenido</span>
-      <textarea name="cuerpo" class="textarea" placeholder="Escribe el mensaje del comunicado..." required></textarea>
-    </div>
-
-    {% if not es_docente %}
-    <div class="field">
-      <span class="label">Destinatarios</span>
-      <div class="radio-group">
-        <label class="radio-opt">
-          <input type="radio" name="destinatario" value="TODOS" checked onchange="toggleDestinatario(this)">
-          <span>Todos los grupos</span>
-        </label>
-        <label class="radio-opt">
-          <input type="radio" name="destinatario" value="GRUPO" onchange="toggleDestinatario(this)">
-          <span>Grupo específico</span>
-        </label>
-        <label class="radio-opt">
-          <input type="radio" name="destinatario" value="DOCENTES" onchange="toggleDestinatario(this)">
-          <span>Solo docentes</span>
-        </label>
+    {% if messages %}
+      {% for msg in messages %}
+      <div class="alert-msg alert-error" role="alert">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+        {{ msg }}
       </div>
+      {% endfor %}
+    {% endif %}
+
+    {% if es_docente %}
+    <div class="docente-notice">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+      Solo puedes enviar comunicados a tus grupos asignados.
     </div>
     {% endif %}
 
-    <div class="field" id="publico-field">
-      <span class="label">Público</span>
-      <div class="radio-group">
-        <label class="radio-opt">
-          <input type="radio" name="publico" value="AMBOS" checked>
-          <span>Alumnos y padres</span>
-        </label>
-        <label class="radio-opt">
-          <input type="radio" name="publico" value="ALUMNOS">
-          <span>Solo alumnos</span>
-        </label>
-        <label class="radio-opt">
-          <input type="radio" name="publico" value="PADRES">
-          <span>Solo padres</span>
-        </label>
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <div class="field">
+        <label class="label" for="titulo-input">Título</label>
+        <input type="text" name="titulo" id="titulo-input" class="input" placeholder="Ej. Suspensión de clases el viernes" required aria-required="true">
       </div>
-    </div>
 
-    <div class="field" id="materia-field">
-      <span class="label">Materia (opcional)</span>
-      <select name="asignatura_id" id="asignatura-select" class="select" onchange="filtrarGruposPorMateria()">
-        <option value="">— General, sin materia —</option>
-        {% for a in asignaturas %}
-        <option value="{{ a.pk }}">{{ a.nombre }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="field" id="grupo-select">
-      <span class="label">{% if es_docente %}Grupo(s) destinatario(s) *{% else %}Grupos{% endif %}</span>
-      <div class="grupo-checks" id="grupo-checks-container">
-        {% for g in grupos %}
-        <label class="grupo-check-opt"
-               data-materias="{% for a in g.asignaturas.all %}{{ a.pk }}{% if not forloop.last %},{% endif %}{% endfor %}">
-          <input type="checkbox" name="grupo_ids" value="{{ g.pk }}">
-          <span>{{ g }}</span>
-        </label>
-        {% empty %}
-        <span class="empty-grupos-hint">No tienes grupos asignados.</span>
-        {% endfor %}
+      <div class="field">
+        <label class="label" for="cuerpo-input">Contenido</label>
+        <textarea name="cuerpo" id="cuerpo-input" class="textarea" placeholder="Escribe el mensaje del comunicado..." required aria-required="true"></textarea>
       </div>
-    </div>
 
-    <div class="field">
-      <span class="label">Adjunto (opcional)</span>
-      <input type="file" name="adjunto" class="input" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx">
-      <span class="file-hint">PDF, imagen o documento. Máx. 10 MB. Se sube a Cloudinary.</span>
-    </div>
+      {% if not es_docente %}
+      <fieldset class="field">
+        <legend class="label">Destinatarios</legend>
+        <div class="radio-group">
+          <label class="radio-opt">
+            <input type="radio" name="destinatario" value="TODOS" checked onchange="toggleDestinatario(this)">
+            <span>Todos los grupos</span>
+          </label>
+          <label class="radio-opt">
+            <input type="radio" name="destinatario" value="GRUPO" onchange="toggleDestinatario(this)">
+            <span>Grupo específico</span>
+          </label>
+          <label class="radio-opt">
+            <input type="radio" name="destinatario" value="DOCENTES" onchange="toggleDestinatario(this)">
+            <span>Solo docentes</span>
+          </label>
+        </div>
+      </fieldset>
+      {% endif %}
 
-    <div class="footer">
-      <a href="{% url 'lista_comunicados' %}" class="btn-cancel">Cancelar</a>
-      <button type="submit" class="btn-submit">Publicar comunicado</button>
-    </div>
-  </form>
+      <fieldset class="field" id="publico-field">
+        <legend class="label">Público</legend>
+        <div class="radio-group">
+          <label class="radio-opt">
+            <input type="radio" name="publico" value="AMBOS" checked>
+            <span>Alumnos y padres</span>
+          </label>
+          <label class="radio-opt">
+            <input type="radio" name="publico" value="ALUMNOS">
+            <span>Solo alumnos</span>
+          </label>
+          <label class="radio-opt">
+            <input type="radio" name="publico" value="PADRES">
+            <span>Solo padres</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="field" id="materia-field">
+        <label class="label" for="asignatura-select">Materia <span class="optional-tag">(opcional)</span></label>
+        <select name="asignatura_id" id="asignatura-select" class="select" onchange="filtrarGruposPorMateria()">
+          <option value="">— General, sin materia —</option>
+          {% for a in asignaturas %}
+          <option value="{{ a.pk }}">{{ a.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <fieldset class="field" id="grupo-select">
+        <legend class="label">{% if es_docente %}Grupo(s) destinatario(s) *{% else %}Grupos{% endif %}</legend>
+        <div class="grupo-checks" id="grupo-checks-container">
+          {% for g in grupos %}
+          <label class="grupo-check-opt"
+                 data-materias="{% for a in g.asignaturas.all %}{{ a.pk }}{% if not forloop.last %},{% endif %}{% endfor %}">
+            <input type="checkbox" name="grupo_ids" value="{{ g.pk }}">
+            <span>{{ g }}</span>
+          </label>
+          {% empty %}
+          <span class="empty-grupos-hint">No tienes grupos asignados.</span>
+          {% endfor %}
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label class="label" for="adjunto-input">Adjunto <span class="optional-tag">(opcional)</span></label>
+        <input type="file" name="adjunto" id="adjunto-input" class="input" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" aria-describedby="adjunto-hint">
+        <span class="file-hint" id="adjunto-hint">PDF, imagen o documento. Máx. 10 MB. Se sube a Cloudinary.</span>
+      </div>
+
+      <div class="footer">
+        <a href="{% url 'lista_comunicados' %}" class="btn-cancel">Cancelar</a>
+        <button type="submit" class="btn-submit">Publicar comunicado</button>
+      </div>
+    </form>
+  </div>
+
 </div>
 
 <script>

@@ -2,72 +2,181 @@
 {% block title %}Personal del Plantel{% endblock %}
 
 {% block content %}
-<div style="margin-bottom:1.5rem">
-  <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:2px">Personal del Plantel</h1>
-  <p style="font-size:13px;color:var(--ink-2)">Gestiona roles y permisos de tu equipo</p>
+<style>
+  :root {
+    /* ── Colores principales (Design Tokens oficiales) ── */
+    --color-primary: #F02614;
+
+    --color-secondary: #161344;
+    --color-secondary-light: #E9E8F2;
+
+    --color-success: #22C55E;
+    --color-success-light: #ECFDF3;
+
+    --color-warning: #F59E0B;
+    --color-warning-light: #FFF7E6;
+
+    --color-info: #3B82F6;
+    --color-info-light: #EFF6FF;
+
+    /* ── Fondos ── */
+    --bg-page: #F8F9FB;
+    --bg-surface: #FFFFFF;
+    --bg-surface-secondary: #F3F5F8;
+    --bg-hover: #F7F8FA;
+
+    /* ── Texto ── */
+    --text-primary: #1F2937;
+    --text-secondary: #6B7280;
+    --text-muted: #9CA3AF;
+    --text-white: #FFFFFF;
+
+    /* ── Bordes ── */
+    --border-light: #E5E7EB;
+
+    /* ── Sombras ── */
+    --shadow-xs: 0 2px 8px rgba(15,23,42,.05);
+
+    /* ── Radios ── */
+    --radius-button: 16px;
+    --radius-card: 22px;
+    --radius-sm: 10px;
+    --radius-pill: 999px;
+
+    /* ── Espaciado (sistema de 8 puntos) ── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+
+    --font-family: "Inter", "SF Pro Display", sans-serif;
+    --transition-fast: 150ms;
+  }
+
+  * { font-family: var(--font-family); }
+
+  .page-header { margin-bottom: var(--space-6); }
+  .page-title { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
+  .page-sub { font-size: 13px; color: var(--text-secondary); }
+
+  .alert-success {
+    background: var(--color-success-light); color: #166534;
+    padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm);
+    margin-bottom: var(--space-4); font-size: 13px; font-weight: 600;
+  }
+
+  .table-card { background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-card); overflow: hidden; box-shadow: var(--shadow-xs); }
+  .personal-table { width: 100%; border-collapse: collapse; }
+  .personal-table thead tr { background: var(--bg-surface-secondary); border-bottom: 1px solid var(--border-light); }
+  .personal-table th {
+    padding: var(--space-3) var(--space-5); font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); text-align: left;
+  }
+  .personal-table th.center { text-align: center; }
+  .personal-table tbody tr { border-bottom: 1px solid var(--border-light); transition: background var(--transition-fast); }
+  .personal-table tbody tr:last-child { border-bottom: none; }
+  .personal-table tbody tr:hover { background: var(--bg-hover); }
+  .personal-table td { padding: var(--space-3) var(--space-5); }
+  .personal-table td.center { text-align: center; }
+
+  .persona-cell { display: flex; align-items: center; gap: var(--space-3); }
+  .persona-avatar {
+    width: 34px; height: 34px; border-radius: var(--radius-sm);
+    background: var(--color-secondary-light); color: var(--color-secondary);
+    font-size: 11px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .persona-nombre { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .persona-username { font-size: 11px; color: var(--text-muted); }
+
+  .role-badge { font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: var(--radius-pill); display: inline-block; }
+  .role-director { background: var(--color-secondary-light); color: var(--color-secondary); }
+  .role-coord { background: var(--color-info-light); color: var(--color-info); }
+  .role-docente { background: var(--color-success-light); color: #166534; }
+  .role-tutor { background: var(--color-warning-light); color: #92400E; }
+  .role-otro { background: var(--bg-surface-secondary); color: var(--text-secondary); }
+
+  .contacto-email { font-size: 12px; color: var(--text-secondary); }
+  .contacto-telefono { font-size: 11px; color: var(--text-muted); }
+
+  .btn-cambiar-rol {
+    height: 32px; padding: 0 var(--space-4);
+    background: var(--color-secondary-light); color: var(--color-secondary);
+    border: 1px solid transparent; border-radius: var(--radius-sm);
+    font-size: 11px; font-weight: 700; display: inline-flex; align-items: center;
+    text-decoration: none; transition: all var(--transition-fast);
+  }
+  .btn-cambiar-rol:hover { background: var(--color-secondary); color: var(--text-white); }
+  .btn-cambiar-rol:focus-visible { outline: 2px solid var(--color-secondary); outline-offset: 2px; }
+
+  .tu-label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+
+  .empty-row { padding: 48px; text-align: center; font-size: 13px; color: var(--text-muted); }
+</style>
+
+<div class="page-header">
+  <h1 class="page-title">Personal del Plantel</h1>
+  <p class="page-sub">Gestiona roles y permisos de tu equipo</p>
 </div>
 
 {% if messages %}
   {% for msg in messages %}
-  <div style="background:#d1fae5;color:#065f46;padding:.75rem 1rem;border-radius:9px;margin-bottom:1rem;font-size:13px">{{ msg }}</div>
+  <div class="alert-success">{{ msg }}</div>
   {% endfor %}
 {% endif %}
 
-<div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
-  <table style="width:100%;border-collapse:collapse">
+<div class="table-card">
+  <table class="personal-table">
     <thead>
-      <tr style="background:#f7f8fc;border-bottom:1px solid var(--border)">
-        <th style="padding:.75rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:left">Nombre</th>
-        <th style="padding:.75rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Rol actual</th>
-        <th style="padding:.75rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Contacto</th>
-        <th style="padding:.75rem 1.25rem;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);text-align:center">Acciones</th>
+      <tr>
+        <th scope="col">Nombre</th>
+        <th scope="col" class="center">Rol actual</th>
+        <th scope="col" class="center">Contacto</th>
+        <th scope="col" class="center">Acciones</th>
       </tr>
     </thead>
     <tbody>
       {% for u in personal %}
-      <tr style="border-bottom:1px solid #f2f3f7">
-        <td style="padding:.75rem 1.25rem">
-          <div style="display:flex;align-items:center;gap:10px">
-            <div style="width:34px;height:34px;border-radius:9px;background:var(--accent-2);color:var(--accent);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-              {{ u.first_name|first|upper }}{{ u.last_name|first|upper }}
-            </div>
+      <tr>
+        <td>
+          <div class="persona-cell">
+            <div class="persona-avatar">{{ u.first_name|first|upper }}{{ u.last_name|first|upper }}</div>
             <div>
-              <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ u.get_full_name }}</div>
-              <div style="font-size:11px;color:var(--ink-3)">{{ u.username }}</div>
+              <div class="persona-nombre">{{ u.get_full_name }}</div>
+              <div class="persona-username">{{ u.username }}</div>
             </div>
           </div>
         </td>
-        <td style="padding:.75rem 1.25rem;text-align:center">
+        <td class="center">
           {% if u.rol == 'DIRECTOR' %}
-          <span style="background:#ede9fe;color:#5b21b6;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">Director</span>
+          <span class="role-badge role-director">Director</span>
           {% elif u.rol == 'COORD' %}
-          <span style="background:#dbeafe;color:#1e40af;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">Coordinador</span>
+          <span class="role-badge role-coord">Coordinador</span>
           {% elif u.rol == 'DOCENTE' %}
-          <span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">Docente</span>
+          <span class="role-badge role-docente">Docente</span>
           {% elif u.rol == 'TUTOR' %}
-          <span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">Tutor</span>
+          <span class="role-badge role-tutor">Tutor</span>
           {% else %}
-          <span style="background:#f3f4f6;color:#6b7280;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px">{{ u.get_rol_display }}</span>
+          <span class="role-badge role-otro">{{ u.get_rol_display }}</span>
           {% endif %}
         </td>
-        <td style="padding:.75rem 1.25rem;text-align:center">
-          <div style="font-size:12px;color:var(--ink-2)">{{ u.email|default:"—" }}</div>
-          <div style="font-size:11px;color:var(--ink-3)">{{ u.telefono|default:"" }}</div>
+        <td class="center">
+          <div class="contacto-email">{{ u.email|default:"—" }}</div>
+          <div class="contacto-telefono">{{ u.telefono|default:"" }}</div>
         </td>
-        <td style="padding:.75rem 1.25rem;text-align:center">
+        <td class="center">
           {% if u != request.user %}
-          <a href="{% url 'editar_permisos' u.pk %}"
-            style="height:30px;padding:0 14px;background:var(--accent-2);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:8px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;text-decoration:none">
-            Cambiar rol
-          </a>
+          <a href="{% url 'editar_permisos' u.pk %}" class="btn-cambiar-rol">Cambiar rol</a>
           {% else %}
-          <span style="font-size:11px;color:var(--ink-3)">Tú</span>
+          <span class="tu-label">Tú</span>
           {% endif %}
         </td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="4" style="padding:3rem;text-align:center;font-size:13px;color:var(--ink-3)">No hay personal registrado.</td>
+        <td colspan="4" class="empty-row">No hay personal registrado.</td>
       </tr>
       {% endfor %}
     </tbody>

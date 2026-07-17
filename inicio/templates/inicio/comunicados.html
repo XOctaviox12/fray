@@ -2,127 +2,183 @@
 {% block content %}
 <style>
   :root {
+    /* ── Paleta ── */
     --ink: #111318;
-    --ink-2: #6b7280;
-    --ink-3: #9ca3af;
+    --ink-2: #5b6172;
+    --ink-3: #8a90a3;
     --border: #e8eaf0;
+    --border-strong: #d7dae4;
     --bg: #f4f5f9;
     --white: #fff;
     --accent: #4f6ef7;
-    --danger: #e53e3e;
+    --accent-strong: #3b56e8;
+    --accent-soft: #eef0fe;
+    --danger: #dc2626;
+    --danger-soft: #fef2f2;
     --success: #059669;
+    --success-soft: #f0fdf4;
+
+    /* ── Espaciado (escala 4px) ── */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+    --sp-8: 32px;
+
+    /* ── Radios ── */
+    --r-sm: 8px;
+    --r-md: 12px;
+    --r-lg: 16px;
+    --r-pill: 999px;
+
+    /* ── Sombras ── */
+    --shadow-sm: 0 1px 2px rgba(17, 19, 24, .04);
+    --shadow-md: 0 4px 16px rgba(17, 19, 24, .08);
+    --shadow-focus: 0 0 0 3px rgba(79, 110, 247, .28);
+
+    /* ── Movimiento ── */
+    --dur: 200ms;
+    --ease: cubic-bezier(.4, 0, .2, 1);
   }
 
-  /* ── Layout ── */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+
+  /* ── Foco visible (accesibilidad) ── */
+  .comunicados-wrap a:focus-visible,
+  .comunicados-wrap button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+  }
+
+  .comunicados-wrap { max-width: 920px; }
+
+  /* ── Cabecera ── */
   .page-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    margin-bottom: 22px;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-6);
     flex-wrap: wrap;
-    gap: 12px;
   }
   .page-title {
     font-family: 'Instrument Serif', serif;
-    font-size: 26px;
+    font-size: 30px;
+    line-height: 1.15;
     font-weight: 400;
     color: var(--ink);
     margin: 0;
   }
   .page-subtitle {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--ink-3);
-    margin: 2px 0 0;
+    margin: var(--sp-1) 0 0;
+    font-weight: 600;
   }
 
-  /* ── Botón nuevo ── */
+  /* ── Botón nuevo (acción primaria) ── */
   .btn-new {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px 18px;
+    gap: var(--sp-2);
+    min-height: 44px;
+    padding: 0 var(--sp-5);
     background: var(--accent);
     color: #fff;
     border: none;
-    border-radius: 11px;
-    font-size: 11.5px;
+    border-radius: var(--r-md);
+    font-size: 12px;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: .08em;
+    letter-spacing: .07em;
     cursor: pointer;
     font-family: 'Plus Jakarta Sans', sans-serif;
     text-decoration: none;
-    transition: background .15s;
+    box-shadow: var(--shadow-sm);
+    transition: background var(--dur) var(--ease), transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
     white-space: nowrap;
   }
-  .btn-new:hover { background: #3b56e8; }
+  .btn-new:hover { background: var(--accent-strong); box-shadow: var(--shadow-md); }
+  .btn-new:active { transform: translateY(1px); }
 
   /* ── Filtros ── */
   .filters-bar {
     display: flex;
-    gap: 8px;
-    margin-bottom: 18px;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-5);
     flex-wrap: wrap;
   }
   .filter-chip {
-    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 var(--sp-4);
     border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 11px;
+    border-radius: var(--r-pill);
+    font-size: 11.5px;
     font-weight: 700;
     color: var(--ink-2);
     background: var(--white);
     cursor: pointer;
     text-decoration: none;
-    transition: all .14s;
+    transition: all var(--dur) var(--ease);
   }
-  .filter-chip:hover,
-  .filter-chip.active {
+  .filter-chip:hover { border-color: var(--border-strong); color: var(--ink); }
+  .filter-chip.active,
+  .filter-chip[aria-current="page"] {
     border-color: var(--accent);
     color: var(--accent);
-    background: #eef0fe;
+    background: var(--accent-soft);
   }
 
-  /* ── Cards de comunicados ── */
+  /* ── Lista de comunicados ── */
   .comunicados-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: var(--sp-3);
+    list-style: none;
+    margin: 0;
+    padding: 0;
   }
 
   .com-card {
     background: var(--white);
     border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 18px 20px;
+    border-radius: var(--r-lg);
+    padding: var(--sp-5) var(--sp-5);
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 12px;
+    gap: var(--sp-4);
     align-items: start;
-    transition: box-shadow .15s, border-color .15s;
+    transition: box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
   }
   .com-card:hover {
     border-color: #c7ccf5;
-    box-shadow: 0 2px 12px rgba(79,110,247,.07);
+    box-shadow: var(--shadow-md);
   }
 
   .com-badge-row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 6px;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-2);
     flex-wrap: wrap;
   }
   .com-badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 9px;
-    border-radius: 20px;
+    gap: var(--sp-1);
+    padding: 4px 10px;
+    border-radius: var(--r-pill);
     font-size: 9.5px;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: .07em;
+    letter-spacing: .06em;
   }
   .badge-todos    { background: #eff6ff; color: #2563eb; }
   .badge-grupo    { background: #f0fdf4; color: #15803d; }
@@ -131,17 +187,17 @@
   .badge-padres   { background: #fff7ed; color: #c2410c; }
 
   .com-title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
     color: var(--ink);
-    margin: 0 0 4px;
-    line-height: 1.35;
+    margin: 0 0 var(--sp-1);
+    line-height: 1.4;
   }
   .com-body-preview {
-    font-size: 12.5px;
+    font-size: 13px;
     color: var(--ink-2);
-    margin: 0 0 8px;
-    line-height: 1.5;
+    margin: 0 0 var(--sp-3);
+    line-height: 1.55;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -150,14 +206,15 @@
   .com-meta {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--sp-4);
+    row-gap: var(--sp-2);
     flex-wrap: wrap;
   }
   .com-meta-item {
     display: flex;
     align-items: center;
-    gap: 4px;
-    font-size: 10.5px;
+    gap: var(--sp-1);
+    font-size: 11px;
     color: var(--ink-3);
     font-weight: 600;
   }
@@ -167,37 +224,43 @@
   .adjunto-chip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
-    background: #f3f4f6;
+    gap: var(--sp-1);
+    min-height: 28px;
+    padding: 0 var(--sp-2);
+    background: var(--bg);
     border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 10px;
+    border-radius: 7px;
+    font-size: 10.5px;
     font-weight: 700;
     color: var(--ink-2);
     text-decoration: none;
-    transition: all .14s;
+    transition: all var(--dur) var(--ease);
   }
-  .adjunto-chip:hover { border-color: var(--accent); color: var(--accent); background: #eef0fe; }
+  .adjunto-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 
   /* Materia chip */
   .materia-chip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
-    background: #eef2ff;
+    gap: var(--sp-1);
+    padding: 4px 10px;
+    background: var(--accent-soft);
     border: 1px solid #c7d2fe;
-    border-radius: 6px;
-    font-size: 10px;
+    border-radius: 7px;
+    font-size: 10.5px;
     font-weight: 700;
     color: #4338ca;
   }
 
   /* acciones */
-  .com-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .com-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--sp-2);
+  }
   .com-date-tag {
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 700;
     color: var(--ink-3);
     white-space: nowrap;
@@ -205,50 +268,51 @@
   .btn-delete {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 5px 10px;
+    gap: var(--sp-1);
+    min-height: 36px;
+    padding: 0 var(--sp-3);
     background: transparent;
     border: 1px solid #fecaca;
-    border-radius: 8px;
-    font-size: 10px;
+    border-radius: var(--r-sm);
+    font-size: 10.5px;
     font-weight: 700;
-    color: #ef4444;
+    color: var(--danger);
     cursor: pointer;
     font-family: 'Plus Jakarta Sans', sans-serif;
-    transition: all .14s;
+    transition: all var(--dur) var(--ease);
     text-transform: uppercase;
-    letter-spacing: .06em;
+    letter-spacing: .05em;
   }
-  .btn-delete:hover { background: #fff5f5; border-color: var(--danger); }
+  .btn-delete:hover { background: var(--danger-soft); border-color: var(--danger); }
 
   /* ── Empty state ── */
   .empty-state {
     background: var(--white);
     border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 52px 28px;
+    border-radius: var(--r-lg);
+    padding: 56px 28px;
     text-align: center;
   }
   .empty-icon {
-    width: 52px;
-    height: 52px;
-    background: #f3f4f6;
+    width: 56px;
+    height: 56px;
+    background: var(--bg);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 14px;
+    margin: 0 auto var(--sp-4);
   }
   .empty-title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
     color: var(--ink);
-    margin: 0 0 6px;
+    margin: 0 0 var(--sp-1);
   }
   .empty-sub {
-    font-size: 12px;
+    font-size: 12.5px;
     color: var(--ink-3);
-    margin: 0 0 20px;
+    margin: 0 0 var(--sp-5);
   }
 
   /* ── Paginación ── */
@@ -256,279 +320,333 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 6px;
-    margin-top: 24px;
+    gap: var(--sp-2);
+    margin-top: var(--sp-6);
     flex-wrap: wrap;
   }
   .page-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
     border: 1px solid var(--border);
-    border-radius: 9px;
-    font-size: 12px;
+    border-radius: var(--r-sm);
+    font-size: 12.5px;
     font-weight: 700;
     color: var(--ink-2);
     background: var(--white);
     text-decoration: none;
-    transition: all .14s;
+    transition: all var(--dur) var(--ease);
   }
   .page-btn:hover { border-color: var(--accent); color: var(--accent); }
   .page-btn.current { background: var(--accent); color: #fff; border-color: var(--accent); }
   .page-btn.disabled { opacity: .35; pointer-events: none; }
 
-  /* Modal confirmación borrar */
+  /* ── Modal confirmación borrar ── */
   .modal-overlay {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,.35);
+    background: rgba(17, 19, 24, .4);
     z-index: 9999;
     align-items: center;
     justify-content: center;
+    padding: var(--sp-4);
   }
   .modal-overlay.open { display: flex; }
   .modal-box {
     background: var(--white);
-    border-radius: 18px;
-    padding: 28px;
-    max-width: 380px;
-    width: 90%;
-    box-shadow: 0 20px 60px rgba(0,0,0,.18);
+    border-radius: var(--r-lg);
+    padding: var(--sp-6);
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(17, 19, 24, .2);
   }
-  .modal-title { font-size: 15px; font-weight: 800; color: var(--ink); margin: 0 0 8px; }
-  .modal-sub   { font-size: 12.5px; color: var(--ink-2); margin: 0 0 22px; line-height: 1.5; }
-  .modal-actions { display: flex; gap: 8px; }
+  .modal-title { font-size: 16px; font-weight: 800; color: var(--ink); margin: 0 0 var(--sp-2); }
+  .modal-sub   { font-size: 13px; color: var(--ink-2); margin: 0 0 var(--sp-6); line-height: 1.55; }
+  .modal-actions { display: flex; gap: var(--sp-2); }
   .modal-cancel {
-    flex: 1; padding: 11px; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 10px; font-size: 11.5px; font-weight: 700; color: var(--ink-2);
-    cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; transition: all .14s;
+    flex: 1;
+    min-height: 44px;
+    padding: 0 var(--sp-4);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-2);
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: all var(--dur) var(--ease);
   }
   .modal-cancel:hover { border-color: var(--ink); color: var(--ink); }
   .modal-confirm {
-    flex: 2; padding: 11px; background: var(--danger); border: none;
-    border-radius: 10px; font-size: 11.5px; font-weight: 800; color: #fff;
-    cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; transition: background .14s;
-    text-transform: uppercase; letter-spacing: .07em;
-  }
-  .modal-confirm:hover { background: #c53030; }
-
-  /* messages */
-  .alert-msg {
-    padding: 11px 15px;
-    border-radius: 10px;
+    flex: 2;
+    min-height: 44px;
+    padding: 0 var(--sp-4);
+    background: var(--danger);
+    border: none;
+    border-radius: var(--r-sm);
     font-size: 12px;
-    font-weight: 700;
-    margin-bottom: 16px;
+    font-weight: 800;
+    color: #fff;
+    cursor: pointer;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: background var(--dur) var(--ease);
+    text-transform: uppercase;
+    letter-spacing: .06em;
   }
-  .alert-success { background: #f0fdf4; border-left: 3px solid #22c55e; color: var(--success); }
-  .alert-error   { background: #fff5f5; border-left: 3px solid var(--danger);  color: var(--danger); }
+  .modal-confirm:hover { background: #b91c1c; }
+
+  /* ── Mensajes flash ── */
+  .alert-msg {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-sm);
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-bottom: var(--sp-4);
+  }
+  .alert-success { background: var(--success-soft); border-left: 3px solid #22c55e; color: var(--success); }
+  .alert-error   { background: var(--danger-soft); border-left: 3px solid var(--danger); color: var(--danger); }
+
+  /* ── Utilidades ── */
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .com-card { grid-template-columns: 1fr; }
+    .com-actions { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
+  }
 </style>
 
-<!-- ── Mensajes flash ── -->
-{% if messages %}
-  {% for msg in messages %}
-    <div class="alert-msg {% if msg.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
-      {{ msg }}
-    </div>
-  {% endfor %}
-{% endif %}
+<div class="comunicados-wrap">
 
-<!-- ── Cabecera ── -->
-<div class="page-header">
-  <div>
-    <h1 class="page-title">Comunicados</h1>
-    <p class="page-subtitle">
-      {% if comunicados.paginator.count == 0 %}
-        Sin comunicados activos
-      {% else %}
-        {{ comunicados.paginator.count }} comunicado{{ comunicados.paginator.count|pluralize }}
-      {% endif %}
-    </p>
-  </div>
-  {% if request.user.rol in 'DIRECTOR,COORD,ADMIN,DOCENTE' %}
-  <a href="{% url 'crear_comunicado' %}" class="btn-new">
-    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-    Nuevo comunicado
-  </a>
+  <!-- ── Mensajes flash ── -->
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert-msg {% if msg.tags == 'error' %}alert-error{% else %}alert-success{% endif %}" role="status">
+        {% if msg.tags == 'error' %}
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+        {% else %}
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+        {% endif %}
+        {{ msg }}
+      </div>
+    {% endfor %}
   {% endif %}
-</div>
 
-<!-- ── Filtros por destinatario (solo directivos ven todos) ── -->
-{% if request.user.rol not in 'DOCENTE' %}
-<div class="filters-bar">
-  <a href="{% url 'lista_comunicados' %}"
-     class="filter-chip {% if not request.GET.dest %}active{% endif %}">
-    Todos
-  </a>
-  <a href="{% url 'lista_comunicados' %}?dest=TODOS"
-     class="filter-chip {% if request.GET.dest == 'TODOS' %}active{% endif %}">
-    Todos los grupos
-  </a>
-  <a href="{% url 'lista_comunicados' %}?dest=DOCENTES"
-     class="filter-chip {% if request.GET.dest == 'DOCENTES' %}active{% endif %}">
-    Solo docentes
-  </a>
-  <a href="{% url 'lista_comunicados' %}?dest=GRUPO"
-     class="filter-chip {% if request.GET.dest == 'GRUPO' %}active{% endif %}">
-    Grupo específico
-  </a>
-</div>
-{% endif %}
-
-<!-- ── Lista ── -->
-{% if comunicados %}
-<div class="comunicados-list">
-  {% for c in comunicados %}
-  <div class="com-card">
-
-    <!-- Contenido principal -->
+  <!-- ── Cabecera ── -->
+  <div class="page-header">
     <div>
-      <!-- Badges -->
-      <div class="com-badge-row">
-        {% if c.destinatario == 'TODOS' %}
-          <span class="com-badge badge-todos">
-            <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            Todos los grupos
-          </span>
-        {% elif c.destinatario == 'GRUPO' %}
-          <span class="com-badge badge-grupo">
-            <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
-            {% if c.grupo %}{{ c.grupo }}{% else %}Grupo específico{% endif %}
-          </span>
-        {% elif c.destinatario == 'DOCENTES' %}
-          <span class="com-badge badge-docentes">
-            <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M12 8v4m0 4h.01"/></svg>
-            Solo docentes
-          </span>
+      <h1 class="page-title">Comunicados</h1>
+      <p class="page-subtitle">
+        {% if comunicados.paginator.count == 0 %}
+          Sin comunicados activos
+        {% else %}
+          {{ comunicados.paginator.count }} comunicado{{ comunicados.paginator.count|pluralize }}
         {% endif %}
-
-        <!-- Público (solo si aplica: no se muestra para DOCENTES ni cuando es AMBOS) -->
-        {% if c.destinatario != 'DOCENTES' %}
-          {% if c.publico == 'ALUMNOS' %}
-            <span class="com-badge badge-alumnos">Solo alumnos</span>
-          {% elif c.publico == 'PADRES' %}
-            <span class="com-badge badge-padres">Solo padres</span>
-          {% endif %}
-        {% endif %}
-
-        <!-- Materia (si tiene) -->
-        {% if c.asignatura %}
-          <span class="materia-chip">{{ c.asignatura.nombre }}</span>
-        {% endif %}
-      </div>
-
-      <!-- Título -->
-      <p class="com-title">{{ c.titulo }}</p>
-
-      <!-- Preview del cuerpo -->
-      <p class="com-body-preview">{{ c.cuerpo }}</p>
-
-      <!-- Meta info -->
-      <div class="com-meta">
-        <!-- Autor -->
-        <span class="com-meta-item">
-          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          {{ c.autor.get_full_name|default:c.autor.username }}
-        </span>
-
-        <!-- Fecha -->
-        <span class="com-meta-item">
-          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-          {{ c.creado_en|date:"d/m/Y H:i" }}
-        </span>
-
-        <!-- Adjunto -->
-        {% if c.adjunto %}
-        <a href="{% url 'ver_adjunto_comunicado' c.pk %}" target="_blank" rel="noopener" class="adjunto-chip">
-          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-          Ver adjunto
-        </a>
-        {% endif %}
-      </div>
+      </p>
     </div>
-
-    <!-- Acciones (derecha) -->
-    <div class="com-actions">
-      <span class="com-date-tag">{{ c.creado_en|timesince }} ago</span>
-
-      {% if request.user.rol in 'DIRECTOR,COORD,ADMIN' or request.user == c.autor %}
-      <button
-        class="btn-delete"
-        onclick="confirmarEliminar('{{ c.pk }}', '{{ c.titulo|escapejs }}')"
-        type="button">
-        <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-        Eliminar
-      </button>
-      {% endif %}
-    </div>
-
-  </div>
-  {% endfor %}
-</div>
-
-<!-- ── Paginación ── -->
-{% if page_obj.has_other_pages %}
-<div class="pagination">
-  {% if page_obj.has_previous %}
-    <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.dest %}&dest={{ request.GET.dest }}{% endif %}" class="page-btn">
-      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+    {% if request.user.rol in 'DIRECTOR,COORD,ADMIN,DOCENTE' %}
+    <a href="{% url 'crear_comunicado' %}" class="btn-new">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      Nuevo comunicado
     </a>
-  {% else %}
-    <span class="page-btn disabled">
-      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
-    </span>
-  {% endif %}
-
-  {% for num in page_obj.paginator.page_range %}
-    {% if page_obj.number == num %}
-      <span class="page-btn current">{{ num }}</span>
-    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-      <a href="?page={{ num }}{% if request.GET.dest %}&dest={{ request.GET.dest }}{% endif %}" class="page-btn">{{ num }}</a>
     {% endif %}
-  {% endfor %}
-
-  {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}{% if request.GET.dest %}&dest={{ request.GET.dest }}{% endif %}" class="page-btn">
-      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-    </a>
-  {% else %}
-    <span class="page-btn disabled">
-      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
-    </span>
-  {% endif %}
-</div>
-{% endif %}
-
-{% else %}
-<!-- ── Empty state ── -->
-<div class="empty-state">
-  <div class="empty-icon">
-    <svg width="22" height="22" fill="none" stroke="#9ca3af" stroke-width="1.8" viewBox="0 0 24 24">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-    </svg>
   </div>
-  <p class="empty-title">Sin comunicados</p>
-  <p class="empty-sub">Todavía no hay comunicados publicados para ti.</p>
-  {% if request.user.rol in 'DIRECTOR,COORD,ADMIN,DOCENTE' %}
-  <a href="{% url 'crear_comunicado' %}" class="btn-new" style="display:inline-flex;">
-    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-    Crear primer comunicado
-  </a>
-  {% endif %}
-</div>
-{% endif %}
 
+  <!-- ── Filtros por destinatario (solo directivos ven todos) ── -->
+  {% if request.user.rol not in 'DOCENTE' %}
+  <nav class="filters-bar" aria-label="Filtrar comunicados por destinatario">
+    <a href="{% url 'lista_comunicados' %}"
+       class="filter-chip {% if not request.GET.dest %}active{% endif %}"
+       {% if not request.GET.dest %}aria-current="page"{% endif %}>
+      Todos
+    </a>
+    <a href="{% url 'lista_comunicados' %}?dest=TODOS"
+       class="filter-chip {% if request.GET.dest == 'TODOS' %}active{% endif %}"
+       {% if request.GET.dest == 'TODOS' %}aria-current="page"{% endif %}>
+      Todos los grupos
+    </a>
+    <a href="{% url 'lista_comunicados' %}?dest=DOCENTES"
+       class="filter-chip {% if request.GET.dest == 'DOCENTES' %}active{% endif %}"
+       {% if request.GET.dest == 'DOCENTES' %}aria-current="page"{% endif %}>
+      Solo docentes
+    </a>
+    <a href="{% url 'lista_comunicados' %}?dest=GRUPO"
+       class="filter-chip {% if request.GET.dest == 'GRUPO' %}active{% endif %}"
+       {% if request.GET.dest == 'GRUPO' %}aria-current="page"{% endif %}>
+      Grupo específico
+    </a>
+  </nav>
+  {% endif %}
+
+  <!-- ── Lista ── -->
+  {% if comunicados %}
+  <ul class="comunicados-list">
+    {% for c in comunicados %}
+    <li class="com-card">
+
+      <!-- Contenido principal -->
+      <div>
+        <!-- Badges -->
+        <div class="com-badge-row">
+          {% if c.destinatario == 'TODOS' %}
+            <span class="com-badge badge-todos">
+              <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Todos los grupos
+            </span>
+          {% elif c.destinatario == 'GRUPO' %}
+            <span class="com-badge badge-grupo">
+              <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+              {% if c.grupo %}{{ c.grupo }}{% else %}Grupo específico{% endif %}
+            </span>
+          {% elif c.destinatario == 'DOCENTES' %}
+            <span class="com-badge badge-docentes">
+              <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M12 8v4m0 4h.01"/></svg>
+              Solo docentes
+            </span>
+          {% endif %}
+
+          <!-- Público (solo si aplica: no se muestra para DOCENTES ni cuando es AMBOS) -->
+          {% if c.destinatario != 'DOCENTES' %}
+            {% if c.publico == 'ALUMNOS' %}
+              <span class="com-badge badge-alumnos">Solo alumnos</span>
+            {% elif c.publico == 'PADRES' %}
+              <span class="com-badge badge-padres">Solo padres</span>
+            {% endif %}
+          {% endif %}
+
+          <!-- Materia (si tiene) -->
+          {% if c.asignatura %}
+            <span class="materia-chip">{{ c.asignatura.nombre }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Título -->
+        <p class="com-title">{{ c.titulo }}</p>
+
+        <!-- Preview del cuerpo -->
+        <p class="com-body-preview">{{ c.cuerpo }}</p>
+
+        <!-- Meta info -->
+        <div class="com-meta">
+          <!-- Autor -->
+          <span class="com-meta-item">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            {{ c.autor.get_full_name|default:c.autor.username }}
+          </span>
+
+          <!-- Fecha -->
+          <span class="com-meta-item">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <time datetime="{{ c.creado_en|date:'c' }}">{{ c.creado_en|date:"d/m/Y H:i" }}</time>
+          </span>
+
+          <!-- Adjunto -->
+          {% if c.adjunto %}
+          <a href="{% url 'ver_adjunto_comunicado' c.pk %}" target="_blank" rel="noopener" class="adjunto-chip">
+            <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            Ver adjunto
+            <span class="sr-only">de «{{ c.titulo }}»</span>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Acciones (derecha) -->
+      <div class="com-actions">
+        <span class="com-date-tag">{{ c.creado_en|timesince }} ago</span>
+
+        {% if request.user.rol in 'DIRECTOR,COORD,ADMIN' or request.user == c.autor %}
+        <button
+          class="btn-delete"
+          onclick="confirmarEliminar('{{ c.pk }}', '{{ c.titulo|escapejs }}')"
+          type="button"
+          aria-label="Eliminar comunicado «{{ c.titulo }}»">
+          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          Eliminar
+        </button>
+        {% endif %}
+      </div>
+
+    </li>
+    {% endfor %}
+  </ul>
+
+  <!-- ── Paginación ── -->
+  {% if page_obj.has_other_pages %}
+  <nav class="pagination" aria-label="Paginación de comunicados">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.dest %}&dest={{ request.GET.dest }}{% endif %}" class="page-btn" aria-label="Página anterior">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+      </a>
+    {% else %}
+      <span class="page-btn disabled" aria-hidden="true">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+      </span>
+    {% endif %}
+
+    {% for num in page_obj.paginator.page_range %}
+      {% if page_obj.number == num %}
+        <span class="page-btn current" aria-current="page">{{ num }}</span>
+      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+        <a href="?page={{ num }}{% if request.GET.dest %}&dest={{ request.GET.dest }}{% endif %}" class="page-btn" aria-label="Ir a la página {{ num }}">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if request.GET.dest %}&dest={{ request.GET.dest }}{% endif %}" class="page-btn" aria-label="Página siguiente">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+    {% else %}
+      <span class="page-btn disabled" aria-hidden="true">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+      </span>
+    {% endif %}
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <!-- ── Empty state ── -->
+  <div class="empty-state">
+    <div class="empty-icon">
+      <svg width="22" height="22" fill="none" stroke="#9ca3af" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </div>
+    <p class="empty-title">Sin comunicados</p>
+    <p class="empty-sub">Todavía no hay comunicados publicados para ti.</p>
+    {% if request.user.rol in 'DIRECTOR,COORD,ADMIN,DOCENTE' %}
+    <a href="{% url 'crear_comunicado' %}" class="btn-new" style="display:inline-flex;">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      Crear primer comunicado
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
 
 <!-- ── Modal de confirmación de borrado ── -->
-<div class="modal-overlay" id="deleteModal">
+<div class="modal-overlay" id="deleteModal" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle" aria-describedby="deleteModalSub">
   <div class="modal-box">
-    <p class="modal-title">¿Eliminar comunicado?</p>
+    <p class="modal-title" id="deleteModalTitle">¿Eliminar comunicado?</p>
     <p class="modal-sub" id="deleteModalSub">Esta acción desactivará el comunicado y no aparecerá más en la lista.</p>
     <div class="modal-actions">
-      <button class="modal-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="modal-cancel" onclick="cerrarModal()" type="button">Cancelar</button>
       <form id="deleteForm" method="post" style="flex:2;display:contents;">
         {% csrf_token %}
         <button type="submit" class="modal-confirm">Eliminar</button>
@@ -538,19 +656,45 @@
 </div>
 
 <script>
+let elementoQueAbrioModal = null;
+
 function confirmarEliminar(pk, titulo) {
+  elementoQueAbrioModal = document.activeElement;
+
   document.getElementById('deleteModalSub').textContent =
     '«' + titulo + '» quedará desactivado y no aparecerá más en la lista.';
   document.getElementById('deleteForm').action =
     '{% url "eliminar_comunicado" 0 %}'.replace('/0/', '/' + pk + '/');
-  document.getElementById('deleteModal').classList.add('open');
+
+  const modal = document.getElementById('deleteModal');
+  modal.classList.add('open');
+
+  // Accesibilidad: mover el foco al modal al abrirlo
+  const primerBoton = modal.querySelector('.modal-cancel');
+  if (primerBoton) primerBoton.focus();
 }
+
 function cerrarModal() {
   document.getElementById('deleteModal').classList.remove('open');
+
+  // Accesibilidad: regresar el foco al elemento que abrió el modal
+  if (elementoQueAbrioModal) {
+    elementoQueAbrioModal.focus();
+    elementoQueAbrioModal = null;
+  }
 }
+
 // Cerrar al hacer clic fuera del box
 document.getElementById('deleteModal').addEventListener('click', function(e) {
   if (e.target === this) cerrarModal();
+});
+
+// Cerrar con la tecla Escape (navegación por teclado)
+document.addEventListener('keydown', function(e) {
+  const modal = document.getElementById('deleteModal');
+  if (e.key === 'Escape' && modal.classList.contains('open')) {
+    cerrarModal();
+  }
 });
 </script>
 

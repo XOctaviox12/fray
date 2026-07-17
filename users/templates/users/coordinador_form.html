@@ -1,108 +1,222 @@
-<!-- ═══════════════════════════════════════════
-     crear_coordinador.html
-     ═══════════════════════════════════════════ -->
 {% extends 'inicio/base.html' %}
 {% block title %}{{ titulo }} | FRAY{% endblock %}
 {% block content %}
 <style>
   :root {
-    --ink: #111318; --ink-2: #6b7280; --ink-3: #9ca3af;
-    --border: #e8eaf0; --bg: #f4f5f9; --white: #fff;
-    --accent: #4f6ef7; --danger: #e53e3e;
+    /* ── Colores principales (Design Tokens oficiales) ── */
+    --color-primary: #F02614;
+    --color-primary-hover: #C71F10;
+    --color-primary-light: #FDE9E6;
+
+    --color-secondary: #161344;
+    --color-secondary-hover: #0F0C30;
+    --color-secondary-light: #E9E8F2;
+
+    --color-danger: #B00020;
+    --color-danger-hover: #8C0018;
+    --color-danger-light: #FBE7EA;
+
+    --color-success: #22C55E;
+    --color-success-light: #ECFDF3;
+
+    /* ── Fondos ── */
+    --bg-page: #F8F9FB;
+    --bg-surface: #FFFFFF;
+    --bg-surface-secondary: #F3F5F8;
+    --bg-hover: #F7F8FA;
+
+    /* ── Texto ── */
+    --text-primary: #1F2937;
+    --text-secondary: #6B7280;
+    --text-muted: #9CA3AF;
+    --text-white: #FFFFFF;
+
+    /* ── Bordes ── */
+    --border-light: #E5E7EB;
+    --border-medium: #D1D5DB;
+
+    /* ── Sombras ── */
+    --shadow-xs: 0 2px 8px rgba(15,23,42,.05);
+    --shadow-sm: 0 6px 18px rgba(15,23,42,.06);
+    --shadow-md: 0 12px 30px rgba(15,23,42,.08);
+    --shadow-lg: 0 18px 45px rgba(15,23,42,.10);
+
+    /* ── Radios ── */
+    --radius-input: 16px;
+    --radius-button: 16px;
+    --radius-card: 22px;
+    --radius-sm: 10px;
+    --radius-xs: 6px;
+
+    /* ── Espaciado (sistema de 8 puntos) ── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 32px;
+
+    /* ── Tipografía ── */
+    --font-family: "Inter", "SF Pro Display", sans-serif;
+
+    /* ── Transiciones ── */
+    --transition-fast: 150ms;
+    --transition-normal: 220ms;
   }
+
+  * { font-family: var(--font-family); }
+
   .page { max-width: 900px; margin: 0 auto; }
 
-  /* breadcrumb */
-  .breadcrumb { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; }
-  .breadcrumb a { font-size: 12px; font-weight: 600; color: var(--ink-2); text-decoration: none; transition: color .15s; display: flex; align-items: center; gap: 4px; }
-  .breadcrumb a:hover { color: var(--accent); }
-  .breadcrumb-sep { color: var(--ink-3); font-size: 12px; }
-  .breadcrumb-current { font-size: 12px; font-weight: 700; color: var(--ink); }
+  /* ── Breadcrumb ── */
+  .breadcrumb { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-6); }
+  .breadcrumb a {
+    font-size: 12px; font-weight: 600; color: var(--text-secondary); text-decoration: none;
+    transition: color var(--transition-fast); display: flex; align-items: center; gap: var(--space-1);
+  }
+  .breadcrumb a:hover { color: var(--color-primary); }
+  .breadcrumb a:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: var(--radius-xs); }
+  .breadcrumb-sep { color: var(--text-muted); font-size: 12px; }
+  .breadcrumb-current { font-size: 12px; font-weight: 700; color: var(--text-primary); }
 
-  .form-layout { display: grid; grid-template-columns: 220px 1fr; gap: 18px; align-items: start; }
+  .form-layout { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-5); align-items: start; }
 
-  /* Photo sidebar */
+  /* ── Sidebar de foto ── */
   .photo-card {
-    background: var(--white); border: 1px solid var(--border);
-    border-radius: 18px; padding: 22px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    background: var(--bg-surface); border: 1px solid var(--border-light);
+    border-radius: var(--radius-card); padding: var(--space-6);
+    box-shadow: var(--shadow-xs);
     position: sticky; top: 80px; text-align: center;
   }
   .photo-drop {
-    width: 120px; height: 120px; border-radius: 20px;
-    border: 2px dashed var(--border); background: var(--bg);
+    width: 120px; height: 120px; border-radius: var(--radius-card);
+    border: 2px dashed var(--border-light); background: var(--bg-page);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    margin: 0 auto 14px; overflow: hidden;
-    transition: border-color .18s;
+    margin: 0 auto var(--space-4); overflow: hidden;
+    transition: border-color var(--transition-normal);
     cursor: pointer;
   }
-  .photo-drop:hover { border-color: var(--accent); }
+  .photo-drop:hover { border-color: var(--color-primary); }
   .photo-drop img { width: 100%; height: 100%; object-fit: cover; }
-  .photo-drop svg { color: var(--border); transition: color .18s; }
-  .photo-drop:hover svg { color: var(--accent); }
-  .photo-label { font-size: 10px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
-  .photo-hint { font-size: 10px; color: var(--ink-3); margin-bottom: 16px; }
+  .photo-drop svg { color: var(--border-medium); transition: color var(--transition-normal); }
+  .photo-drop:hover svg { color: var(--color-primary); }
+  .photo-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: var(--space-4); }
+  .photo-hint { font-size: 10px; color: var(--text-muted); margin-bottom: var(--space-4); }
 
-  .plantel-info { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; text-align: left; }
-  .plantel-label { font-size: 9px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .1em; }
-  .plantel-value { font-size: 11.5px; font-weight: 700; color: var(--ink); }
-
-  /* Right form */
-  .form-stack { display: flex; flex-direction: column; gap: 14px; }
-  .form-section { background: var(--white); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
-  .section-head { display: flex; align-items: center; gap: 9px; padding: 18px 22px; border-bottom: 1px solid var(--border); background: var(--bg); }
-  .section-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .section-label { font-size: 12px; font-weight: 700; color: var(--ink); text-transform: uppercase; letter-spacing: .06em; }
-  .section-body { padding: 20px 22px; }
-
-  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .field-group { display: flex; flex-direction: column; gap: 5px; }
-  .field-group.full { grid-column: 1 / -1; }
-  .field-label { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); }
-
-  /* Dark security section */
-  .security-section {
-    background: #0d1020; border-radius: 18px; overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0,0,0,.15);
+  .plantel-info {
+    display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3);
+    background: var(--bg-page); border: 1px solid var(--border-light); border-radius: var(--radius-sm); text-align: left;
   }
-  .security-head { display: flex; align-items: center; gap: 9px; padding: 18px 22px; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .plantel-label { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .1em; }
+  .plantel-value { font-size: 11.5px; font-weight: 700; color: var(--text-primary); }
+
+  /* ── Formulario derecho ── */
+  .form-stack { display: flex; flex-direction: column; gap: var(--space-4); }
+  .form-section {
+    background: var(--bg-surface); border: 1px solid var(--border-light);
+    border-radius: var(--radius-card); overflow: hidden; box-shadow: var(--shadow-xs);
+  }
+  .section-head {
+    display: flex; align-items: center; gap: var(--space-2); padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--border-light); background: var(--bg-page);
+  }
+  .section-icon {
+    width: 28px; height: 28px; border-radius: var(--radius-xs);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .section-label { font-size: 12px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: .06em; }
+  .section-body { padding: var(--space-5); }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+  .field-group { display: flex; flex-direction: column; gap: var(--space-1); }
+  .field-group.full { grid-column: 1 / -1; }
+  .field-label { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text-muted); }
+
+  /* Inputs: estilo unificado del design system */
+  .field-group input,
+  .field-group textarea,
+  .field-group select {
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-input);
+    padding: var(--space-3) var(--space-4);
+    font-size: 14px;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .field-group input:focus,
+  .field-group textarea:focus,
+  .field-group select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+  }
+
+  /* ── Sección de seguridad (azul marino de marca) ── */
+  .security-section {
+    background: var(--color-secondary); border-radius: var(--radius-card); overflow: hidden;
+    box-shadow: var(--shadow-md);
+  }
+  .security-head {
+    display: flex; align-items: center; gap: var(--space-2); padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
   .security-head .section-label { color: rgba(255,255,255,.7); }
-  .security-body { padding: 20px 22px; position: relative; overflow: hidden; }
+  .security-body { padding: var(--space-5); position: relative; overflow: hidden; }
   .security-body::after {
     content: ''; position: absolute; bottom: -20px; right: -20px;
     width: 100px; height: 100px;
-    background: rgba(79,110,247,.15); border-radius: 50%; filter: blur(30px);
+    background: rgba(240,38,20,.18); border-radius: 50%; filter: blur(30px);
   }
-  .security-label { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,.3); }
+  .security-label { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,.35); }
+  .security-body .field-group input {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+    color: var(--text-white);
+  }
+  .security-body .field-group input::placeholder { color: rgba(255,255,255,.35); }
+  .security-body .field-group input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(240,38,20,.25);
+  }
 
-  /* Error */
-  .error-banner { background: #fff5f5; border: 1px solid #fecaca; border-left: 3px solid var(--danger); border-radius: 10px; padding: 10px 14px; font-size: 11.5px; font-weight: 700; color: var(--danger); margin-bottom: 14px; }
+  /* ── Banner de error ── */
+  .error-banner {
+    background: var(--color-danger-light); border: 1px solid #f3b8bf; border-left: 3px solid var(--color-danger);
+    border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4);
+    font-size: 11.5px; font-weight: 700; color: var(--color-danger); margin-bottom: var(--space-4);
+  }
 
-  /* Buttons */
-  .action-row { display: flex; gap: 10px; }
+  /* ── Acciones ── */
+  .action-row { display: flex; gap: var(--space-3); }
   .btn-cancel {
-    flex: 1; padding: 13px; background: var(--white);
-    border: 1px solid var(--border); color: var(--ink-2);
-    border-radius: 11px; font-size: 11.5px; font-weight: 700;
-    text-align: center; text-decoration: none; transition: all .16s;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    flex: 1; padding: var(--space-4); min-height: 44px; background: var(--bg-surface);
+    border: 1px solid var(--border-light); color: var(--text-secondary);
+    border-radius: var(--radius-button); font-size: 11.5px; font-weight: 700;
+    text-align: center; text-decoration: none; transition: all var(--transition-fast);
+    display: flex; align-items: center; justify-content: center;
   }
-  .btn-cancel:hover { border-color: var(--ink); color: var(--ink); }
-  .btn-submit {
-    flex: 2; padding: 13px; background: var(--accent); color: #fff;
-    border: none; border-radius: 11px; font-size: 11.5px; font-weight: 800;
-    text-transform: uppercase; letter-spacing: .08em; cursor: pointer;
-    font-family: 'Plus Jakarta Sans', sans-serif; transition: all .16s;
-    display: flex; align-items: center; justify-content: center; gap: 7px;
-  }
-  .btn-submit:hover { background: #3b56e8; box-shadow: 0 6px 20px rgba(79,110,247,.3); }
+  .btn-cancel:hover { border-color: var(--color-secondary); color: var(--color-secondary); }
+  .btn-cancel:focus-visible { outline: 2px solid var(--color-secondary); outline-offset: 2px; }
 
-  input[type="file"] { font-size: 12px; color: var(--ink-2); }
+  .btn-submit {
+    flex: 2; padding: var(--space-4); min-height: 44px; background: var(--color-primary); color: var(--text-white);
+    border: none; border-radius: var(--radius-button); font-size: 11.5px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .08em; cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex; align-items: center; justify-content: center; gap: var(--space-2);
+  }
+  .btn-submit:hover { background: var(--color-primary-hover); box-shadow: var(--shadow-sm); }
+  .btn-submit:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .btn-submit:active { transform: translateY(1px); }
+
+  input[type="file"] { font-size: 12px; color: var(--text-secondary); }
   input[type="file"]::file-selector-button {
-    background: var(--bg); color: var(--ink-2); border: 1px solid var(--border);
-    padding: 6px 12px; border-radius: 8px; cursor: pointer;
+    background: var(--bg-page); color: var(--text-secondary); border: 1px solid var(--border-light);
+    padding: var(--space-2) var(--space-3); border-radius: var(--radius-xs); cursor: pointer;
     font-weight: 700; font-size: 10px; text-transform: uppercase;
-    margin-right: 10px; font-family: 'Plus Jakarta Sans', sans-serif;
+    margin-right: var(--space-3); font-family: var(--font-family);
   }
 
   @media (max-width: 800px) {
@@ -136,15 +250,15 @@
         <p class="photo-label">Fotografía</p>
         <div class="photo-drop">
           {% if form.instance.foto_perfil %}
-            <img src="{{ form.instance.foto_perfil.url }}">
+            <img src="{{ form.instance.foto_perfil.url }}" alt="Fotografía de perfil del coordinador">
           {% else %}
-            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           {% endif %}
         </div>
         <div style="margin-bottom:16px;">{{ form.foto_perfil }}</div>
 
         <div class="plantel-info">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--accent);flex-shrink:0;"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--color-primary);flex-shrink:0;" aria-hidden="true"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           <div>
             <div class="plantel-label">Plantel</div>
             <div class="plantel-value">{{ user.plantel.nombre|default:"Administración Global" }}</div>
@@ -157,39 +271,39 @@
         <!-- Personal info -->
         <div class="form-section">
           <div class="section-head">
-            <div class="section-icon" style="background:#111318;color:#fff;">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            <div class="section-icon" style="background:var(--color-secondary);color:var(--text-white);">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
             </div>
             <span class="section-label">Información Personal</span>
           </div>
           <div class="section-body">
             <div class="field-grid">
               <div class="field-group">
-                <label class="field-label">Nombre de Usuario</label>
+                <label class="field-label" for="{{ form.username.id_for_label }}">Nombre de Usuario</label>
                 {{ form.username }}
               </div>
               <div class="field-group">
-                <label class="field-label">Correo Institucional</label>
+                <label class="field-label" for="{{ form.email.id_for_label }}">Correo Institucional</label>
                 {{ form.email }}
               </div>
               <div class="field-group">
-                <label class="field-label">Nombre(s)</label>
+                <label class="field-label" for="{{ form.first_name.id_for_label }}">Nombre(s)</label>
                 {{ form.first_name }}
               </div>
               <div class="field-group">
-                <label class="field-label">Apellidos</label>
+                <label class="field-label" for="{{ form.last_name.id_for_label }}">Apellidos</label>
                 {{ form.last_name }}
               </div>
               <div class="field-group">
-                <label class="field-label">Teléfono Directo</label>
+                <label class="field-label" for="{{ form.telefono.id_for_label }}">Teléfono Directo</label>
                 {{ form.telefono }}
               </div>
               <div class="field-group">
-                <label class="field-label">Fecha de Nacimiento</label>
+                <label class="field-label" for="{{ form.fecha_nacimiento.id_for_label }}">Fecha de Nacimiento</label>
                 {{ form.fecha_nacimiento }}
               </div>
               <div class="field-group full">
-                <label class="field-label">Dirección de Residencia</label>
+                <label class="field-label" for="{{ form.direccion.id_for_label }}">Dirección de Residencia</label>
                 {{ form.direccion }}
               </div>
             </div>
@@ -199,19 +313,19 @@
         <!-- Security -->
         <div class="security-section">
           <div class="security-head">
-            <div class="section-icon" style="background:rgba(79,110,247,.2);color:#8ba4fa;">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <div class="section-icon" style="background:rgba(240,38,20,.18);color:#FF9C8C;">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             </div>
             <span class="section-label">Seguridad de la Cuenta</span>
           </div>
           <div class="security-body">
             <div class="field-grid" style="position:relative;z-index:1;">
               <div class="field-group">
-                <label class="security-label">Contraseña</label>
+                <label class="security-label" for="{{ form.password.id_for_label }}">Contraseña</label>
                 {{ form.password }}
               </div>
               <div class="field-group">
-                <label class="security-label">Confirmar Acceso</label>
+                <label class="security-label" for="{{ form.confirm_password.id_for_label }}">Confirmar Acceso</label>
                 {{ form.confirm_password }}
               </div>
             </div>
@@ -222,7 +336,7 @@
         <div class="action-row">
           <a href="{% url 'lista_coordinadores' %}" class="btn-cancel">Cancelar</a>
           <button type="submit" class="btn-submit">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
             Confirmar Registro
           </button>
         </div>

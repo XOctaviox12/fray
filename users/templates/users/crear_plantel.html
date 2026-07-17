@@ -2,18 +2,140 @@
 {% block title %}Nuevo Plantel{% endblock %}
 
 {% block content %}
-<div style="max-width:560px">
-  <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:1.5rem">Nuevo Plantel</h1>
+<style>
+  :root {
+    /* ── Colores principales (Design Tokens oficiales) ── */
+    --color-primary: #F02614;
+    --color-primary-hover: #C71F10;
+    --color-primary-light: #FDE9E6;
+
+    --color-danger: #B00020;
+    --color-danger-light: #FBE7EA;
+
+    /* ── Fondos ── */
+    --bg-page: #F8F9FB;
+    --bg-surface: #FFFFFF;
+
+    /* ── Texto ── */
+    --text-primary: #1F2937;
+    --text-secondary: #6B7280;
+    --text-muted: #9CA3AF;
+    --text-white: #FFFFFF;
+
+    /* ── Bordes ── */
+    --border-light: #E5E7EB;
+
+    /* ── Sombras ── */
+    --shadow-xs: 0 2px 8px rgba(15,23,42,.05);
+    --shadow-sm: 0 6px 18px rgba(15,23,42,.06);
+
+    /* ── Radios ── */
+    --radius-input: 16px;
+    --radius-button: 16px;
+    --radius-card: 22px;
+    --radius-sm: 10px;
+
+    /* ── Espaciado (sistema de 8 puntos) ── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 32px;
+
+    /* ── Tipografía ── */
+    --font-family: "Inter", "SF Pro Display", sans-serif;
+
+    /* ── Transiciones ── */
+    --transition-fast: 150ms;
+  }
+
+  .plantel-page { max-width: 560px; font-family: var(--font-family); }
+
+  .plantel-title {
+    font-size: 22px; font-weight: 700; color: var(--text-primary);
+    margin-bottom: var(--space-6);
+  }
+
+  .alert-error {
+    background: var(--color-danger-light); color: var(--color-danger);
+    border-left: 3px solid var(--color-danger);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-4);
+    font-size: 13px; font-weight: 600;
+  }
+
+  .plantel-card {
+    background: var(--bg-surface); border: 1px solid var(--border-light);
+    border-radius: var(--radius-card); padding: var(--space-6);
+    margin-bottom: var(--space-5); box-shadow: var(--shadow-xs);
+  }
+
+  /* Estilo unificado para el render por defecto de Django (form.as_p) */
+  .plantel-card p { margin: 0 0 var(--space-4); }
+  .plantel-card p:last-child { margin-bottom: 0; }
+  .plantel-card label {
+    display: block; font-size: 9.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .1em;
+    color: var(--text-muted); margin-bottom: var(--space-1);
+  }
+  .plantel-card input,
+  .plantel-card select,
+  .plantel-card textarea {
+    width: 100%; box-sizing: border-box;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-input);
+    padding: var(--space-3) var(--space-4);
+    font-size: 14px; color: var(--text-primary);
+    background: var(--bg-surface);
+    font-family: var(--font-family);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .plantel-card input:focus,
+  .plantel-card select:focus,
+  .plantel-card textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+  }
+  .plantel-card .helptext {
+    display: block; font-size: 11px; color: var(--text-secondary);
+    margin-top: var(--space-1);
+  }
+  .plantel-card ul.errorlist {
+    list-style: none; margin: var(--space-1) 0 0; padding: 0;
+    color: var(--color-danger); font-size: 11.5px; font-weight: 600;
+  }
+
+  .btn-crear-plantel {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding: 0 var(--space-7);
+    background: var(--color-primary); color: var(--text-white);
+    border: none; border-radius: var(--radius-button);
+    font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em;
+    font-family: var(--font-family); cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+  .btn-crear-plantel:hover { background: var(--color-primary-hover); box-shadow: var(--shadow-sm); }
+  .btn-crear-plantel:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .btn-crear-plantel:active { transform: translateY(1px); }
+</style>
+
+<div class="plantel-page">
+  <h1 class="plantel-title">Nuevo Plantel</h1>
+
   {% if messages %}{% for msg in messages %}
-  <div style="background:#fee2e2;color:#991b1b;padding:.75rem 1rem;border-radius:9px;margin-bottom:1rem;font-size:13px">{{ msg }}</div>
+  <div class="alert-error">{{ msg }}</div>
   {% endfor %}{% endif %}
+
   <form method="post">
     {% csrf_token %}
-    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
+    <div class="plantel-card">
       {{ form.as_p }}
     </div>
-    <button type="submit"
-      style="height:42px;padding:0 28px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+    <button type="submit" class="btn-crear-plantel">
       Crear Plantel
     </button>
   </form>

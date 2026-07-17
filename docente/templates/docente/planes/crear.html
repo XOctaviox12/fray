@@ -2,31 +2,144 @@
 {% block title %}Nuevo Plan de Clase | FRAY{% endblock %}
 
 {% block content %}
-<div style="max-width:640px;margin:0 auto;">
-  <div style="margin-bottom:22px;">
-    <a href="{% url 'docente_lista_planes' %}" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);text-decoration:none;display:inline-flex;align-items:center;gap:5px;">
-      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+<style>
+  :root {
+    /* ── Colores principales (Design Tokens oficiales) ── */
+    --color-primary: #F02614;
+    --color-primary-hover: #C71F10;
+    --color-primary-light: #FDE9E6;
+
+    /* ── Fondos ── */
+    --bg-page: #F8F9FB;
+    --bg-surface: #FFFFFF;
+    --bg-surface-secondary: #F3F5F8;
+
+    /* ── Texto ── */
+    --text-primary: #1F2937;
+    --text-secondary: #6B7280;
+    --text-muted: #9CA3AF;
+    --text-white: #FFFFFF;
+
+    /* ── Bordes ── */
+    --border-light: #E5E7EB;
+
+    /* ── Sombras ── */
+    --shadow-xs: 0 2px 8px rgba(15,23,42,.05);
+    --shadow-sm: 0 6px 18px rgba(15,23,42,.06);
+
+    /* ── Radios ── */
+    --radius-input: 16px;
+    --radius-button: 16px;
+    --radius-card: 22px;
+    --radius-xs: 6px;
+
+    /* ── Espaciado (sistema de 8 puntos) ── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+
+    --font-family: "Inter", "SF Pro Display", sans-serif;
+    --transition-fast: 150ms;
+  }
+
+  * { font-family: var(--font-family); }
+
+  .plan-wrap { max-width: 640px; margin: 0 auto; }
+  .plan-header { margin-bottom: var(--space-6); }
+
+  .back-link {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--text-muted); text-decoration: none;
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    transition: color var(--transition-fast);
+  }
+  .back-link:hover { color: var(--color-primary); }
+  .back-link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: var(--radius-xs); }
+
+  .plan-title { font-size: 24px; font-weight: 700; color: var(--text-primary); margin: var(--space-2) 0 3px; letter-spacing: -.01em; }
+  .plan-sub { font-size: 12.5px; color: var(--text-secondary); margin: 0; }
+
+  .plan-card { background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-card); padding: var(--space-7, 28px); box-shadow: var(--shadow-xs); }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4); }
+  .field-group.full { grid-column: 1 / -1; }
+  .field-label {
+    display: block; font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--text-muted); margin-bottom: var(--space-1);
+  }
+
+  .field-group input,
+  .field-group select,
+  .field-group textarea {
+    width: 100%; box-sizing: border-box;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-input);
+    padding: var(--space-3) var(--space-4);
+    font-size: 13px; font-family: var(--font-family);
+    color: var(--text-primary); background: var(--bg-surface-secondary);
+    outline: none; transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  .field-group input:focus,
+  .field-group select:focus,
+  .field-group textarea:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+    background: var(--bg-surface);
+  }
+  .field-group select { height: 44px; }
+  .field-group textarea { resize: vertical; }
+
+  .plan-actions { display: flex; gap: var(--space-3); border-top: 1px solid var(--border-light); padding-top: var(--space-5); }
+  .btn-cancel {
+    flex: 1; min-height: 44px; box-sizing: border-box; padding: var(--space-3);
+    background: var(--bg-page); border: 1px solid var(--border-light); border-radius: var(--radius-button);
+    font-size: 12px; font-weight: 700; color: var(--text-secondary);
+    text-align: center; text-decoration: none;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--transition-fast);
+  }
+  .btn-cancel:hover { border-color: var(--text-primary); color: var(--text-primary); }
+  .btn-cancel:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
+
+  .btn-submit {
+    flex: 2; min-height: 44px; box-sizing: border-box; padding: var(--space-3);
+    background: var(--color-primary); color: var(--text-white);
+    border: none; border-radius: var(--radius-button); font-size: 12px; font-weight: 800;
+    cursor: pointer; font-family: var(--font-family); transition: all var(--transition-fast);
+  }
+  .btn-submit:hover { background: var(--color-primary-hover); box-shadow: var(--shadow-sm); }
+  .btn-submit:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .btn-submit:active { transform: translateY(1px); }
+
+  @media (max-width: 600px) { .field-grid { grid-template-columns: 1fr; } }
+</style>
+
+<div class="plan-wrap">
+  <div class="plan-header">
+    <a href="{% url 'docente_lista_planes' %}" class="back-link">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
       Mis Planes
     </a>
-    <h1 style="font-family:'Instrument Serif',serif;font-size:26px;font-weight:400;color:var(--ink);margin:8px 0 3px;">Nuevo Plan de Clase</h1>
-    <p style="font-size:12.5px;color:var(--ink-2);margin:0;">Define el cronograma y temario para tu grupo.</p>
+    <h1 class="plan-title">Nuevo Plan de Clase</h1>
+    <p class="plan-sub">Define el cronograma y temario para tu grupo.</p>
   </div>
 
-  <div style="background:#fff;border:1px solid var(--border);border-radius:16px;padding:28px;">
+  <div class="plan-card">
     <form method="post">
       {% csrf_token %}
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Título del Plan *</label>
-          <input type="text" name="titulo" required placeholder="Ej: Temario Primer Bimestre — Álgebra"
-            style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--ink);background:var(--bg);outline:none;box-sizing:border-box;">
+      <div class="field-grid">
+        <div class="field-group full">
+          <label class="field-label" for="id_titulo">Título del Plan *</label>
+          <input type="text" name="titulo" id="id_titulo" required placeholder="Ej: Temario Primer Bimestre — Álgebra">
         </div>
 
-        <div>
-          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Grupo *</label>
-          <select name="grupo" id="sel-grupo" onchange="cargarAsignaturas()" required
-            style="width:100%;height:40px;border:1px solid var(--border);border-radius:10px;padding:0 11px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink);outline:none;">
+        <div class="field-group">
+          <label class="field-label" for="sel-grupo">Grupo *</label>
+          <select name="grupo" id="sel-grupo" onchange="cargarAsignaturas()" required>
             <option value="">— Selecciona —</option>
             {% for g in grupos %}
             <option value="{{ g.pk }}" data-asignaturas='[{% for a in g.asignaturas.all %}{"id":{{ a.pk }},"nombre":"{{ a.nombre }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'>
@@ -36,18 +149,16 @@
           </select>
         </div>
 
-        <div>
-          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Asignatura *</label>
-          <select name="asignatura" id="sel-asignatura" required
-            style="width:100%;height:40px;border:1px solid var(--border);border-radius:10px;padding:0 11px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink);outline:none;">
+        <div class="field-group">
+          <label class="field-label" for="sel-asignatura">Asignatura *</label>
+          <select name="asignatura" id="sel-asignatura" required>
             <option value="">— Primero selecciona un grupo —</option>
           </select>
         </div>
 
-        <div>
-          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Tipo de Periodo *</label>
-          <select name="periodo_tipo"
-            style="width:100%;height:40px;border:1px solid var(--border);border-radius:10px;padding:0 11px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--ink);outline:none;">
+        <div class="field-group">
+          <label class="field-label" for="id_periodo_tipo">Tipo de Periodo *</label>
+          <select name="periodo_tipo" id="id_periodo_tipo">
             <option value="SEMANA">Semanal</option>
             <option value="QUINCENA">Quincenal</option>
             <option value="MES" selected>Mensual</option>
@@ -59,40 +170,30 @@
 
         <div></div>
 
-        <div>
-          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Fecha Inicio *</label>
-          <input type="date" name="fecha_inicio" required
-            style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);outline:none;box-sizing:border-box;">
+        <div class="field-group">
+          <label class="field-label" for="id_fecha_inicio">Fecha Inicio *</label>
+          <input type="date" name="fecha_inicio" id="id_fecha_inicio" required>
         </div>
 
-        <div>
-          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Fecha Fin *</label>
-          <input type="date" name="fecha_fin" required
-            style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);outline:none;box-sizing:border-box;">
+        <div class="field-group">
+          <label class="field-label" for="id_fecha_fin">Fecha Fin *</label>
+          <input type="date" name="fecha_fin" id="id_fecha_fin" required>
         </div>
 
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Objetivo General</label>
-          <textarea name="objetivo_general" rows="2" placeholder="¿Qué aprenderán los alumnos al finalizar este periodo?"
-            style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+        <div class="field-group full">
+          <label class="field-label" for="id_objetivo_general">Objetivo General</label>
+          <textarea name="objetivo_general" id="id_objetivo_general" rows="2" placeholder="¿Qué aprenderán los alumnos al finalizar este periodo?"></textarea>
         </div>
 
-        <div style="grid-column:1/-1;">
-          <label style="display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin-bottom:5px;">Competencias a Desarrollar</label>
-          <textarea name="competencias" rows="2" placeholder="Lista las competencias del programa que se abordarán..."
-            style="width:100%;padding:10px 13px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+        <div class="field-group full">
+          <label class="field-label" for="id_competencias">Competencias a Desarrollar</label>
+          <textarea name="competencias" id="id_competencias" rows="2" placeholder="Lista las competencias del programa que se abordarán..."></textarea>
         </div>
       </div>
 
-      <div style="display:flex;gap:10px;border-top:1px solid var(--border);padding-top:16px;">
-        <a href="{% url 'docente_lista_planes' %}"
-          style="flex:1;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:11px;font-size:12px;font-weight:700;color:var(--ink-2);text-align:center;text-decoration:none;">
-          Cancelar
-        </a>
-        <button type="submit"
-          style="flex:2;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:11px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">
-          Crear Plan y Agregar Sesiones →
-        </button>
+      <div class="plan-actions">
+        <a href="{% url 'docente_lista_planes' %}" class="btn-cancel">Cancelar</a>
+        <button type="submit" class="btn-submit">Crear Plan y Agregar Sesiones →</button>
       </div>
     </form>
   </div>

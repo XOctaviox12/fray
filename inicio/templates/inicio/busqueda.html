@@ -2,79 +2,138 @@
 {% block title %}Búsqueda — {{ query }}{% endblock %}
 
 {% block content %}
-<div style="margin-bottom:1.5rem">
-  <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:2px">Resultados de búsqueda</h1>
-  <p style="font-size:13px;color:var(--ink-2)">{{ total }} resultado{{ total|pluralize }} para "<strong>{{ query }}</strong>"</p>
+<style>
+    .sr-header { margin-bottom: 1.5rem; }
+    .sr-title { font-size: 22px; font-weight: 700; color: var(--ink); margin: 0 0 2px; }
+    .sr-subtitle { font-size: 13px; color: var(--ink-2); margin: 0; }
+    .sr-subtitle strong { color: var(--ink); font-weight: 700; }
+
+    .sr-section { margin-bottom: 1.5rem; }
+    .sr-section-label {
+        font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+        color: var(--ink-3); margin: 0 0 .75rem;
+    }
+
+    .sr-list {
+        list-style: none; margin: 0; padding: 0;
+        background: var(--white); border: 1px solid var(--border); border-radius: 14px;
+        overflow: hidden;
+    }
+    .sr-list li + li { border-top: 1px solid #f2f3f7; }
+
+    .sr-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: .85rem 1.25rem; min-height: var(--tap-min);
+        text-decoration: none; transition: background .14s ease;
+    }
+    .sr-item:hover { background: #f7f8fc; }
+    .sr-item:focus-visible { background: #f7f8fc; outline-offset: -2px; }
+
+    .sr-avatar {
+        width: 34px; height: 34px; border-radius: 9px;
+        font-size: 11px; font-weight: 800;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .sr-avatar.is-alumno  { background: var(--accent-2); color: var(--accent); }
+    .sr-avatar.is-docente { background: rgba(16,185,129,.15); color: #059669; }
+    .sr-avatar.is-grupo   { background: #ede9fe; color: #5b21b6; }
+
+    .sr-item-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+    .sr-item-sub  { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
+
+    .sr-empty {
+        background: var(--white); border: 1px solid var(--border); border-radius: 14px;
+        padding: 3.5rem 2rem; text-align: center;
+    }
+    .sr-empty-icon {
+        width: 48px; height: 48px; margin: 0 auto 16px;
+        border-radius: 12px; background: var(--bg); color: var(--ink-3);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .sr-empty-title { font-size: 15px; font-weight: 700; color: var(--ink); margin: 0 0 4px; }
+    .sr-empty-desc { font-size: 13px; color: var(--ink-3); margin: 0 0 20px; }
+    .sr-empty-cta {
+        display: inline-flex; align-items: center; gap: 8px;
+        min-height: var(--tap-min); padding: 0 18px;
+        background: var(--ink); color: #fff; text-decoration: none;
+        font-size: 13px; font-weight: 700; border-radius: var(--radius-sm);
+        transition: background .16s ease;
+    }
+    .sr-empty-cta:hover { background: var(--accent); }
+</style>
+
+<div class="sr-header">
+    <h1 class="sr-title">Resultados de búsqueda</h1>
+    <p class="sr-subtitle">{{ total }} resultado{{ total|pluralize }} para "<strong>{{ query }}</strong>"</p>
 </div>
 
 {% if alumnos %}
-<div style="margin-bottom:1.5rem">
-  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:.75rem">Alumnos</div>
-  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
-    {% for alumno in alumnos %}
-    <a href="{% url 'detalle_alumno' alumno.pk %}"
-      style="display:flex;align-items:center;gap:12px;padding:.75rem 1.25rem;border-bottom:1px solid #f2f3f7;text-decoration:none;transition:background .1s"
-      onmouseover="this.style.background='#f7f8fc'" onmouseout="this.style.background=''">
-      <div style="width:34px;height:34px;border-radius:9px;background:var(--accent-2);color:var(--accent);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        {{ alumno.first_name|first|upper }}{{ alumno.last_name|first|upper }}
-      </div>
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ alumno.get_full_name }}</div>
-        <div style="font-size:11px;color:var(--ink-3)">{{ alumno.username }} · {{ alumno.alumno_grupo }}</div>
-      </div>
-    </a>
-    {% endfor %}
-  </div>
-</div>
+<section class="sr-section" aria-labelledby="sr-label-alumnos">
+    <h2 class="sr-section-label" id="sr-label-alumnos">Alumnos</h2>
+    <ul class="sr-list">
+        {% for alumno in alumnos %}
+        <li>
+            <a href="{% url 'detalle_alumno' alumno.pk %}" class="sr-item">
+                <div class="sr-avatar is-alumno" aria-hidden="true">{{ alumno.first_name|first|upper }}{{ alumno.last_name|first|upper }}</div>
+                <div>
+                    <div class="sr-item-name">{{ alumno.get_full_name }}</div>
+                    <div class="sr-item-sub">{{ alumno.username }} · {{ alumno.alumno_grupo }}</div>
+                </div>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
 {% endif %}
 
 {% if docentes %}
-<div style="margin-bottom:1.5rem">
-  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:.75rem">Docentes</div>
-  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
-    {% for docente in docentes %}
-    <a href="{% url 'detalle_docente' docente.pk %}"
-      style="display:flex;align-items:center;gap:12px;padding:.75rem 1.25rem;border-bottom:1px solid #f2f3f7;text-decoration:none"
-      onmouseover="this.style.background='#f7f8fc'" onmouseout="this.style.background=''">
-      <div style="width:34px;height:34px;border-radius:9px;background:rgba(16,185,129,.15);color:#059669;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        {{ docente.first_name|first|upper }}{{ docente.last_name|first|upper }}
-      </div>
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ docente.get_full_name }}</div>
-        <div style="font-size:11px;color:var(--ink-3)">{{ docente.email|default:docente.username }}</div>
-      </div>
-    </a>
-    {% endfor %}
-  </div>
-</div>
+<section class="sr-section" aria-labelledby="sr-label-docentes">
+    <h2 class="sr-section-label" id="sr-label-docentes">Docentes</h2>
+    <ul class="sr-list">
+        {% for docente in docentes %}
+        <li>
+            <a href="{% url 'detalle_docente' docente.pk %}" class="sr-item">
+                <div class="sr-avatar is-docente" aria-hidden="true">{{ docente.first_name|first|upper }}{{ docente.last_name|first|upper }}</div>
+                <div>
+                    <div class="sr-item-name">{{ docente.get_full_name }}</div>
+                    <div class="sr-item-sub">{{ docente.email|default:docente.username }}</div>
+                </div>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
 {% endif %}
 
 {% if grupos %}
-<div style="margin-bottom:1.5rem">
-  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:.75rem">Grupos</div>
-  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
-    {% for grupo in grupos %}
-    <a href="{% url 'detalle_grupo' grupo.pk %}"
-      style="display:flex;align-items:center;gap:12px;padding:.75rem 1.25rem;border-bottom:1px solid #f2f3f7;text-decoration:none"
-      onmouseover="this.style.background='#f7f8fc'" onmouseout="this.style.background=''">
-      <div style="width:34px;height:34px;border-radius:9px;background:#ede9fe;color:#5b21b6;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-        {{ grupo.nombre|first|upper }}
-      </div>
-      <div>
-        <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ grupo }}</div>
-        <div style="font-size:11px;color:var(--ink-3)">Grado {{ grupo.grado }}</div>
-      </div>
-    </a>
-    {% endfor %}
-  </div>
-</div>
+<section class="sr-section" aria-labelledby="sr-label-grupos">
+    <h2 class="sr-section-label" id="sr-label-grupos">Grupos</h2>
+    <ul class="sr-list">
+        {% for grupo in grupos %}
+        <li>
+            <a href="{% url 'detalle_grupo' grupo.pk %}" class="sr-item">
+                <div class="sr-avatar is-grupo" aria-hidden="true">{{ grupo.nombre|first|upper }}</div>
+                <div>
+                    <div class="sr-item-name">{{ grupo }}</div>
+                    <div class="sr-item-sub">Grado {{ grupo.grado }}</div>
+                </div>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
 {% endif %}
 
 {% if not alumnos and not docentes and not grupos %}
-<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:4rem;text-align:center">
-  <p style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px">Sin resultados</p>
-  <p style="font-size:13px;color:var(--ink-3)">No se encontró nada para "{{ query }}"</p>
+<div class="sr-empty">
+    <div class="sr-empty-icon" aria-hidden="true">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    </div>
+    <p class="sr-empty-title">Sin resultados</p>
+    <p class="sr-empty-desc">No se encontró nada para "{{ query }}"</p>
+    <a href="{% if user.rol == 'DOCENTE' %}{% url 'dashboard_docente' %}{% else %}{% url 'dashboard' %}{% endif %}" class="sr-empty-cta">
+        Volver al inicio
+    </a>
 </div>
 {% endif %}
 {% endblock %}
-I'm seeing the roo

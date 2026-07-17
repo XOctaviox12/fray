@@ -2,24 +2,149 @@
 {% block title %}Editar Permisos — {{ usuario.get_full_name }}{% endblock %}
 
 {% block content %}
-<div style="margin-bottom:1rem">
-  <a href="{% url 'lista_personal' %}" style="font-size:12px;color:var(--ink-3);text-decoration:none">← Volver</a>
-</div>
+<style>
+  :root {
+    /* ── Colores principales (Design Tokens oficiales) ── */
+    --color-primary: #F02614;
+    --color-primary-hover: #C71F10;
+    --color-primary-light: #FDE9E6;
 
-<div style="max-width:580px">
-  <div style="display:flex;align-items:center;gap:14px;margin-bottom:1.5rem">
-    <div style="width:48px;height:48px;border-radius:12px;background:var(--accent-2);color:var(--accent);font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-      {{ usuario.first_name|first|upper }}{{ usuario.last_name|first|upper }}
-    </div>
+    --color-secondary: #161344;
+    --color-secondary-light: #E9E8F2;
+
+    --color-success: #22C55E;
+    --color-success-light: #ECFDF3;
+
+    /* ── Fondos ── */
+    --bg-page: #F8F9FB;
+    --bg-surface: #FFFFFF;
+
+    /* ── Texto ── */
+    --text-primary: #1F2937;
+    --text-secondary: #6B7280;
+    --text-muted: #9CA3AF;
+    --text-white: #FFFFFF;
+
+    /* ── Bordes ── */
+    --border-light: #E5E7EB;
+
+    /* ── Sombras ── */
+    --shadow-xs: 0 2px 8px rgba(15,23,42,.05);
+    --shadow-sm: 0 6px 18px rgba(15,23,42,.06);
+
+    /* ── Radios ── */
+    --radius-button: 16px;
+    --radius-card: 22px;
+    --radius-sm: 10px;
+    --radius-xs: 6px;
+
+    /* ── Espaciado (sistema de 8 puntos) ── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 32px;
+
+    --font-family: "Inter", "SF Pro Display", sans-serif;
+    --transition-fast: 150ms;
+  }
+
+  * { font-family: var(--font-family); }
+
+  .permisos-page { max-width: 580px; }
+
+  .back-link {
+    display: inline-flex; align-items: center; gap: var(--space-1);
+    font-size: 12px; color: var(--text-muted); text-decoration: none;
+    font-weight: 600; margin-bottom: var(--space-5); transition: color var(--transition-fast);
+  }
+  .back-link:hover { color: var(--color-primary); }
+  .back-link:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; border-radius: var(--radius-xs); }
+
+  .usuario-header { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-6); }
+  .usuario-avatar {
+    width: 48px; height: 48px; border-radius: var(--radius-sm);
+    background: var(--color-secondary-light); color: var(--color-secondary);
+    font-size: 16px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .usuario-nombre { font-size: 20px; font-weight: 700; color: var(--text-primary); margin: 0; }
+  .usuario-correo { font-size: 12px; color: var(--text-muted); margin: 0; }
+
+  .alert-success {
+    background: var(--color-success-light); color: #166534;
+    border-left: 3px solid var(--color-success);
+    padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm);
+    margin-bottom: var(--space-4); font-size: 13px; font-weight: 600;
+  }
+
+  .form-card {
+    background: var(--bg-surface); border: 1px solid var(--border-light);
+    border-radius: var(--radius-card); padding: var(--space-5) var(--space-6);
+    margin-bottom: var(--space-4); box-shadow: var(--shadow-xs);
+  }
+  .form-card-title { font-size: 12px; font-weight: 700; color: var(--text-primary); margin-bottom: var(--space-4); text-transform: uppercase; letter-spacing: .06em; }
+
+  /* ── Selector de rol ── */
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+  .role-option {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-3); border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm); cursor: pointer; background: var(--bg-surface);
+    transition: all var(--transition-fast);
+  }
+  .role-option:hover { border-color: var(--color-primary); }
+  .role-option-selected { border-color: var(--color-primary); background: var(--color-primary-light); }
+  .role-option input[type="radio"] { width: 18px; height: 18px; accent-color: var(--color-primary); cursor: pointer; flex-shrink: 0; }
+  .role-option span { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+
+  /* ── Lista de permisos ── */
+  .permisos-list { display: flex; flex-direction: column; gap: var(--space-2); }
+  .permiso-row {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+    padding: var(--space-4); border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+    transition: border-color var(--transition-fast);
+  }
+  .permiso-row:hover { border-color: var(--border-medium, var(--border-light)); }
+  .permiso-titulo { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .permiso-desc { font-size: 11px; color: var(--text-muted); }
+  .permiso-row input[type="checkbox"] {
+    width: 22px; height: 22px; accent-color: var(--color-primary);
+    cursor: pointer; flex-shrink: 0;
+  }
+
+  .btn-submit {
+    min-height: 44px; box-sizing: border-box; padding: 0 var(--space-7);
+    background: var(--color-primary); color: var(--text-white);
+    border: none; border-radius: var(--radius-button); font-size: 13px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .06em;
+    font-family: var(--font-family); cursor: pointer;
+    transition: all var(--transition-fast);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .btn-submit:hover { background: var(--color-primary-hover); box-shadow: var(--shadow-sm); }
+  .btn-submit:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+  .btn-submit:active { transform: translateY(1px); }
+
+  @media (max-width: 520px) { .role-grid { grid-template-columns: 1fr; } }
+</style>
+
+<a href="{% url 'lista_personal' %}" class="back-link">← Volver</a>
+
+<div class="permisos-page">
+  <div class="usuario-header">
+    <div class="usuario-avatar">{{ usuario.first_name|first|upper }}{{ usuario.last_name|first|upper }}</div>
     <div>
-      <h1 style="font-size:20px;font-weight:700;color:var(--ink);margin:0">{{ usuario.get_full_name }}</h1>
-      <p style="font-size:12px;color:var(--ink-3);margin:0">{{ usuario.email|default:usuario.username }}</p>
+      <h1 class="usuario-nombre">{{ usuario.get_full_name }}</h1>
+      <p class="usuario-correo">{{ usuario.email|default:usuario.username }}</p>
     </div>
   </div>
 
   {% if messages %}
     {% for msg in messages %}
-    <div style="background:#d1fae5;color:#065f46;padding:.75rem 1rem;border-radius:9px;margin-bottom:1rem;font-size:13px">{{ msg }}</div>
+    <div class="alert-success">{{ msg }}</div>
     {% endfor %}
   {% endif %}
 
@@ -27,96 +152,87 @@
     {% csrf_token %}
 
     {# Rol #}
-    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
-      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1rem">Rol del usuario</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        {% for valor, etiqueta in roles_disponibles %}
-        <label style="display:flex;align-items:center;gap:10px;padding:.6rem .75rem;border:1px solid {% if usuario.rol == valor %}rgba(79,110,247,.3){% else %}var(--border){% endif %};border-radius:9px;cursor:pointer;background:{% if usuario.rol == valor %}var(--accent-2){% else %}#fff{% endif %}">
-          <input type="radio" name="rol" value="{{ valor }}" {% if usuario.rol == valor %}checked{% endif %}
-            style="accent-color:var(--accent)">
-          <span style="font-size:13px;font-weight:600;color:var(--ink)">{{ etiqueta }}</span>
-        </label>
-        {% endfor %}
-      </div>
+    <div class="form-card">
+      <fieldset style="border:none;margin:0;padding:0;">
+        <legend class="form-card-title" style="padding:0;">Rol del usuario</legend>
+        <div class="role-grid">
+          {% for valor, etiqueta in roles_disponibles %}
+          <label class="role-option{% if usuario.rol == valor %} role-option-selected{% endif %}">
+            <input type="radio" name="rol" value="{{ valor }}" {% if usuario.rol == valor %}checked{% endif %}>
+            <span>{{ etiqueta }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </fieldset>
     </div>
 
     {# Permisos #}
-    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
-      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1rem">Permisos específicos</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="form-card">
+      <div class="form-card-title">Permisos específicos</div>
+      <div class="permisos-list">
 
         {% with permisos_lista=permisos %}
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border:1px solid var(--border);border-radius:9px">
+        <label class="permiso-row">
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink)">Inscribir alumnos</div>
-            <div style="font-size:11px;color:var(--ink-3)">Puede registrar nuevos alumnos</div>
+            <div class="permiso-titulo">Inscribir alumnos</div>
+            <div class="permiso-desc">Puede registrar nuevos alumnos</div>
           </div>
-          <input type="checkbox" name="puede_inscribir_alumnos" {% if permisos.puede_inscribir_alumnos %}checked{% endif %}
-            style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+          <input type="checkbox" name="puede_inscribir_alumnos" {% if permisos.puede_inscribir_alumnos %}checked{% endif %}>
         </label>
 
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border:1px solid var(--border);border-radius:9px">
+        <label class="permiso-row">
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink)">Generar pagos/cobros</div>
-            <div style="font-size:11px;color:var(--ink-3)">Puede registrar y gestionar pagos</div>
+            <div class="permiso-titulo">Generar pagos/cobros</div>
+            <div class="permiso-desc">Puede registrar y gestionar pagos</div>
           </div>
-          <input type="checkbox" name="puede_generar_pagos" {% if permisos.puede_generar_pagos %}checked{% endif %}
-            style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+          <input type="checkbox" name="puede_generar_pagos" {% if permisos.puede_generar_pagos %}checked{% endif %}>
         </label>
 
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border:1px solid var(--border);border-radius:9px">
+        <label class="permiso-row">
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink)">Subir comunicados</div>
-            <div style="font-size:11px;color:var(--ink-3)">Puede publicar comunicados a docentes y alumnos</div>
+            <div class="permiso-titulo">Subir comunicados</div>
+            <div class="permiso-desc">Puede publicar comunicados a docentes y alumnos</div>
           </div>
-          <input type="checkbox" name="puede_subir_comunicados" {% if permisos.puede_subir_comunicados %}checked{% endif %}
-            style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+          <input type="checkbox" name="puede_subir_comunicados" {% if permisos.puede_subir_comunicados %}checked{% endif %}>
         </label>
 
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border:1px solid var(--border);border-radius:9px">
+        <label class="permiso-row">
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink)">Subir horarios</div>
-            <div style="font-size:11px;color:var(--ink-3)">Puede subir y reemplazar horarios PDF de grupos</div>
+            <div class="permiso-titulo">Subir horarios</div>
+            <div class="permiso-desc">Puede subir y reemplazar horarios PDF de grupos</div>
           </div>
-          <input type="checkbox" name="puede_subir_horarios" {% if permisos.puede_subir_horarios %}checked{% endif %}
-            style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+          <input type="checkbox" name="puede_subir_horarios" {% if permisos.puede_subir_horarios %}checked{% endif %}>
         </label>
 
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border:1px solid var(--border);border-radius:9px">
+        <label class="permiso-row">
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink)">Ver calificaciones</div>
-            <div style="font-size:11px;color:var(--ink-3)">Puede consultar boletas y concentrados</div>
+            <div class="permiso-titulo">Ver calificaciones</div>
+            <div class="permiso-desc">Puede consultar boletas y concentrados</div>
           </div>
-          <input type="checkbox" name="puede_ver_calificaciones" {% if permisos.puede_ver_calificaciones %}checked{% endif %}
-            style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+          <input type="checkbox" name="puede_ver_calificaciones" {% if permisos.puede_ver_calificaciones %}checked{% endif %}>
         </label>
 
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border:1px solid var(--border);border-radius:9px">
+        <label class="permiso-row">
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink)">Gestionar grupos</div>
-            <div style="font-size:11px;color:var(--ink-3)">Puede crear, editar y eliminar grupos</div>
+            <div class="permiso-titulo">Gestionar grupos</div>
+            <div class="permiso-desc">Puede crear, editar y eliminar grupos</div>
           </div>
-          <input type="checkbox" name="puede_gestionar_grupos" {% if permisos.puede_gestionar_grupos %}checked{% endif %}
-            style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+          <input type="checkbox" name="puede_gestionar_grupos" {% if permisos.puede_gestionar_grupos %}checked{% endif %}>
         </label>
 
-        <label style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;border:1px solid var(--border);border-radius:9px">
+        <label class="permiso-row">
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--ink)">Reportes y estadísticas</div>
-            <div style="font-size:11px;color:var(--ink-3)">Puede ver reportes generales del plantel</div>
+            <div class="permiso-titulo">Reportes y estadísticas</div>
+            <div class="permiso-desc">Puede ver reportes generales del plantel</div>
           </div>
-          <input type="checkbox" name="puede_ver_reportes" {% if permisos.puede_ver_reportes %}checked{% endif %}
-            style="width:18px;height:18px;accent-color:var(--accent);cursor:pointer">
+          <input type="checkbox" name="puede_ver_reportes" {% if permisos.puede_ver_reportes %}checked{% endif %}>
         </label>
         {% endwith %}
 
       </div>
     </div>
 
-    <button type="submit"
-      style="height:42px;padding:0 28px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
-      Guardar cambios
-    </button>
+    <button type="submit" class="btn-submit">Guardar cambios</button>
   </form>
 </div>
 {% endblock %}

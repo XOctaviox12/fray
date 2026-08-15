@@ -209,7 +209,7 @@ def lista_grupos(request):
 def detalle_grupo(request, pk):
     ctx   = get_plantel_context(request.user)
     grupo = get_object_or_404(Grupo, pk=pk, plantel=request.user.plantel)
-    # Si es docente, verificar que tenga asignación en este grupo
+    tiene_acceso = True
     if request.user.rol == 'DOCENTE':
         from users.models import DocenteGrupo
         tiene_acceso = DocenteGrupo.objects.filter(
@@ -367,24 +367,28 @@ def crear_materia(request):
             nombre   = form.cleaned_data['nombre']
             clave    = form.cleaned_data['clave']
             creditos = form.cleaned_data['creditos']
-            grado    = form.cleaned_data['grado_destino']
             nivel    = form.cleaned_data['nivel_academico']
+            todos    = form.cleaned_data['todos_los_grupos']
+            grupos_elegidos = form.cleaned_data['grupos']
             docentes_seleccionados = form.cleaned_data['docentes']
 
-            grupos_coincidentes = Grupo.objects.filter(
-                plantel=plantel, grado=grado, carrera__nivel=nivel
-            )
-            if grupos_coincidentes.exists():
+            if todos:
+                grupos_destino = Grupo.objects.filter(plantel=plantel, carrera__nivel=nivel)
+            else:
+                grupos_destino = grupos_elegidos
+
+            if grupos_destino.exists():
                 from users.models import DocenteGrupo
+
                 nueva_asignatura = Asignatura.objects.create(
-                    carrera=grupos_coincidentes.first().carrera,
+                    carrera=grupos_destino.first().carrera,
                     nombre=nombre, clave=clave, creditos=creditos
                 )
-                nueva_asignatura.grupos.set(grupos_coincidentes)
+                nueva_asignatura.grupos.set(grupos_destino)
+
                 if docentes_seleccionados:
                     nueva_asignatura.docentes.set(docentes_seleccionados)
-                    # ── Sincronizar DocenteGrupo ──
-                    for grupo_c in grupos_coincidentes:
+                    for grupo_c in grupos_destino:
                         for docente in docentes_seleccionados:
                             DocenteGrupo.objects.get_or_create(
                                 docente=docente,
@@ -392,17 +396,46 @@ def crear_materia(request):
                                 asignatura=nueva_asignatura,
                                 defaults={'ciclo': '2026-1', 'activo': True}
                             )
+
+                messages.success(
+                    request,
+                    f"Materia creada y asignada a {grupos_destino.count()} grupo(s)."
+                )
             else:
-                messages.error(request, f"No se encontraron grupos para {grado}º de {nivel}.")
+                messages.error(request, f"No se encontraron grupos de nivel {nivel}.")
             return redirect('lista_asignaturas')
     else:
         form = AsignaturaForm(plantel=plantel)
     return render(request, 'academic/materia_form.html', {'form': form})
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # ALUMNOS
 # ─────────────────────────────────────────────────────────────────────────────
+@login_required
+def detalle_alumno_json(request, pk):
+    alumno = get_object_or_404(User, pk=pk, plantel=request.user.plantel, rol='ALUMNO')
+
+    tutores = [
+        {
+            'nombre': t.nombre,
+            'parentesco': getattr(t, 'parentesco', ''),
+            'telefono': t.telefono,
+        }
+        for t in alumno.tutores.all()
+    ]
+
+    return JsonResponse({
+        'nombre': alumno.get_full_name(),
+        'username': alumno.username,
+        'email': alumno.email or '',
+        'telefono': alumno.telefono or '',
+        'direccion': alumno.direccion or '',
+        'fecha_nacimiento': alumno.fecha_nacimiento.strftime('%d/%m/%Y') if alumno.fecha_nacimiento else '',
+        'estatus': alumno.get_estatus_display() if hasattr(alumno, 'get_estatus_display') else 'Activo',
+        'activo': alumno.is_active,
+        'tutores': tutores,
+    })
+
 @login_required
 @rol_requerido('DIRECTOR', 'COORD', 'ADMIN')
 def alumnos_view(request):

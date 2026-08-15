@@ -3,12 +3,78 @@
 {% block nav_actividades %}active{% endblock %}
 
 {% block content %}
-<div style="margin-bottom:1rem">
-  <a href="{% url 'docente_actividades' %}" style="font-size:12px;color:var(--ink-3);text-decoration:none">← Volver</a>
-</div>
+<style>
+  :root {
+    --ink:#111318;--ink-2:#6b7280;--ink-3:#9ca3af;
+    --border:#e8eaf0;--bg:#f4f5f9;--white:#fff;
+    --accent:#4f6ef7;--accent-light:#eef0fe;--danger:#e53e3e;--danger-light:#fee2e2;
+  }
+  .form-page { max-width:760px;margin:0 auto; }
+  .back-link { display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink-3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:18px; }
+  .form-title { font-size:22px;font-weight:700;color:var(--ink);margin-bottom:1.5rem; }
+  .card { background:#fff;border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:14px; }
+  .card-label { font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1rem; }
+  .field-group { display:flex;flex-direction:column;gap:5px;margin-bottom:14px; }
+  .field-group:last-child { margin-bottom:0; }
+  .field-label { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3); }
+  .field-input, .field-select, .field-textarea {
+    width:100%;border:1px solid var(--border);border-radius:9px;padding:0 12px;height:40px;
+    font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);
+    outline:none;box-sizing:border-box;
+  }
+  .field-textarea { height:auto;padding:10px 12px;resize:vertical; }
 
-<div style="max-width:720px">
-  <h1 style="font-size:22px;font-weight:700;color:var(--ink);margin-bottom:1.5rem">Nueva Actividad</h1>
+  .tipo-selector { display:grid;grid-template-columns:repeat(3,1fr);gap:10px; }
+  .tipo-opt { display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border:1.5px solid var(--border);border-radius:11px;background:#fff;cursor:pointer;transition:all .15s; }
+  .tipo-opt:hover { border-color:var(--accent); }
+  .tipo-opt.selected { border-color:var(--accent);background:var(--accent-light); }
+  .tipo-opt svg { color:var(--ink-3); }
+  .tipo-opt.selected svg { color:var(--accent); }
+  .tipo-opt span { font-size:11.5px;font-weight:700;color:var(--ink);text-align:center; }
+
+  {# ── Preguntas: tarjeta por tipo ── #}
+  .pregunta-card { border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;background:#fafbff; }
+  .pregunta-header { display:flex;gap:8px;align-items:center;margin-bottom:10px; }
+  .pregunta-tipo-tag { font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);background:var(--accent-light);padding:3px 9px;border-radius:99px;flex-shrink:0; }
+  .pregunta-texto-input { flex:1; }
+  .pregunta-puntos-input { width:64px;text-align:center; }
+  .pregunta-quitar { width:30px;height:30px;flex-shrink:0;border:none;background:var(--danger-light);color:var(--danger);border-radius:7px;cursor:pointer;font-size:15px; }
+  .opcion-row { display:flex;align-items:center;gap:8px;margin-bottom:6px; }
+  .opcion-row input[type="radio"] { accent-color:var(--accent);flex-shrink:0; }
+  .opcion-texto-input { flex:1;height:34px; }
+  .opcion-quitar { width:26px;height:26px;flex-shrink:0;border:none;background:transparent;color:var(--ink-3);cursor:pointer;font-size:16px; }
+  .btn-agregar-opcion { display:inline-flex;align-items:center;gap:6px;background:var(--accent-light);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-top:4px; }
+  .vf-row { display:flex;gap:16px;font-size:13px;font-weight:600;color:var(--ink); }
+  .vf-row label { display:flex;align-items:center;gap:6px;cursor:pointer; }
+  .abierta-hint { font-size:11.5px;color:var(--ink-3);font-style:italic;display:flex;align-items:center;gap:6px; }
+
+  .agregar-pregunta-row { display:flex;gap:8px;flex-wrap:wrap; }
+  .agregar-pregunta-btn { flex:1;min-width:150px;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border:1.5px dashed var(--border);border-radius:9px;background:transparent;color:var(--ink-2);font-size:11.5px;font-weight:700;cursor:pointer; }
+  .agregar-pregunta-btn:hover { border-color:var(--accent);color:var(--accent); }
+
+  .upload-zone { border:1.5px dashed var(--border);border-radius:12px;padding:24px;text-align:center;cursor:pointer;background:#fafbff; }
+  .upload-zone:hover, .upload-zone.dragging { border-color:var(--accent);background:var(--accent-light); }
+  .upload-zone p { margin:4px 0 0;font-size:12.5px;color:var(--ink-2); }
+  .file-chip { display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border);border-radius:9px;padding:8px 12px;margin-top:8px;font-size:12.5px; }
+
+  .publish-row { display:flex;align-items:center;justify-content:space-between;gap:14px; }
+  .publish-text strong { font-size:13px;color:var(--ink);display:block; }
+  .publish-text span { font-size:11.5px;color:var(--ink-3); }
+  .toggle-switch { width:46px;height:26px;border-radius:13px;background:#e5e7eb;position:relative;cursor:pointer;flex-shrink:0; }
+  .toggle-switch.active { background:var(--accent); }
+  .toggle-circle { width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:3px;left:3px;transition:left .2s; }
+  .toggle-switch.active .toggle-circle { left:23px; }
+
+  .form-footer { display:flex;justify-content:flex-end;gap:10px; }
+  .btn-cancel { height:40px;padding:0 18px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;text-decoration:none; }
+  .btn-submit { height:40px;padding:0 26px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer; }
+
+  @media(max-width:600px) { .tipo-selector { grid-template-columns:1fr; } .agregar-pregunta-btn { min-width:100%; } }
+</style>
+
+<div class="form-page">
+  <a href="{% url 'docente_actividades' %}" class="back-link">← Volver</a>
+  <h1 class="form-title">Nueva Actividad</h1>
 
   {% if messages %}
     {% for msg in messages %}
@@ -16,114 +82,109 @@
     {% endfor %}
   {% endif %}
 
-  <form method="post" enctype="multipart/form-data">
+  <form method="post" enctype="multipart/form-data" id="formActividad">
     {% csrf_token %}
 
-    {# Grupo / Asignatura #}
-    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
-      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1rem">Grupo y Asignatura</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div>
-          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Grupo</label>
-          <select name="grupo_id" id="selGrupo" onchange="filtrarAsig()" required
-            style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
-            <option value="">— Selecciona —</option>
-            {% for a in asignaciones %}
-            <option value="{{ a.grupo.pk }}">{{ a.grupo }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Asignatura</label>
-          <select name="asignatura_id" id="selAsig" required
-            style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
-            <option value="">— Primero elige grupo —</option>
-          </select>
-        </div>
+    <div class="card">
+      <div class="card-label">Información</div>
+      <div class="field-group">
+        <label class="field-label">Título *</label>
+        <input type="text" name="titulo" required class="field-input">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Instrucciones</label>
+        <textarea name="instrucciones" rows="3" class="field-textarea"></textarea>
       </div>
     </div>
 
-    {# Info básica #}
-    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
-      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1rem">Información</div>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <div>
-          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Título *</label>
-          <input type="text" name="titulo" required
-            style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none;box-sizing:border-box">
+    {# ── Tipo de actividad: solo 3 modalidades, el "cuestionario" mezcla preguntas ── #}
+    <div class="card">
+      <div class="card-label">Tipo de actividad *</div>
+      <div class="tipo-selector" id="tipoSelector">
+        <div class="tipo-opt" data-tipo="CUESTIONARIO">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          <span>Cuestionario</span>
         </div>
-        <div>
-          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Instrucciones</label>
-          <textarea name="instrucciones" rows="3"
-            style="width:100%;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none;resize:none;box-sizing:border-box"></textarea>
+        <div class="tipo-opt" data-tipo="ARCHIVO">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span>Subir archivo</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div>
-            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Tipo de actividad *</label>
-            <select name="tipo" id="selTipo" onchange="mostrarSeccion()" required
-              style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
-              <option value="">— Selecciona —</option>
-              <option value="ABIERTA">Pregunta abierta</option>
-              <option value="MULTIPLE">Opción múltiple</option>
-              <option value="ARCHIVO">Subir archivo</option>
-              <option value="INTERACTIVA">Ejercicio interactivo</option>
-            </select>
-          </div>
-          <div>
-            <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Fecha de entrega *</label>
-            <input type="datetime-local" name="fecha_entrega" required
-              style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none;box-sizing:border-box">
-          </div>
+        <div class="tipo-opt" data-tipo="INTERACTIVA">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/></svg>
+          <span>Ejercicio interactivo</span>
         </div>
       </div>
+      <input type="hidden" name="tipo" id="tipoInput" required>
     </div>
 
-    {# Sección archivo adjunto #}
-    <div id="secArchivo" style="display:none;background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
-      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:1rem">Archivo de instrucciones (opcional)</div>
-      <input type="file" name="archivo" accept=".pdf,.doc,.docx" style="font-size:13px;color:var(--ink)">
-    </div>
-
-    {# Sección URL interactiva #}
-    <div id="secInteractiva" style="display:none;background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
-      <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:4px">URL del ejercicio interactivo</div>
-      <p style="font-size:11px;color:var(--ink-3);margin-bottom:12px">Pega el enlace de GeoGebra, Kahoot, Quizlet, Wordwall, Desmos, etc.</p>
-      <input type="url" name="url_interactiva" placeholder="https://..."
-        style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none;box-sizing:border-box">
-    </div>
-
-    {# Sección preguntas #}
-    <div id="secPreguntas" style="display:none;background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-        <span style="font-size:12px;font-weight:700;color:var(--ink)">Preguntas</span>
-        <button type="button" onclick="agregarPregunta()"
-          style="height:30px;padding:0 14px;background:var(--accent-2);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
-          + Agregar pregunta
-        </button>
-      </div>
+    {# ── Preguntas: se puede combinar opción múltiple, V/F y respuesta corta ── #}
+    <div class="card" id="secPreguntas" style="display:none">
+      <div class="card-label">Preguntas</div>
       <div id="listaPreguntas"></div>
+      <div class="agregar-pregunta-row">
+        <button type="button" class="agregar-pregunta-btn" onclick="agregarPregunta('MULTIPLE')">☰ Opción múltiple</button>
+        <button type="button" class="agregar-pregunta-btn" onclick="agregarPregunta('VF')">✓ Verdadero / Falso</button>
+        <button type="button" class="agregar-pregunta-btn" onclick="agregarPregunta('ABIERTA')">💬 Respuesta corta</button>
+      </div>
     </div>
 
-    {# Toggle publicar #}
-    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div style="font-size:13px;font-weight:700;color:var(--ink)">Publicar ahora</div>
-        <div style="font-size:12px;color:var(--ink-3)">Si no publicas, los alumnos no verán la actividad hasta que la liberes</div>
+    <div class="card" id="secInteractiva" style="display:none">
+      <div class="card-label">Enlace de la actividad</div>
+      <p style="font-size:11.5px;color:var(--ink-3);margin:0 0 10px">GeoGebra, Kahoot, Quizlet, Wordwall, Desmos, etc.</p>
+      <input type="url" name="url_interactiva" class="field-input" placeholder="https://...">
+    </div>
+
+    <div class="card" id="secArchivo" style="display:none">
+      <div class="card-label">Archivo (opcional)</div>
+      <label class="upload-zone" id="uploadZone" for="archivoInput">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Arrastra un archivo o <strong>selecciona</strong></p>
+      </label>
+      <input id="archivoInput" type="file" name="archivo" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" hidden>
+      <div id="fileChip"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Materia y grupo</div>
+      <div class="field-group">
+        <label class="field-label">Materia *</label>
+        <select id="selMateria" class="field-select" onchange="filtrarGrupos()" required>
+          <option value="">— Selecciona —</option>
+        </select>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <input type="checkbox" name="publicada" value="1" id="chkPublicar" style="display:none">
-        <div id="togglePublicar" onclick="toggleSwitch()"
-          style="width:44px;height:24px;background:#e5e7eb;border-radius:12px;position:relative;transition:background .2s;cursor:pointer">
-          <div id="toggleCircle" style="width:20px;height:20px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+      <div class="field-group">
+        <label class="field-label">Grupo *</label>
+        <select name="grupo_id" id="selGrupo" class="field-select" required>
+          <option value="">— Primero elige materia —</option>
+        </select>
+      </div>
+      <input type="hidden" name="asignatura_id" id="asignaturaInput">
+    </div>
+
+    <div class="card">
+      <div class="field-group">
+        <label class="field-label">Fecha y hora de entrega *</label>
+        <input type="datetime-local" name="fecha_entrega" class="field-input" required>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="publish-row">
+        <div class="publish-text">
+          <strong id="publishTitle">Se publicará de inmediato</strong>
+          <span id="publishSub">Los alumnos la verán apenas la guardes.</span>
         </div>
-        <span id="toggleLabel" style="font-size:12px;font-weight:600;color:var(--ink-3)">Borrador</span>
+        <div class="toggle-switch active" id="togglePublicar" onclick="toggleSwitch()">
+          <div class="toggle-circle"></div>
+        </div>
       </div>
+      <input type="hidden" name="publicada" id="publicadaInput" value="1">
     </div>
 
-    <button type="submit"
-      style="height:42px;padding:0 28px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
-      Crear Actividad
-    </button>
+    <div class="form-footer">
+      <a href="{% url 'docente_actividades' %}" class="btn-cancel">Cancelar</a>
+      <button type="submit" class="btn-submit">Crear Actividad</button>
+    </div>
 
   </form>
 </div>
@@ -133,84 +194,120 @@
 <script>
 const asignaciones = [
   {% for a in asignaciones %}
-  { grupo: "{{ a.grupo.pk }}", asignatura: "{{ a.asignatura.pk }}", nombre: "{{ a.asignatura }}" },
+  { grupoId: "{{ a.grupo.pk }}", grupoNombre: "{{ a.grupo }}", asigId: "{{ a.asignatura.pk }}", asigNombre: "{{ a.asignatura }}" },
   {% endfor %}
 ];
+const materiasMap = {};
+asignaciones.forEach(a => { materiasMap[a.asigId] = a.asigNombre; });
 
-function filtrarAsig() {
-  const grupoId = document.getElementById('selGrupo').value;
-  const sel = document.getElementById('selAsig');
-  sel.innerHTML = '<option value="">— Selecciona —</option>';
-  asignaciones.filter(a => a.grupo === grupoId).forEach(a => {
-    sel.innerHTML += `<option value="${a.asignatura}">${a.nombre}</option>`;
+document.addEventListener('DOMContentLoaded', () => {
+  const selMateria = document.getElementById('selMateria');
+  Object.entries(materiasMap).forEach(([id, nombre]) => {
+    selMateria.innerHTML += `<option value="${id}">${nombre}</option>`;
+  });
+});
+
+function filtrarGrupos() {
+  const asigId = document.getElementById('selMateria').value;
+  document.getElementById('asignaturaInput').value = asigId;
+  const selGrupo = document.getElementById('selGrupo');
+  selGrupo.innerHTML = '<option value="">— Selecciona —</option>';
+  asignaciones.filter(a => a.asigId === asigId).forEach(a => {
+    selGrupo.innerHTML += `<option value="${a.grupoId}">${a.grupoNombre}</option>`;
   });
 }
 
-function mostrarSeccion() {
-  const tipo = document.getElementById('selTipo').value;
-  document.getElementById('secArchivo').style.display     = ['ABIERTA','MULTIPLE','ARCHIVO'].includes(tipo) ? 'block' : 'none';
-  document.getElementById('secInteractiva').style.display = tipo === 'INTERACTIVA' ? 'block' : 'none';
-  document.getElementById('secPreguntas').style.display   = ['ABIERTA','MULTIPLE'].includes(tipo) ? 'block' : 'none';
-}
+// ── Selector de tipo de actividad ──
+let tipoActual = '';
+document.querySelectorAll('.tipo-opt').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tipo-opt').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    tipoActual = btn.dataset.tipo;
+    document.getElementById('tipoInput').value = tipoActual;
+    document.getElementById('secPreguntas').style.display   = tipoActual === 'CUESTIONARIO' ? 'block' : 'none';
+    document.getElementById('secInteractiva').style.display = tipoActual === 'INTERACTIVA' ? 'block' : 'none';
+    document.getElementById('secArchivo').style.display     = tipoActual === 'ARCHIVO' ? 'block' : 'none';
+  });
+});
 
-function toggleSwitch() {
-  const chk = document.getElementById('chkPublicar');
-  chk.checked = !chk.checked;
-  actualizarToggle(chk.checked);
-}
-
-function actualizarToggle(activo) {
-  const toggle = document.getElementById('togglePublicar');
-  const circle = document.getElementById('toggleCircle');
-  const label  = document.getElementById('toggleLabel');
-  toggle.style.background = activo ? 'var(--accent)' : '#e5e7eb';
-  circle.style.left       = activo ? '22px' : '2px';
-  label.textContent       = activo ? 'Publicada' : 'Borrador';
-  label.style.color       = activo ? 'var(--accent)' : 'var(--ink-3)';
-}
-
-document.addEventListener('DOMContentLoaded', () => actualizarToggle(false));
-
+// ── Preguntas: cada una lleva su propio tipo (MULTIPLE / VF / ABIERTA) ──
 let preguntaIdx = 0;
+const ETIQUETAS = { MULTIPLE: 'Opción múltiple', VF: 'Verdadero / Falso', ABIERTA: 'Respuesta corta' };
 
-function agregarPregunta() {
-  const tipo = document.getElementById('selTipo').value;
+function agregarPregunta(tipoPreg) {
   const i = preguntaIdx++;
   const div = document.createElement('div');
-  div.style.cssText = 'border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:10px';
+  div.className = 'pregunta-card';
   div.id = `preg_${i}`;
 
-  let opcionesHTML = tipo === 'MULTIPLE' ? `
-    <div style="margin-top:10px">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px">Opciones (marca la correcta)</div>
+  let cuerpoHTML = '';
+  if (tipoPreg === 'MULTIPLE') {
+    cuerpoHTML = `
       <div id="opciones_${i}">
         ${[0,1,2,3].map(j => `
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <input type="radio" name="opcion_correcta_${i}" value="${j}">
-          <input type="text" name="opcion_texto_${i}" placeholder="Opción ${j+1}"
-            style="flex:1;height:32px;border:1px solid var(--border);border-radius:7px;padding:0 10px;font-size:12px;background:#f7f8fc;outline:none">
+        <div class="opcion-row">
+          <input type="radio" name="opcion_correcta_${i}" value="${j}" ${j===0?'checked':''}>
+          <input type="text" name="opcion_texto_${i}" placeholder="Opción ${j+1}" class="field-input opcion-texto-input">
         </div>`).join('')}
       </div>
-    </div>` : '';
+      <button type="button" class="btn-agregar-opcion" onclick="agregarOpcion(${i})">+ Agregar opción</button>`;
+  } else if (tipoPreg === 'VF') {
+    cuerpoHTML = `
+      <div class="vf-row">
+        <label><input type="radio" name="opcion_correcta_${i}" value="0" checked> Verdadero</label>
+        <label><input type="radio" name="opcion_correcta_${i}" value="1"> Falso</label>
+      </div>`;
+  } else {
+    cuerpoHTML = `<p class="abierta-hint">💬 El alumno responderá con texto libre (no se autocalifica).</p>`;
+  }
 
   div.innerHTML = `
-    <div style="display:flex;gap:10px;align-items:flex-start">
-      <div style="flex:1">
-        <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3)">Pregunta ${i+1}</label>
-        <textarea name="pregunta_texto" rows="2" placeholder="Escribe la pregunta..."
-          style="width:100%;margin-top:5px;border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;outline:none;resize:none;box-sizing:border-box"></textarea>
-      </div>
-      <div style="width:80px">
-        <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--ink-3)">Puntos</label>
-        <input type="number" name="pregunta_puntos" value="1" min="0.5" step="0.5"
-          style="width:100%;height:38px;margin-top:5px;border:1px solid var(--border);border-radius:7px;padding:0 8px;font-size:13px;background:#f7f8fc;outline:none;box-sizing:border-box">
-      </div>
-      <button type="button" onclick="document.getElementById('preg_${i}').remove()"
-        style="margin-top:18px;height:30px;width:30px;background:#fee2e2;color:#dc2626;border:none;border-radius:7px;font-size:16px;cursor:pointer;flex-shrink:0">×</button>
+    <div class="pregunta-header">
+      <span class="pregunta-tipo-tag">${ETIQUETAS[tipoPreg]}</span>
+      <input type="hidden" name="pregunta_tipo" value="${tipoPreg}">
+      <input type="text" name="pregunta_texto" placeholder="Escribe la pregunta..." class="field-input pregunta-texto-input">
+      <input type="number" name="pregunta_puntos" value="1" min="0.5" step="0.5" class="field-input pregunta-puntos-input" title="Puntos">
+      <button type="button" class="pregunta-quitar" onclick="document.getElementById('preg_${i}').remove()">×</button>
     </div>
-    ${opcionesHTML}
+    ${cuerpoHTML}
   `;
   document.getElementById('listaPreguntas').appendChild(div);
 }
+
+function agregarOpcion(i) {
+  const cont = document.getElementById(`opciones_${i}`);
+  const n = cont.children.length;
+  const row = document.createElement('div');
+  row.className = 'opcion-row';
+  row.innerHTML = `
+    <input type="radio" name="opcion_correcta_${i}" value="${n}">
+    <input type="text" name="opcion_texto_${i}" placeholder="Opción ${n+1}" class="field-input opcion-texto-input">`;
+  cont.appendChild(row);
+}
+
+// ── Toggle publicar ──
+function toggleSwitch() {
+  const toggle = document.getElementById('togglePublicar');
+  const input  = document.getElementById('publicadaInput');
+  const activo = !toggle.classList.contains('active');
+  toggle.classList.toggle('active', activo);
+  input.value = activo ? '1' : '0';
+  document.getElementById('publishTitle').textContent = activo ? 'Se publicará de inmediato' : 'Se guardará como borrador';
+  document.getElementById('publishSub').textContent    = activo ? 'Los alumnos la verán apenas la guardes.' : 'Los alumnos no la verán hasta que la publiques.';
+}
+
+// ── Archivo (drag & drop) ──
+const uploadZone   = document.getElementById('uploadZone');
+const archivoInput = document.getElementById('archivoInput');
+const fileChip     = document.getElementById('fileChip');
+archivoInput.addEventListener('change', () => { if (archivoInput.files.length) mostrarArchivo(archivoInput.files[0]); });
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragging'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragging'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('dragging');
+  if (e.dataTransfer.files.length) { archivoInput.files = e.dataTransfer.files; mostrarArchivo(e.dataTransfer.files[0]); }
+});
+function mostrarArchivo(file) { fileChip.innerHTML = `<div class="file-chip">📎 ${file.name}</div>`; }
 </script>
 {% endblock %}

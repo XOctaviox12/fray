@@ -20,9 +20,7 @@ INPUT_CLASSES = (
     "transition-all duration-200 "
     "hover:bg-white"
 )
-
 class GrupoForm(forms.ModelForm):
-    # Selector de docentes (Mantenemos la cuadrícula y filtros)
     docentes = forms.ModelMultipleChoiceField(
         queryset=User.objects.none(),
         widget=forms.CheckboxSelectMultiple(attrs={
@@ -34,25 +32,23 @@ class GrupoForm(forms.ModelForm):
 
     class Meta:
         model = Grupo
-        # Solo campos persistentes en la base de datos
         fields = ['carrera', 'grado', 'nombre', 'aula', 'capacidad_maxima', 'docentes']
-        
         widgets = {
             'carrera': forms.Select(attrs={
-                'id': 'id_carrera_grupo', 
+                'id': 'id_carrera_grupo',
                 'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-purple-500 bg-white'
             }),
             'grado': forms.NumberInput(attrs={
-                'id': 'id_grado_input', 
+                'id': 'id_grado_input',
                 'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500',
                 'placeholder': 'Ej: 1, 3, 6...'
             }),
             'nombre': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500', 
+                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500',
                 'placeholder': 'Ej: A, B, Matutino...'
             }),
             'aula': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500', 
+                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500',
                 'placeholder': 'Ej: B-102'
             }),
             'capacidad_maxima': forms.NumberInput(attrs={
@@ -60,29 +56,44 @@ class GrupoForm(forms.ModelForm):
             }),
         }
 
+    # Nombres por defecto si el nivel aún no tiene Carrera creada en este plantel
+    NIVELES_BASE = [
+        ('SECUNDARIA', 'Secundaria General'),
+        ('PREPARATORIA', 'Preparatoria General'),
+        ('UNIVERSIDAD', 'Universidad General'),
+    ]
+
     def __init__(self, *args, **kwargs):
         plantel = kwargs.pop('plantel', None)
         super().__init__(*args, **kwargs)
-        
+
         if plantel:
-            # Filtros de seguridad para que solo aparezcan datos de tu plantel (Plantel 1)
+            # Aseguramos que el plantel tenga las 3 carreras base.
+            # get_or_create no duplica: si ya existe una Carrera con ese
+            # nivel para este plantel, la respeta tal cual está.
+            for nivel, nombre_default in self.NIVELES_BASE:
+                Carrera.objects.get_or_create(
+                    plantel=plantel,
+                    nivel=nivel,
+                    defaults={'nombre': nombre_default}
+                )
+
             self.fields['carrera'].queryset = Carrera.objects.filter(plantel=plantel)
             self.fields['docentes'].queryset = User.objects.filter(plantel=plantel, rol='DOCENTE')
-            
-            
-            # Label para guiar al usuario en la selección de Secundaria o Prepa
             self.fields['carrera'].empty_label = "--- Seleccione Nivel (Secu o Prepa) ---"
 
 
-
 class AsignaturaForm(forms.ModelForm):
+    # Coincide exactamente con Carrera.NIVELES del modelo
+    NIVELES_ASIGNATURA = [
+        ('', '--- Seleccione Nivel ---'),
+        ('SECUNDARIA', 'Secundaria'),
+        ('PREPARATORIA', 'Preparatoria'),
+        ('UNIVERSIDAD', 'Universidad'),
+    ]
+
     nivel_academico = forms.ChoiceField(
-        choices=[
-            ('', '--- Seleccione Nivel ---'),
-            ('SECUNDARIA', 'Secundaria'),
-            ('PREPARATORIA', 'Preparatoria'),
-            ('BACHILLERATO', 'Bachillerato'),
-        ],
+        choices=NIVELES_ASIGNATURA,
         widget=forms.Select(attrs={
             'id': 'id_nivel_selector',
             'class': (
@@ -94,26 +105,31 @@ class AsignaturaForm(forms.ModelForm):
         label="¿Para qué nivel es la materia?",
         required=True,
     )
- 
-    grado_destino = forms.IntegerField(
-        label="Grado / Cuatrimestre",
-        widget=forms.NumberInput(attrs={
-            'class': (
-                'w-full bg-white border border-slate-200 rounded-xl '
-                'px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500'
-            ),
-            'placeholder': 'Ej: 1',
-        }),
-        required=True,
+
+    # Marcado por defecto: la materia se asigna sola a TODOS los grupos
+    # que tengan ese nivel dentro del plantel.
+    todos_los_grupos = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Asignar automáticamente a todos los grupos de este nivel",
+        widget=forms.CheckboxInput(attrs={'id': 'id_todos_los_grupos'}),
     )
- 
+
+    # Solo se usa si el usuario desmarca "todos_los_grupos".
+    grupos = forms.ModelMultipleChoiceField(
+        queryset=Grupo.objects.none(),
+        required=False,
+        label="O elige grupos específicos de ese nivel",
+        widget=forms.CheckboxSelectMultiple(),
+    )
+
     docentes = forms.ModelMultipleChoiceField(
         queryset=User.objects.none(),
         widget=forms.CheckboxSelectMultiple(),
         label="Docentes que imparten la materia",
         required=False,
     )
- 
+
     class Meta:
         model = Asignatura
         fields = ['nombre', 'clave', 'creditos', 'docentes']
@@ -139,20 +155,50 @@ class AsignaturaForm(forms.ModelForm):
                 ),
             }),
         }
- 
+
     def __init__(self, *args, **kwargs):
         plantel = kwargs.pop('plantel', None)
         super().__init__(*args, **kwargs)
- 
+
         if plantel:
             self.fields['docentes'].queryset = User.objects.filter(
                 plantel=plantel, rol='DOCENTE'
             )
-            # Ocultar créditos en planteles que no sean universidad
+            # Todos los grupos del plantel; el JS filtra visualmente por
+            # nivel usando data-nivel, y clean() vuelve a filtrar en server.
+            self.fields['grupos'].queryset = Grupo.objects.filter(
+                plantel=plantel
+            ).select_related('carrera').order_by('carrera__nivel', 'grado', 'nombre')
+
             if hasattr(plantel, 'nivel_educativo') and plantel.nivel_educativo != 'SUPERIOR':
                 self.fields['creditos'].widget = forms.HiddenInput()
                 self.fields['creditos'].required = False
- 
+
+    def clean(self):
+        cleaned = super().clean()
+        nivel = cleaned.get('nivel_academico')
+        todos = cleaned.get('todos_los_grupos')
+        grupos = cleaned.get('grupos')
+
+        if not nivel:
+            return cleaned
+
+        if not todos and not grupos:
+            raise forms.ValidationError(
+                "Selecciona al menos un grupo específico, o marca la casilla "
+                "para asignar la materia a todos los grupos de ese nivel."
+            )
+
+        # Si eligieron grupos a mano, nos aseguramos de que de verdad
+        # pertenezcan al nivel elegido (por si el JS falla o lo manipulan).
+        if not todos and grupos:
+            fuera_de_nivel = grupos.exclude(carrera__nivel=nivel)
+            if fuera_de_nivel.exists():
+                raise forms.ValidationError(
+                    "Uno o más grupos seleccionados no pertenecen al nivel elegido."
+                )
+
+        return cleaned
 
 class AlumnoForm(forms.ModelForm):
     class Meta:
@@ -206,10 +252,11 @@ class AlumnoForm(forms.ModelForm):
                 alumno.username = nuevo_username
                 break
         password_aleatoria = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-        alumno.set_password(password_aleatoria)
+        alumno.set_password(password_aleatoria)              # hash real de Django + bcrypt (password_verificacion)
+        alumno.set_password_recuperable(password_aleatoria)   # ← esta línea faltaba
         if commit:
             alumno.save()
-        return alumno, password_aleatoria   # ← ahora retorna tupla (alumno, contraseña)
+        return alumno, password_aleatoria # ← ahora retorna tupla (alumno, contraseña)
 class TutorForm(forms.ModelForm):
     class Meta:
         model = Tutor

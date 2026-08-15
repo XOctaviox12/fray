@@ -107,7 +107,10 @@ class UserProfileForm(forms.ModelForm):
             "last_name": forms.TextInput(attrs={"class": INPUT}),
             "email": forms.EmailInput(attrs={"class": INPUT}),
             "telefono": forms.TextInput(attrs={"class": INPUT}),
-            "fecha_nacimiento": forms.DateInput(attrs={"class": DATE_INPUT, "type": "date"}),
+            "fecha_nacimiento": forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={"class": DATE_INPUT, "type": "date"}
+            ),
             "direccion": forms.TextInput(attrs={"class": INPUT}),
         }
 
@@ -188,18 +191,11 @@ class ResetPasswordForm(forms.Form):
 
 # ── Docente ────────────────────────────────────────────────────────────────
 class DocenteForm(forms.ModelForm):
-    password = forms.CharField(
-        required=False,
-        widget=forms.PasswordInput(attrs={"class": INPUT, "placeholder": "Contraseña (dejar vacío para no cambiar)"}),
-        label="Contraseña",
-    )
-
     class Meta:
         model = User
-        fields = ["username", "first_name", "last_name", "email",
-                  "telefono", "direccion", "foto_perfil", "password"]
+        fields = ["first_name", "last_name", "email",
+                  "telefono", "direccion", "foto_perfil"]
         widgets = {
-            "username": forms.TextInput(attrs={"class": INPUT, "placeholder": "Matrícula docente"}),
             "first_name": forms.TextInput(attrs={"class": INPUT, "placeholder": "Nombre(s)"}),
             "last_name": forms.TextInput(attrs={"class": INPUT, "placeholder": "Apellidos"}),
             "email": forms.EmailInput(attrs={"class": INPUT}),
@@ -210,12 +206,6 @@ class DocenteForm(forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.rol = "DOCENTE"
-        pwd = self.cleaned_data.get("password")
-        if pwd:
-            user.set_password(pwd)
-        elif not user.pk:
-            # nuevo docente sin contraseña → inutilizable hasta que la pongan
-            user.set_unusable_password()
         if commit:
             user.save()
         return user

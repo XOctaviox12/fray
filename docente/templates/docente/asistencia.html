@@ -5,6 +5,19 @@
 {% block nav_asistencia %}active{% endblock %}
 
 {% block content %}
+<style>
+  :root {
+    --ink:#111318;--ink-2:#6b7280;--ink-3:#9ca3af;
+    --border:#e8eaf0;--bg:#f4f5f9;--white:#fff;
+    --accent:#4f6ef7;
+  }
+  .tab-btn {
+    height:36px;padding:0 18px;border-radius:9px;border:1px solid var(--border);
+    background:#fff;color:var(--ink-2);font-size:12.5px;font-weight:700;
+    font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;
+  }
+  .tab-btn.active { background:var(--accent);color:#fff;border-color:var(--accent); }
+</style>
 
 {# ── Título ── #}
 <div class="mb-6">
@@ -16,7 +29,7 @@
 
 {# ── Selector de grupo/asignatura/fecha ── #}
 <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.25rem">
-  <form method="get">
+  <form method="get" id="formSelector">
     <div style="display:grid;grid-template-columns:2fr 1fr auto;gap:12px;align-items:end">
 
       <div>
@@ -35,7 +48,6 @@
             {{ a.grupo }} · {{ a.asignatura }}
           </option>
           {% empty %}
-            {# ← Agrega esto temporalmente para diagnóstico #}
             <option disabled>⚠ Sin asignaciones activas</option>
         {% endfor %}
         </select>
@@ -47,7 +59,7 @@
         <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">
           Fecha
         </label>
-        <input type="date" name="fecha"
+        <input type="date" name="fecha" id="fechaInput"
           value="{{ fecha|date:'Y-m-d' }}" max="{{ hoy|date:'Y-m-d' }}"
           style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
       </div>
@@ -66,9 +78,31 @@
 
 {% if grupo and asignatura %}
 
-{# ── Tarjetas de conteo ── #}
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem">
-  {% for stat in "" %}{% endfor %}
+{# ── NUEVO: banner de fecha distinta a hoy + volver a hoy ── #}
+{% if fecha != hoy %}
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:.65rem 1rem;margin-bottom:1rem;font-size:12.5px;color:#1e40af;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+  <span>📅 Estás viendo/editando la lista del <strong>{{ fecha|date:"d/m/Y" }}</strong>, no la de hoy.</span>
+  <a href="?grupo_id={{ grupo.pk }}&asignatura_id={{ asignatura.pk }}&fecha={{ hoy|date:'Y-m-d' }}"
+     id="linkVolverHoy" style="color:#1e40af;font-weight:700;text-decoration:underline;white-space:nowrap">Volver a hoy</a>
+</div>
+{% endif %}
+
+{# ── NUEVO: banner de cambios sin guardar (se activa/desactiva por JS) ── #}
+<div id="bannerSinGuardar" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:.65rem 1rem;margin-bottom:1rem;font-size:12.5px;font-weight:700;color:#991b1b">
+  ⚠️ Tienes cambios sin guardar.
+</div>
+
+{# ── NUEVO: tabs Tomar lista / Historial ── #}
+<div style="display:flex;gap:8px;margin-bottom:1rem">
+  <button type="button" class="tab-btn active" data-tab="lista" onclick="cambiarTab('lista')">Tomar lista</button>
+  <button type="button" class="tab-btn" data-tab="historial" onclick="cambiarTab('historial')">Historial</button>
+</div>
+
+{# ═══════════════════════════ VISTA: TOMAR LISTA ═══════════════════════════ #}
+<div id="vista-lista">
+
+{# ── Tarjetas de conteo (agregado % de asistencia) ── #}
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.25rem">
 
   <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem 1.25rem;text-align:center">
     <div style="font-size:30px;font-weight:700;color:var(--accent);line-height:1">{{ filas|length }}</div>
@@ -89,10 +123,28 @@
     <div id="cntAusente" style="font-size:30px;font-weight:700;color:#dc2626;line-height:1">0</div>
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-top:4px">Ausentes</div>
   </div>
+
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1rem 1.25rem;text-align:center">
+    <div id="cntPct" style="font-size:30px;font-weight:700;color:var(--ink);line-height:1">0%</div>
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);margin-top:4px">Asistencia</div>
+  </div>
 </div>
 
+{# ── NUEVO: banner de alumnos sin revisar ── #}
+<div id="bannerSinRevisar" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.6rem 1rem;margin-bottom:1rem;font-size:12.5px;font-weight:700;color:#92400e;align-items:center;gap:6px">
+  👁️ <span id="txtSinRevisar"></span>
+</div>
+
+{# ── NUEVO: buscador de alumnos (solo si hay más de 5) ── #}
+{% if filas|length > 5 %}
+<div style="margin-bottom:12px">
+  <input type="text" id="buscadorAlumno" placeholder="Buscar alumno por nombre..."
+    style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 14px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;background:#f7f8fc;color:var(--ink);outline:none">
+</div>
+{% endif %}
+
 {# ── Tabla de asistencia ── #}
-<form method="post">
+<form method="post" id="formAsistencia">
   {% csrf_token %}
   <input type="hidden" name="grupo_id"      value="{{ grupo.pk }}">
   <input type="hidden" name="asignatura_id" value="{{ asignatura.pk }}">
@@ -121,19 +173,24 @@
         </div>
       </div>
 
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
         <a href="{% url 'pdf_asistencia' grupo.pk asignatura.pk %}?mes={{ fecha|date:'Y-m' }}"
           style="height:30px;padding:0 12px;background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.25);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px;text-decoration:none;"
           target="_blank">
           <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
           Exportar mes
         </a>
-        <button type="button" onclick="marcarTodos('P')"
+        <button type="button" onclick="confirmarMarcarTodos('P')"
           style="height:30px;padding:0 12px;background:rgba(16,185,129,.15);color:#34d399;border:1px solid rgba(16,185,129,.25);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
           <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
           Todos presentes
         </button>
-        <button type="button" onclick="marcarTodos('A')"
+        <button type="button" onclick="confirmarMarcarTodos('R')"
+          style="height:30px;padding:0 12px;background:rgba(217,119,6,.15);color:#fbbf24;border:1px solid rgba(217,119,6,.25);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          Todos con retardo
+        </button>
+        <button type="button" onclick="confirmarMarcarTodos('A')"
           style="height:30px;padding:0 12px;background:rgba(220,38,38,.12);color:#f87171;border:1px solid rgba(220,38,38,.2);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
           <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
           Todos ausentes
@@ -154,7 +211,10 @@
         </thead>
         <tbody>
           {% for fila in filas %}
-          <tr style="border-bottom:1px solid #f2f3f7;transition:background .1s" onmouseover="this.style.background='#f7f8fc'" onmouseout="this.style.background=''">
+          <tr data-alumno="{{ fila.alumno.pk }}"
+              data-nombre="{{ fila.alumno.get_full_name|lower }}"
+              data-guardado="{{ fila.guardado|yesno:'1,0' }}"
+              style="border-bottom:1px solid #f2f3f7;transition:background .1s" onmouseover="this.style.background='#f7f8fc'" onmouseout="this.style.background=''">
 
             <td style="padding:.75rem 1.25rem;font-size:12px;color:var(--ink-3)">{{ forloop.counter }}</td>
 
@@ -169,7 +229,12 @@
                 </div>
                 {% endif %}
                 <div>
-                  <div style="font-size:13px;font-weight:600;color:var(--ink)">{{ fila.alumno.get_full_name }}</div>
+                  <div style="font-size:13px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:5px">
+                    {{ fila.alumno.get_full_name }}
+                    <span class="sin-revisar-dot" data-dot="{{ fila.alumno.pk }}"
+                      style="width:6px;height:6px;border-radius:50%;background:#f59e0b;flex-shrink:0;display:{% if fila.guardado %}none{% else %}inline-block{% endif %}"
+                      title="Sin revisar"></span>
+                  </div>
                   <div style="font-size:11px;color:var(--ink-3)">{{ fila.alumno.username }}</div>
                 </div>
               </div>
@@ -233,7 +298,7 @@
 
     {% if filas %}
     <div style="padding:.875rem 1.5rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
-      <a href="?grupo_id={{ grupo.pk }}&asignatura_id={{ asignatura.pk }}&fecha={{ fecha|date:'Y-m-d' }}"
+      <a href="?grupo_id={{ grupo.pk }}&asignatura_id={{ asignatura.pk }}&fecha={{ fecha|date:'Y-m-d' }}" id="linkCancelar"
         style="height:36px;padding:0 18px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 101.5-5M3 3v4h4"/></svg>
         Cancelar
@@ -248,6 +313,55 @@
 
   </div>
 </form>
+
+</div>
+{# ═══════════════════════════ FIN VISTA: TOMAR LISTA ═══════════════════════════ #}
+
+{# ═══════════════════════════ NUEVO — VISTA: HISTORIAL ═══════════════════════════ #}
+<div id="vista-historial" style="display:none">
+  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden">
+    {% if historial %}
+    <div style="max-height:560px;overflow-y:auto">
+      {% for h in historial %}
+      <a href="?grupo_id={{ grupo.pk }}&asignatura_id={{ asignatura.pk }}&fecha={{ h.fecha|date:'Y-m-d' }}"
+         class="link-historial-dia"
+         style="display:flex;align-items:center;gap:14px;padding:.9rem 1.25rem;border-bottom:1px solid #f2f3f7;text-decoration:none;color:inherit">
+        <div style="width:44px;text-align:center;flex-shrink:0">
+          <div style="font-size:16px;font-weight:800;color:var(--ink)">{{ h.fecha|date:"d" }}</div>
+          <div style="font-size:10px;color:var(--ink-3);text-transform:uppercase">{{ h.fecha|date:"M" }}</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          {% if h.total %}
+          <div style="display:flex;height:6px;border-radius:4px;overflow:hidden;background:#f2f3f7;margin-bottom:6px">
+            <div style="width:{% widthratio h.presentes h.total 100 %}%;background:#10b981"></div>
+            <div style="width:{% widthratio h.retardos h.total 100 %}%;background:#f59e0b"></div>
+            <div style="width:{% widthratio h.ausentes h.total 100 %}%;background:#ef4444"></div>
+          </div>
+          {% endif %}
+          <div style="font-size:11px;color:var(--ink-2)">
+            <span style="color:#059669;font-weight:700">{{ h.presentes }}P</span> ·
+            <span style="color:#d97706;font-weight:700">{{ h.retardos }}R</span> ·
+            <span style="color:#dc2626;font-weight:700">{{ h.ausentes }}A</span>
+            <span style="color:var(--ink-3)"> / {{ h.total }}</span>
+          </div>
+        </div>
+        <div style="font-size:15px;font-weight:800;flex-shrink:0;color:{% if h.pct >= 85 %}#059669{% elif h.pct >= 70 %}#d97706{% else %}#dc2626{% endif %}">
+          {{ h.pct }}%
+        </div>
+        <svg width="14" height="14" fill="none" stroke="var(--ink-3)" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M9 18l6-6-6-6"/></svg>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding:3.5rem 1.5rem;text-align:center">
+      <svg width="36" height="36" fill="none" stroke="var(--ink-3)" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 10px;display:block;opacity:.4"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <p style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:3px">Sin registros</p>
+      <p style="font-size:12px;color:var(--ink-3)">Aún no hay listas guardadas para este grupo y materia.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{# ═══════════════════════════ FIN VISTA: HISTORIAL ═══════════════════════════ #}
 
 {% else %}
 
@@ -267,7 +381,6 @@
 <style>
   .radio-estado:checked ~ * { display:none; }
 
-  input#P_{{ grupo.pk }}:checked + .lbl-p,
   [id^="P_"]:checked + .lbl-p {
     background: #d1fae5 !important;
     color: #065f46 !important;
@@ -288,54 +401,227 @@
 {% block extra_js %}
 
 <script>
+// ═══════════════════════════════════════════════════════════
+// NUEVO — paridad de funciones con la app Ionic:
+//  - confirmaciones multi-paso antes de guardar
+//  - tracking de "sin revisar" y "cambios sin guardar"
+//  - buscador de alumnos, tabs Tomar lista / Historial
+//  - botón "Todos con retardo" y % de asistencia ponderado
+// ═══════════════════════════════════════════════════════════
+
+const FECHA_SELECCIONADA   = '{{ fecha|date:"Y-m-d" }}';
+const FECHA_SELECCIONADA_DISPLAY = '{{ fecha|date:"d/m/Y" }}';
+const HOY                  = '{{ hoy|date:"Y-m-d" }}';
+const YA_GUARDADO_INICIAL  = {{ ya_guardado|yesno:"true,false" }};
+
+const formAsistencia = document.getElementById('formAsistencia');
+const revisados = new Set();
+const estadoInicial = new Map();
+let formEnviado = false;
+
+function filasAlumno() {
+  return document.querySelectorAll('tbody tr[data-alumno]');
+}
+
+// ── Snapshot inicial de estados (para detectar cambios sin guardar) ──
+filasAlumno().forEach(tr => {
+  const id = tr.dataset.alumno;
+  if (tr.dataset.guardado === '1') revisados.add(id);
+  const checked = tr.querySelector('.radio-estado:checked');
+  estadoInicial.set(id, checked ? checked.value : 'P');
+});
+
+function hayCambiosSinGuardar() {
+  let cambios = false;
+  filasAlumno().forEach(tr => {
+    const id = tr.dataset.alumno;
+    const checked = tr.querySelector('.radio-estado:checked');
+    const valorActual = checked ? checked.value : 'P';
+    if (estadoInicial.get(id) !== valorActual) cambios = true;
+  });
+  return cambios;
+}
+
+function actualizarBannerCambios() {
+  const banner = document.getElementById('bannerSinGuardar');
+  if (banner) banner.style.display = hayCambiosSinGuardar() ? 'block' : 'none';
+}
+
+function actualizarBannerSinRevisar() {
+  const banner = document.getElementById('bannerSinRevisar');
+  const txt = document.getElementById('txtSinRevisar');
+  if (!banner) return;
+  const total = filasAlumno().length;
+  const sinRevisar = total - revisados.size;
+  if (sinRevisar > 0) {
+    txt.textContent = `${sinRevisar} alumno${sinRevisar === 1 ? '' : 's'} sin revisar aún.`;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+// ── Toggle P / R / A ──
 function aplicarAsignacion(sel) {
+  if (hayCambiosSinGuardar() && !confirm('Cambiar de grupo/asignatura descartará los cambios sin guardar. ¿Continuar?')) {
+    return;
+  }
   const opt = sel.options[sel.selectedIndex];
   const g = opt.dataset.grupo      || '';
   const a = opt.dataset.asignatura || '';
   if (g && a) {
-    const fecha = document.querySelector('input[name="fecha"]').value;
+    const fecha = document.getElementById('fechaInput').value;
     window.location.href = `?grupo_id=${g}&asignatura_id=${a}&fecha=${fecha}`;
   }
 }
 
 function marcarTodos(v) {
   document.querySelectorAll(`.radio-estado[value="${v}"]`).forEach(r => r.checked = true);
+  filasAlumno().forEach(tr => revisados.add(tr.dataset.alumno));
   contar();
   actualizarToggleUI();
+  actualizarBannerCambios();
+  actualizarBannerSinRevisar();
+}
+
+function confirmarMarcarTodos(v) {
+  const total = filasAlumno().length;
+  if (!total) return;
+  const etiqueta = v === 'P' ? 'presentes' : v === 'A' ? 'ausentes' : 'con retardo';
+  if (!confirm(`Vas a marcar a los ${total} alumnos como ${etiqueta}. ¿Continuar?`)) return;
+  marcarTodos(v);
 }
 
 function contar() {
-  let p=0,r=0,a=0;
-  document.querySelectorAll('.radio-estado:checked').forEach(el=>{
-    if(el.value==='P')p++; else if(el.value==='R')r++; else a++;
+  let p = 0, r = 0, a = 0;
+  document.querySelectorAll('.radio-estado:checked').forEach(el => {
+    if (el.value === 'P') p++; else if (el.value === 'R') r++; else a++;
   });
+  const total = p + r + a;
+  const pct = total ? Math.round(((p + r * 0.5) / total) * 100) : 0;
+
   document.getElementById('cntPresente').textContent = p;
   document.getElementById('cntRetardo').textContent  = r;
   document.getElementById('cntAusente').textContent  = a;
+  const cntPct = document.getElementById('cntPct');
+  if (cntPct) cntPct.textContent = pct + '%';
 }
 
 function actualizarToggleUI() {
-  // Resetear todos
   document.querySelectorAll('.lbl-toggle').forEach(l => {
     l.style.background = '';
     l.style.color = 'var(--ink-3)';
   });
-  // Aplicar al seleccionado
   document.querySelectorAll('.radio-estado:checked').forEach(r => {
     const lbl = r.nextElementSibling;
     if (!lbl) return;
-    if (r.value === 'P') { lbl.style.background='#d1fae5'; lbl.style.color='#065f46'; }
-    if (r.value === 'R') { lbl.style.background='#fef3c7'; lbl.style.color='#78350f'; }
-    if (r.value === 'A') { lbl.style.background='#fee2e2'; lbl.style.color='#7f1d1d'; }
+    if (r.value === 'P') { lbl.style.background = '#d1fae5'; lbl.style.color = '#065f46'; }
+    if (r.value === 'R') { lbl.style.background = '#fef3c7'; lbl.style.color = '#78350f'; }
+    if (r.value === 'A') { lbl.style.background = '#fee2e2'; lbl.style.color = '#7f1d1d'; }
   });
 }
 
+// ── Tabs Tomar lista / Historial ──
+function cambiarTab(tab) {
+  const vLista = document.getElementById('vista-lista');
+  const vHist  = document.getElementById('vista-historial');
+  if (vLista) vLista.style.display = tab === 'lista' ? 'block' : 'none';
+  if (vHist)  vHist.style.display  = tab === 'historial' ? 'block' : 'none';
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+}
+
+// ── Buscador de alumnos ──
+document.getElementById('buscadorAlumno')?.addEventListener('input', function () {
+  const q = this.value.trim().toLowerCase();
+  filasAlumno().forEach(tr => {
+    tr.style.display = tr.dataset.nombre.includes(q) ? '' : 'none';
+  });
+});
+
+// ── Confirmación multi-paso antes de guardar (paridad con Ionic) ──
+if (formAsistencia) {
+  formAsistencia.addEventListener('submit', function (e) {
+    e.preventDefault();
+    pasoFecha();
+  });
+}
+
+function pasoFecha() {
+  if (FECHA_SELECCIONADA !== HOY) {
+    if (!confirm(`Vas a guardar la asistencia del ${FECHA_SELECCIONADA_DISPLAY}, no la de hoy. ¿Es correcto?`)) return;
+  }
+  pasoSobrescritura();
+}
+
+function pasoSobrescritura() {
+  if (YA_GUARDADO_INICIAL) {
+    if (!confirm('Ya existe una lista guardada para esta fecha. ¿Deseas sobrescribirla con los cambios actuales?')) return;
+  }
+  pasoResumen();
+}
+
+function pasoResumen() {
+  const total = filasAlumno().length;
+  const presentes = document.querySelectorAll('.radio-estado[value="P"]:checked').length;
+  const retardos  = document.querySelectorAll('.radio-estado[value="R"]:checked').length;
+  const ausentes  = document.querySelectorAll('.radio-estado[value="A"]:checked').length;
+  const pctAusentes = total ? Math.round((ausentes / total) * 100) : 0;
+  const sinRevisar = total - revisados.size;
+
+  let msg = `${presentes} presentes · ${retardos} retardos · ${ausentes} ausentes`;
+  if (pctAusentes >= 30) msg += `\n\n⚠️ ${pctAusentes}% de ausentismo, verifica antes de guardar.`;
+  if (sinRevisar > 0) msg += `\n\n⚠️ ${sinRevisar} alumno(s) sin revisar (quedaron en "Presente" por defecto).`;
+  msg += `\n\n¿Guardar asistencia?`;
+
+  if (!confirm(msg)) return;
+
+  formEnviado = true;
+  formAsistencia.submit(); // form.submit() no dispara el listener de 'submit'
+}
+
+// ── Aviso al salir con cambios sin guardar ──
+document.getElementById('linkCancelar')?.addEventListener('click', function (e) {
+  if (hayCambiosSinGuardar() && !confirm('Tienes cambios sin guardar. ¿Deseas salir sin guardar?')) {
+    e.preventDefault();
+  }
+});
+document.getElementById('linkVolverHoy')?.addEventListener('click', function (e) {
+  if (hayCambiosSinGuardar() && !confirm('Tienes cambios sin guardar. ¿Deseas salir sin guardar?')) {
+    e.preventDefault();
+  }
+});
+document.getElementById('formSelector')?.addEventListener('submit', function (e) {
+  if (hayCambiosSinGuardar() && !confirm('Cambiar de fecha descartará los cambios sin guardar en la lista actual. ¿Continuar?')) {
+    e.preventDefault();
+  }
+});
+window.addEventListener('beforeunload', function (e) {
+  if (!formEnviado && hayCambiosSinGuardar()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// ── Inicialización ──
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.radio-estado').forEach(r => {
-    r.addEventListener('change', () => { contar(); actualizarToggleUI(); });
+    r.addEventListener('change', function () {
+      const alumnoId = this.name.replace('estado_', '');
+      revisados.add(alumnoId);
+      const dot = document.querySelector(`.sin-revisar-dot[data-dot="${alumnoId}"]`);
+      if (dot) dot.style.display = 'none';
+      contar();
+      actualizarToggleUI();
+      actualizarBannerCambios();
+      actualizarBannerSinRevisar();
+    });
   });
   actualizarToggleUI();
   contar();
+  actualizarBannerSinRevisar();
+  actualizarBannerCambios();
 });
 </script>
 {% endblock %}

@@ -22,6 +22,7 @@ urlpatterns = [
     path('docentes/detalle/<int:pk>/', views.detalle_docente, name='detalle_docente'),
     path('docentes/editar/<int:pk>/', views.editar_docente, name='editar_docente'),
     path('docentes/eliminar/<int:pk>/', views.eliminar_docente, name='eliminar_docente'),
+    path('docentes/<int:pk>/regenerar-password/', views.regenerar_password_docente, name='regenerar_password_docente'),
 
     path('docentes/<int:pk>/regenerar-password/', views.regenerar_password_docente, name='regenerar_password_docente'),
     

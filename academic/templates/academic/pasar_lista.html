@@ -107,7 +107,7 @@ pasar_lista.html
           <div style="position:relative;">
             <input type="checkbox" name="presentes" value="{{ alumno.id }}"
                    id="check-{{ alumno.id }}" class="alumno-check"
-                   {% if primera_vez or ya_registrados|default:{}|get:alumno.id %}checked{% endif %}
+                   {% if primera_vez or alumno.id in ya_registrados %}checked{% endif %}
                    onchange="actualizarFila(this)">
             <div class="check-visual">
               <svg class="check-icon" width="12" height="12" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>

@@ -10,6 +10,8 @@ from .forms import (
 import random
 import string
 from .models import User, PermisoPersonal
+import secrets
+ALFABETO_PASSWORD = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
 
 # --- UTILIDADES DE SEGURIDAD Y CONTEXTO ---
 
@@ -174,6 +176,34 @@ def lista_docentes(request):
     docentes = User.objects.filter(plantel=request.user.plantel, rol='DOCENTE').order_by('last_name')
     return render(request, 'users/docentes_list.html', {'docentes': docentes, **theme})
 
+def generar_matricula(plantel):
+    prefijo_plantel = getattr(plantel, 'clave', None) or f"P{plantel.pk}"
+    prefijo = f"DOC-{prefijo_plantel}"
+
+    ultimo_numero = 0
+    existentes = User.objects.filter(
+        plantel=plantel, rol='DOCENTE', username__startswith=f"{prefijo}-"
+    ).values_list('username', flat=True)
+
+    for username in existentes:
+        try:
+            numero = int(username.rsplit('-', 1)[-1])
+            ultimo_numero = max(ultimo_numero, numero)
+        except ValueError:
+            continue
+
+    candidato = f"{prefijo}-{ultimo_numero + 1:03d}"
+    # Colchón por si dos creaciones caen al mismo tiempo
+    while User.objects.filter(username=candidato).exists():
+        ultimo_numero += 1
+        candidato = f"{prefijo}-{ultimo_numero + 1:03d}"
+    return candidato
+
+
+def generar_password_temporal(longitud=8):
+    return ''.join(secrets.choice(ALFABETO_PASSWORD) for _ in range(longitud))
+
+
 @login_required
 def crear_docente(request):
     theme = get_campus_theme(request.user)
@@ -182,12 +212,43 @@ def crear_docente(request):
         if form.is_valid():
             docente = form.save(commit=False)
             docente.plantel = request.user.plantel
+
+            matricula = generar_matricula(request.user.plantel)
+            password_temporal = generar_password_temporal()
+
+            docente.username = matricula
+            docente.set_password(password_temporal)
+            docente.set_password_recuperable(password_temporal)
             docente.save()
-            messages.success(request, f"{theme['labels']['docente']} registrado.")
+
+            messages.success(
+                request,
+                f"{theme['labels']['docente']} registrado. "
+                f"Matrícula: {matricula} — Contraseña temporal: {password_temporal}. "
+                f"Anótala ahora, no se volverá a mostrar aquí."
+            )
             return redirect('lista_docentes')
     else:
         form = DocenteForm()
     return render(request, 'users/docente_form.html', {'form': form, 'titulo': f"Nuevo {theme['labels']['docente']}", **theme})
+
+
+@login_required
+def regenerar_password_docente(request, pk):
+    theme = get_campus_theme(request.user)
+    docente = get_object_or_404(User, pk=pk, plantel=request.user.plantel, rol='DOCENTE')
+
+    nueva_password = generar_password_temporal()
+    docente.set_password(nueva_password)
+    docente.set_password_recuperable(nueva_password)
+    docente.save()
+
+    messages.success(
+        request,
+        f"Contraseña regenerada para {docente.get_full_name()}. "
+        f"Nueva contraseña: {nueva_password}."
+    )
+    return redirect('detalle_docente', pk=docente.pk)
 
 @login_required
 def detalle_docente(request, pk):
@@ -231,15 +292,6 @@ def get_campus_theme(user):
             'alumnos': 'Universitarios' if es_uni else 'Alumnos'
         }
     }
-@login_required
-def regenerar_password_docente(request, pk):
-    docente    = get_object_or_404(User, pk=pk, plantel=request.user.plantel, rol='DOCENTE')
-    nueva_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-    docente.set_password(nueva_pass)
-    docente.password_plana = nueva_pass
-    docente.save()
-    messages.success(request, f"Nueva contraseña para {docente.get_full_name()}: {nueva_pass}")
-    return redirect('detalle_docente', pk=pk)
 
 @login_required
 def lista_personal(request):

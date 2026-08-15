@@ -27,6 +27,7 @@ urlpatterns = [
     path('alumno/<int:pk>/editar/',          views.editar_alumno,           name='editar_alumno'),
     path('alumno/<int:pk>/detalle/',         views.detalle_alumno,          name='detalle_alumno'),
     path('alumno/<int:pk>/regenerar-password/', views.regenerar_password,   name='regenerar_password'),
+    path('academic/alumno/<int:pk>/json/', views.detalle_alumno_json, name='detalle_alumno_json'),
 
     # ── HORARIOS ──────────────────────────────────────────────────────────────
     path('carga-horaria/',                   views.carga_horaria_alumno,    name='carga_horaria'),

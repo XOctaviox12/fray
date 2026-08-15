@@ -1,6 +1,7 @@
 import socket
 import time
 import logging
+import environ
 from pathlib import Path
 from dotenv import load_dotenv
 import os
@@ -240,6 +241,12 @@ if not DEBUG:
 # ── Logging ──────────────────────────────────────────────────────────────────
 # Sin esto, los logger.warning/info de _pick_reachable_ip (y de Django en
 # general) no se ven en ningún lado útil en producción.
+BASE_DIR = Path(__file__).resolve().parent.parent
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+PASSWORD_RECOVERY_KEY = env('PASSWORD_RECOVERY_KEY')
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

@@ -2,21 +2,29 @@
 {% block content %}
 <style>
   :root {
-    /* ── Escala de espaciado, radios y movimiento (consistente con el resto del sistema) ── */
-    --sp-1: 4px;
-    --sp-2: 8px;
-    --sp-3: 12px;
-    --sp-4: 16px;
-    --sp-5: 20px;
-    --sp-6: 24px;
+  /* ── Colores (agregar esto) ── */
+  --ink: #111318;
+  --ink-2: #5b6172;
+  --ink-3: #8a90a3;
+  --border: #e8eaf0;
+  --bg: #f4f5f9;
+  --accent: #4f6ef7;
 
-    --r-sm: 10px;
-    --r-md: 12px;
-    --r-lg: 14px;
+  /* ── Espaciado, radios y movimiento (ya existente) ── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
 
-    --dur: 200ms;
-    --ease: cubic-bezier(.4, 0, .2, 1);
-  }
+  --r-sm: 10px;
+  --r-md: 12px;
+  --r-lg: 14px;
+
+  --dur: 200ms;
+  --ease: cubic-bezier(.4, 0, .2, 1);
+}
 
   @media (prefers-reduced-motion: reduce) {
     .docente-dashboard * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
@@ -318,7 +326,7 @@
               </a>
             </li>
 
-            <li>
+            {% comment %} <li>
               <a href="{% url 'docente_horario' %}" class="qaction">
                 <div class="qaction-icon" style="background:#f0fdf4;color:#16a34a" aria-hidden="true">
                   <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
@@ -328,7 +336,7 @@
                   <div class="qaction-desc">Ver carga horaria</div>
                 </div>
               </a>
-            </li>
+            </li> {% endcomment %}
 
           </ul>
         </div>

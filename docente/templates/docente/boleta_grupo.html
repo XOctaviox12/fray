@@ -3,6 +3,13 @@
 {% block nav_boleta %}active{% endblock %}
 
 {% block content %}
+<style>
+  :root {
+    --ink:#111318;--ink-2:#6b7280;--ink-3:#9ca3af;
+    --border:#e8eaf0;--bg:#f4f5f9;--white:#fff;
+    --accent:#4f6ef7;
+  }
+</style>
 <div style="margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
   <a href="{% url 'docente_boleta_lista' %}" style="font-size:12px;color:var(--ink-3);text-decoration:none">← Volver</a>
   <a href="{% url 'docente_concentrado' %}?grupo_id={{ grupo.pk }}"

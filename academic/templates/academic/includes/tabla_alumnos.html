@@ -8,7 +8,9 @@
                 <th class="px-6 py-4 text-left text-[9.5px] font-black text-slate-400 uppercase tracking-widest">Alumno</th>
                 <th class="px-6 py-4 text-left text-[9.5px] font-black text-slate-400 uppercase tracking-widest">Usuario</th>
                 <th class="px-6 py-4 text-center text-[9.5px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
+                {% if user.rol != 'DOCENTE' %}
                 <th class="px-6 py-4 text-right text-[9.5px] font-black text-slate-400 uppercase tracking-widest">Acciones</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
@@ -42,6 +44,7 @@
                     {% endif %}
                 </td>
 
+                {% if user.rol != 'DOCENTE' %}
                 <td class="px-6 py-4 text-right">
                     {# Modal rápido #}
                     <button onclick="abrirModalAlumno({{ alumno.id }})"
@@ -54,6 +57,7 @@
                         Perfil
                     </a>
                 </td>
+                {% endif %}
             </tr>
             {% empty %}
             <tr>

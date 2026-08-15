@@ -5,6 +5,7 @@ from django.utils import timezone
 from campuses.models import Plantel
 from django.core.exceptions import ValidationError
 from cloudinary.models import CloudinaryField
+from decimal import Decimal
 
 
 # ==========================================
@@ -401,11 +402,17 @@ class Actividad(models.Model):
         return timezone.now() > self.fecha_entrega
 
 class PreguntaActividad(models.Model):
+    TIPOS = [
+        ('opcion_multiple', 'Opción múltiple'),
+        ('verdadero_falso', 'Verdadero / Falso'),
+        ('respuesta_corta', 'Respuesta corta'),
+    ]
     actividad  = models.ForeignKey(Actividad, on_delete=models.CASCADE, related_name='preguntas')
+    tipo       = models.CharField(max_length=20, choices=TIPOS, default='opcion_multiple')
     texto      = models.TextField()
     orden      = models.IntegerField(default=0)
     puntos     = models.DecimalField(max_digits=4, decimal_places=2, default=1)
-
+    
 class OpcionRespuesta(models.Model):
     pregunta   = models.ForeignKey(PreguntaActividad, on_delete=models.CASCADE, related_name='opciones')
     texto      = models.CharField(max_length=300)
@@ -775,7 +782,6 @@ class HorarioPDF(models.Model):
         return f"Horario — {self.grupo}"
     
 class ConfigEvaluacion(models.Model):
-    """Porcentajes de evaluación que define el docente por grupo/asignatura."""
     docente    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='configs_evaluacion')
     grupo      = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='configs_evaluacion')
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='configs_evaluacion')
@@ -786,19 +792,20 @@ class ConfigEvaluacion(models.Model):
     pct_examen      = models.DecimalField(max_digits=5, decimal_places=2, default=30)
     pct_proyecto    = models.DecimalField(max_digits=5, decimal_places=2, default=20)
 
+    rubros_extra = models.JSONField(default=list, blank=True)   # <- si esta línea no existe, agrégala
+
     class Meta:
         unique_together = [['docente', 'grupo', 'asignatura']]
         verbose_name = 'Configuración de Evaluación'
 
     def total(self):
-        return self.pct_tareas + self.pct_actividades + self.pct_asistencia + self.pct_examen + self.pct_proyecto
+        extra = sum((Decimal(str(r.get('pct', 0) or 0)) for r in self.rubros_extra), Decimal('0'))
+        return self.pct_tareas + self.pct_actividades + self.pct_asistencia + self.pct_examen + self.pct_proyecto + extra
 
     def __str__(self):
         return f"Config {self.asignatura} — {self.grupo}"
-
-
+    
 class EvaluacionParcial(models.Model):
-    """Calificación manual de examen o proyecto por alumno."""
     RUBROS = [
         ('EXAMEN',   'Examen'),
         ('PROYECTO', 'Proyecto'),
@@ -807,7 +814,7 @@ class EvaluacionParcial(models.Model):
     grupo      = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='evaluaciones_parciales')
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='evaluaciones_parciales')
     docente    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='evaluaciones_dadas')
-    rubro      = models.CharField(max_length=10, choices=RUBROS)
+    rubro      = models.CharField(max_length=30, choices=RUBROS)   # <- era max_length=10; ahora también guarda claves de categorías extra
     nota       = models.DecimalField(max_digits=4, decimal_places=2)
     observacion= models.TextField(blank=True)
     fecha      = models.DateField(auto_now_add=True)
@@ -818,7 +825,6 @@ class EvaluacionParcial(models.Model):
 
     def __str__(self):
         return f"{self.alumno} — {self.rubro}: {self.nota}"
-    
 class BoletaParcial(models.Model):
     """Calificación final de un parcial, calculada y guardada por el docente."""
     PARCIALES = [
@@ -848,6 +854,7 @@ class BoletaParcial(models.Model):
     nota_asistencia  = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     nota_examen      = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     nota_proyecto    = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    notas_extra      = models.JSONField(default=dict, blank=True)   # <- NUEVO: {"clave": nota, ...}
     calificacion_final = models.DecimalField(max_digits=4, decimal_places=2)
 
     publicada    = models.BooleanField(default=False)  # ← el padre/alumno solo ve si es True

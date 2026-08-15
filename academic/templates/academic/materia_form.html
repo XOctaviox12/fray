@@ -1,4 +1,3 @@
-materia_form.html
 {% extends 'inicio/base.html' %}
 {% block content %}
 <style>
@@ -26,6 +25,17 @@ materia_form.html
   .grupo-wrap { padding:16px 22px;border-top:1px solid var(--border);transition:opacity .25s; }
   .grupo-wrap.disabled { opacity:.4;pointer-events:none; }
   .helper-text { font-size:9.5px;color:var(--ink-3);font-style:italic;margin-top:5px; }
+
+  .toggle-todos { display:flex;align-items:center;gap:9px;padding:11px 14px;background:var(--white);border:1px solid var(--border);border-radius:11px;margin-bottom:12px;cursor:pointer; }
+  .toggle-todos input { width:16px;height:16px;accent-color:var(--accent);cursor:pointer; }
+  .toggle-todos span { font-size:12px;font-weight:600;color:var(--ink); }
+
+  .grupos-lista { display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:220px;overflow-y:auto;padding:4px 2px; }
+  .grupos-lista label { display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:9px;font-size:11.5px;font-weight:600;color:var(--ink-2);cursor:pointer;transition:all .12s; }
+  .grupos-lista label:hover { border-color:var(--accent); }
+  .grupos-lista label.oculto-nivel { display:none; }
+  .grupos-lista input { accent-color:var(--accent); }
+  .grupos-lista.disabled { opacity:.4;pointer-events:none; }
 
   .fields-section { padding:18px 22px;border-top:1px solid var(--border); }
   .field-group { display:flex;flex-direction:column;gap:5px;margin-bottom:14px; }
@@ -67,22 +77,39 @@ materia_form.html
           <span class="step-label">Selección de Nivel</span>
         </div>
         {{ form.nivel_academico }}
+        {% if form.nivel_academico.errors %}<p class="field-error">{{ form.nivel_academico.errors.0 }}</p>{% endif %}
       </div>
 
-      <!-- Paso 2: Grupo (dependiente) -->
+      <!-- Paso 2: Grupos (dependiente del nivel) -->
       <div class="grupo-wrap disabled" id="wrapper-grupo">
         <div class="step-header">
           <div class="step-num" id="step-2-indicator" style="background:var(--ink-3);">2</div>
-          <span class="step-label">{{ form.grupo.label }}</span>
+          <span class="step-label">Grupos destino</span>
         </div>
-        {{ form.grupo }}
+
+        <label class="toggle-todos">
+          {{ form.todos_los_grupos }}
+          <span>Asignar a todos los grupos de este nivel automáticamente</span>
+        </label>
+
         <p class="helper-text" id="helper-text">Primero seleccione un nivel arriba.</p>
+
+        <div class="grupos-lista disabled" id="grupos-lista">
+          {% for grupo in form.grupos.field.queryset %}
+            <label data-nivel="{{ grupo.carrera.nivel }}" class="oculto-nivel">
+              <input type="checkbox" name="grupos" value="{{ grupo.pk }}"
+                {% if grupo.pk in form.grupos.value %}checked{% endif %}>
+              {{ grupo.carrera.nombre }} — {{ grupo.grado }}º {{ grupo.nombre }}
+            </label>
+          {% endfor %}
+        </div>
+        {% if form.grupos.errors %}<p class="field-error">{{ form.grupos.errors.0 }}</p>{% endif %}
       </div>
 
       <!-- Otros campos -->
       <div class="fields-section">
         {% for field in form %}
-          {% if field.name != 'nivel_academico' and field.name != 'grupo' %}
+          {% if field.name != 'nivel_academico' and field.name != 'grupos' and field.name != 'todos_los_grupos' %}
             {% if field.is_hidden %}{{ field }}{% else %}
             <div class="field-group">
               <label class="field-label">
@@ -107,32 +134,50 @@ materia_form.html
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   const nivelSelector = document.getElementById('id_nivel_selector');
-  const grupoSelect = document.getElementById('id_grupo_final');
   const wrapperGrupo = document.getElementById('wrapper-grupo');
   const indicator = document.getElementById('step-2-indicator');
   const helper = document.getElementById('helper-text');
-  const opcionesBase = Array.from(grupoSelect.options);
+  const todosCheckbox = document.getElementById('id_todos_los_grupos');
+  const gruposLista = document.getElementById('grupos-lista');
+  const etiquetasGrupo = Array.from(gruposLista.querySelectorAll('label[data-nivel]'));
 
-  function filtrar() {
+  function filtrarGruposPorNivel() {
     const nivel = nivelSelector.value;
-    grupoSelect.innerHTML = '';
+
     if (!nivel) {
       wrapperGrupo.classList.add('disabled');
       indicator.style.background = 'var(--ink-3)';
-      grupoSelect.innerHTML = '<option value="">--- Primero seleccione nivel ---</option>';
       helper.textContent = 'Primero seleccione un nivel arriba.';
       return;
     }
+
     wrapperGrupo.classList.remove('disabled');
     indicator.style.background = 'var(--ink)';
-    helper.textContent = nivel === 'PREPARATORIA' ? 'Mostrando cuatrimestres de preparatoria.' : 'Mostrando grados de secundaria.';
-    const filtro = nivel === 'PREPARATORIA' ? 'cuatrimestre' : 'grado';
-    grupoSelect.innerHTML = '<option value="">Seleccione el grupo destino…</option>';
-    opcionesBase.forEach(opt => { if (opt.text.toLowerCase().includes(filtro)) grupoSelect.appendChild(opt.cloneNode(true)); });
+
+    etiquetasGrupo.forEach(label => {
+      const coincide = label.dataset.nivel === nivel;
+      label.classList.toggle('oculto-nivel', !coincide);
+      // Si el grupo no es de este nivel, lo desmarcamos para que no
+      // se envíe por error al hacer submit.
+      if (!coincide) label.querySelector('input').checked = false;
+    });
+
+    actualizarEstadoLista();
   }
 
-  nivelSelector?.addEventListener('change', filtrar);
-  if (nivelSelector?.value) filtrar();
+  function actualizarEstadoLista() {
+    const todos = todosCheckbox.checked;
+    gruposLista.classList.toggle('disabled', todos);
+    helper.textContent = todos
+      ? 'La materia se asignará automáticamente a todos los grupos de este nivel.'
+      : 'Selecciona uno o varios grupos específicos de este nivel.';
+  }
+
+  nivelSelector?.addEventListener('change', filtrarGruposPorNivel);
+  todosCheckbox?.addEventListener('change', actualizarEstadoLista);
+
+  if (nivelSelector?.value) filtrarGruposPorNivel();
+  actualizarEstadoLista();
 });
 </script>
 {% endblock %}

@@ -314,7 +314,7 @@
         }
 
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .page-enter { animation: fadeUp var(--transition-normal) ease both; }
+       .page-enter { animation: fadeUp var(--transition-normal) ease; }
 
         @media (prefers-reduced-motion: reduce) {
             .page-enter, .toast { animation: none; }
@@ -364,14 +364,14 @@
         Horarios PDF
         </a> {% endcomment %}
 
-        <a href="{% url 'lista_personal' %}" class="nav-item {% block nav_personal %}{% endblock %}">
+        {% comment %} <a href="{% url 'lista_personal' %}" class="nav-item {% block nav_personal %}{% endblock %}">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
         Personal
-        </a>
-        <a href="{% url 'lista_coordinadores' %}" class="nav-item {% block nav_coordinadores %}{% endblock %}">
+        </a> {% endcomment %}
+        {% comment %} <a href="{% url 'lista_coordinadores' %}" class="nav-item {% block nav_coordinadores %}{% endblock %}">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
             Coordinadores
-        </a>
+        </a> {% endcomment %}
 
         {# ── Comunicados para directivos ── #}
         <div class="nav-section">Comunicación</div>
@@ -413,10 +413,10 @@
         </a>
 
         <div class="nav-section">Calificaciones</div>
-        <a href="{% url 'docente_boleta_lista' %}" class="nav-item {% block nav_boleta %}{% endblock %}">
+        {% comment %} <a href="{% url 'docente_boleta_lista' %}" class="nav-item {% block nav_boleta %}{% endblock %}">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2m-2 4h6m0-4h.01"/></svg>
             Boleta / Concentrado
-        </a>
+        </a> {% endcomment %}
         <a href="{% url 'docente_parcial' %}" class="nav-item {% block nav_parcial %}{% endblock %}">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
             Calificación Parcial
@@ -464,22 +464,22 @@
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
 
-        <form action="{% url 'busqueda_global' %}" method="GET" class="topbar-search" role="search">
+        {% comment %} <form action="{% url 'busqueda_global' %}" method="GET" class="topbar-search" role="search">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-muted); flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             <input type="text" name="q"
                    placeholder="{% if user.rol == 'DOCENTE' %}Buscar alumno, grupo, tarea…{% else %}Buscar alumno, grupo, docente…{% endif %}"
                    autocomplete="off" value="{{ request.GET.q|default:'' }}">
-        </form>
+        </form> {% endcomment %}
 
         <div class="topbar-center">
             <div class="cycle-pill">
                 <span>Ciclo</span>
                 Ene – Abr 2026
             </div>
-            <a href="#" class="icon-btn" title="Notificaciones">
+            {% comment %} <a href="#" class="icon-btn" title="Notificaciones">
                 <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
                 <span class="notif-dot"></span>
-            </a>
+            </a> {% endcomment %}
             <a href="{% url 'perfil' %}" class="icon-btn" title="Mi Perfil">
                 <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </a>
@@ -548,6 +548,19 @@ function closeSidebar() {
     document.body.style.overflow = '';
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
+
+document.addEventListener('DOMContentLoaded', () => {
+    const pageContent = document.getElementById('page-content');
+    pageContent.addEventListener('animationend', () => {
+        pageContent.classList.remove('page-enter');
+    }, { once: true });
+});
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        corePlugins: { preflight: false }
+    }
 </script>
 {% block extra_js %}{% endblock %}
 </body>

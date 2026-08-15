@@ -707,16 +707,25 @@
         <input class="form-input" id="ins-email" type="email" name="email" value="{{ inscripcion_data.email|default:'' }}" placeholder="correo@ejemplo.com">
       </div>
       <div>
-        <label class="form-label" for="ins-grupo">Grupo de ingreso</label>
-        <select class="form-input" id="ins-grupo" name="grupo" required aria-required="true">
-          <option value="">Seleccionar grupo…</option>
-          {% for g in grupos_disponibles %}
-          <option value="{{ g.id }}" {% if inscripcion_data.grupo == g.id|stringformat:"s" %}selected{% endif %}>
-            {{ g }} — ({{ g.alumnos.count }}/{{ g.capacidad_maxima }} alumnos)
-          </option>
-          {% endfor %}
-        </select>
-      </div>
+  <label class="form-label" for="ins-grupo">Grupo de ingreso</label>
+  <select class="form-input" id="ins-grupo" name="grupo" required aria-required="true">
+    <option value="">Seleccionar grupo…</option>
+    {% regroup grupos_disponibles by carrera as grupos_por_carrera %}
+    {% for carrera in grupos_por_carrera %}
+    <optgroup label="{{ carrera.grouper|default:'Sin nivel asignado' }}">
+      {% for g in carrera.list %}
+      {% with ocupados=g.alumnos.count %}
+      <option value="{{ g.id }}"
+              {% if inscripcion_data.grupo == g.id|stringformat:"s" %}selected{% endif %}
+              {% if ocupados >= g.capacidad_maxima %}disabled{% endif %}>
+        {{ g.grado }}º {{ g.nombre }} — {{ ocupados }}/{{ g.capacidad_maxima }} alumnos{% if ocupados >= g.capacidad_maxima %} (LLENO){% endif %}
+      </option>
+      {% endwith %}
+      {% endfor %}
+    </optgroup>
+    {% endfor %}
+  </select>
+</div>
       <div class="form-grid">
         <div>
           <label class="form-label" for="ins-telefono">Teléfono</label>

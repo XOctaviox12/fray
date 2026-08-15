@@ -40,6 +40,7 @@ urlpatterns = [
     path('material/',                    views.material_apoyo,           name='material_apoyo'),
     path('material/subir/',              views.subir_material,           name='subir_material'),
     path('material/<int:pk>/',           views.detalle_material,         name='detalle_material'),
+    path('material/<int:pk>/editar/',    views.subir_material,           name='editar_material'),  # NUEVO: reutiliza subir_material en modo edición (recibe pk)
     path('material/<int:pk>/eliminar/',  views.eliminar_material,        name='eliminar_material'),
     path('material/carpeta/<int:pk>/eliminar/', views.eliminar_carpeta,  name='eliminar_carpeta'),
     path('material/reordenar/',          views.reordenar_material,       name='reordenar_material'),

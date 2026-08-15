@@ -1,9 +1,11 @@
 # web/users/models.py
 from django.contrib.auth.models import AbstractUser
+from django.conf import settings as django_settings
 from django.db import models
+from cryptography.fernet import Fernet, InvalidToken
 from campuses.models import Plantel
 
-
+import bcrypt
 class User(AbstractUser):
     ROLES = (
         ('ADMIN',     'Súper Admin'),
@@ -41,7 +43,41 @@ class User(AbstractUser):
     direccion        = models.TextField(blank=True, null=True)
     foto_perfil      = models.ImageField(upload_to='perfiles/', null=True, blank=True)
     fecha_nacimiento = models.DateField(blank=True, null=True)
-    password_plana   = models.CharField(max_length=50, blank=True, null=True)
+
+    # Antes esto se llamaba `password_plana` y guardaba la contraseña en
+    # texto plano. Ahora guarda la contraseña ENCRIPTADA (reversible),
+    # nunca en claro. Ver la property `password_plana` más abajo para
+    # obtener el valor real cuando se necesita mostrarlo.
+    password_recuperable = models.CharField(
+        max_length=255, blank=True, null=True,
+        help_text="Contraseña actual, encriptada de forma reversible para poder mostrarla si el usuario la pierde."
+    )
+    password_verificacion = models.CharField(max_length=60, blank=True, null=True)
+    
+    def set_password(self, raw_password):
+        super().set_password(raw_password)
+        hash_bcrypt = bcrypt.hashpw(raw_password.encode(), bcrypt.gensalt()).decode()
+        # pgcrypto en Supabase/Postgres no reconoce el prefijo $2b$ que genera
+        # la librería bcrypt de Python — solo $2a$. Son compatibles a nivel de
+        # algoritmo, así que remplazamos el prefijo para que crypt() en SQL
+        # pueda verificar el hash correctamente.
+        self.password_verificacion = hash_bcrypt.replace('$2b$', '$2a$', 1)
+            
+    def set_password_recuperable(self, raw_password):
+        """Guarda una copia encriptada (reversible) de la contraseña.
+        Llamar SIEMPRE junto con set_password() para mantenerlas sincronizadas."""
+        f = Fernet(django_settings.PASSWORD_RECOVERY_KEY.encode())
+        self.password_recuperable = f.encrypt(raw_password.encode()).decode()
+
+    @property
+    def password_plana(self):
+        if not self.password_recuperable:
+            return None
+        try:
+            f = Fernet(django_settings.PASSWORD_RECOVERY_KEY.encode())
+            return f.decrypt(self.password_recuperable.encode()).decode()
+        except (InvalidToken, ValueError):
+            return None
 
     # ── Helpers de rol ────────────────────────────────────────────────────
     @property
@@ -73,7 +109,7 @@ class Tutor(models.Model):
     parentesco = models.CharField(max_length=50)
     telefono   = models.CharField(max_length=20)
     correo     = models.EmailField(blank=True, null=True)
-    codigo_acceso = models.CharField(max_length=12, unique=True, blank=True)  # ← NUEVO
+    codigo_acceso = models.CharField(max_length=12, unique=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.codigo_acceso:
@@ -110,7 +146,7 @@ class DocenteGrupo(models.Model):
         'academic.Asignatura',
         on_delete=models.CASCADE,
         related_name='docentes_grupo',
-        null=True, blank=True,   # null si un docente es tutor del grupo sin materia específica
+        null=True, blank=True,
     )
     ciclo      = models.CharField(
         max_length=20,
@@ -129,7 +165,8 @@ class DocenteGrupo(models.Model):
     def __str__(self):
         materia = self.asignatura.nombre if self.asignatura else 'Tutor'
         return f"{self.docente.get_full_name()} → {self.grupo} | {materia} ({self.ciclo})"
-    
+
+
 class DocentePlantel(models.Model):
     docente = models.ForeignKey(User, on_delete=models.CASCADE, related_name='planteles_asignados')
     plantel = models.ForeignKey(Plantel, on_delete=models.CASCADE)
@@ -137,6 +174,7 @@ class DocentePlantel(models.Model):
 
     class Meta:
         unique_together = ('docente', 'plantel')
+
 
 class PermisoPersonal(models.Model):
     usuario  = models.OneToOneField(User, on_delete=models.CASCADE, related_name='permisos')

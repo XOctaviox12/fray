@@ -29,8 +29,6 @@ def dashboard_view(request):
 
     if request.user.rol == 'DOCENTE':
         return redirect('dashboard_docente')
-    if request.user.rol == 'DIRECTOR':
-        return redirect('en_construccion')
     plantel = request.user.plantel
     
     if request.method == 'POST' and request.POST.get('accion') == 'inscribir':
@@ -97,7 +95,7 @@ def dashboard_view(request):
                 return redirect('dashboard')
 
     # ── Grupos disponibles para el select del modal ───────────────────
-    grupos_disponibles = Grupo.objects.filter(plantel=plantel).prefetch_related('alumnos').order_by('grado', 'nombre')
+    grupos_disponibles = Grupo.objects.filter(plantel=plantel).select_related('carrera').prefetch_related('alumnos').order_by('carrera__nombre', 'grado', 'nombre')
 
     # ── Gestión de espacios (Aulas) ───────────────────────────────────
     total_aulas   = getattr(plantel, 'total_aulas', 20)
@@ -185,8 +183,6 @@ def login_view(request):
 
             user = authenticate(request, username=username, password=password)
             if user:
-                if user.rol == 'DIRECTOR':
-                    return redirect('en_construccion')
                 login(request, user)
                 # ── Redirigir según rol ──
                 if user.is_superuser:

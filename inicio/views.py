@@ -340,6 +340,10 @@ def lista_comunicados(request):
             Q(destinatario='TODOS') |
             Q(destinatario='DOCENTES') |
             Q(destinatario='GRUPO', grupo__in=grupos_docente)
+        ).exclude(
+            # Comunicados dirigidos únicamente a alumnos o a padres
+            # no le corresponden al docente, salvo que él sea el autor.
+            Q(publico__in=['ALUMNOS', 'PADRES']) & ~Q(autor=request.user)
         ).distinct().select_related('autor', 'grupo')
     else:
         # Directivos ven todos los del plantel
@@ -359,7 +363,7 @@ def lista_comunicados(request):
         'page_obj':    page_obj,
         'grupos':      grupos,
     })
- 
+    
 @login_required
 def crear_comunicado(request):
     from academic.models import Comunicado, Grupo, Asignatura

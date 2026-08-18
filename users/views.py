@@ -270,6 +270,7 @@ def editar_docente(request, pk):
         form = DocenteForm(instance=docente)
     return render(request, 'users/docente_form.html', {'form': form, 'titulo': f"Editar {theme['labels']['docente']}", **theme})
 
+
 @login_required
 def eliminar_docente(request, pk):
     docente = get_object_or_404(User, pk=pk, plantel=request.user.plantel, rol='DOCENTE')

@@ -377,9 +377,16 @@ def tareas(request):
             docente=request.user,
             activo=True,
             asignatura__isnull=False,
-            grupo__plantel=request.user.plantel,      # Fix
+            grupo__plantel=request.user.plantel,
         )
         .select_related('grupo', 'asignatura')
+    )
+
+    # Grupos y asignaturas realmente autorizados para este docente,
+    # como conjunto de pares válidos (blindaje extra contra datos corruptos).
+    grupos_autorizados_ids = set(asignaciones.values_list('grupo_id', flat=True))
+    pares_autorizados = set(
+        asignaciones.values_list('grupo_id', 'asignatura_id')
     )
 
     grupo_id      = request.GET.get('grupo_id', '')
@@ -388,7 +395,11 @@ def tareas(request):
 
     qs = (
         Tarea.objects
-        .filter(docente=request.user, activa=True)
+        .filter(
+            docente=request.user,
+            activa=True,
+            grupo_id__in=grupos_autorizados_ids,   # Fix: solo grupos del docente
+        )
         .select_related('grupo', 'asignatura')
         .annotate(
             total_entregas=Count('entregas'),
@@ -425,9 +436,9 @@ def crear_tarea(request):
             docente=request.user,
             activo=True,
             asignatura__isnull=False,
-            grupo__plantel=request.user.plantel,      # Fix
+            grupo__plantel=request.user.plantel,
         )
-        .select_related('grupo', 'asignatura')
+        .select_related('grupo', 'grupo__carrera', 'asignatura')
     )
 
     if request.method == 'POST':
@@ -460,8 +471,30 @@ def crear_tarea(request):
                 messages.success(request, f'✅ Tarea "{titulo}" creada correctamente.')
                 return redirect('detalle_tarea', pk=tarea.pk)
 
-    return render(request, 'docente/crear_tarea.html', {'asignaciones': asignaciones})
+    # --- Grupos únicos (sin repetir por cada materia) ---
+    grupos_vistos = {}
+    for a in asignaciones:
+        if a.grupo_id not in grupos_vistos:
+            grupos_vistos[a.grupo_id] = a.grupo
+    grupos_unicos = sorted(
+        grupos_vistos.values(),
+        key=lambda g: (g.carrera.nombre, g.grado, g.nombre)
+    )
 
+    # --- Mapa grupo_id -> [ {id, nombre} de asignaturas ] para la cascada en JS ---
+    import json
+    asignaturas_por_grupo = {}
+    for a in asignaciones:
+        asignaturas_por_grupo.setdefault(str(a.grupo_id), []).append({
+            'id': a.asignatura_id,
+            'nombre': a.asignatura.nombre,
+        })
+
+    return render(request, 'docente/crear_tarea.html', {
+        'asignaciones': asignaciones,
+        'grupos_unicos': grupos_unicos,
+        'asignaturas_por_grupo_json': json.dumps(asignaturas_por_grupo),
+    })
 
 def fix_pdf_url(url):
     url = url.replace('http://', 'https://').replace('/image/upload/', '/raw/upload/')
@@ -2300,13 +2333,38 @@ def pdf_asistencia(request, grupo_id, asignatura_id):
 @docente_required
 def parcial(request):
     from users.models import DocenteGrupo
+
     asignaciones = (
         DocenteGrupo.objects
-        .filter(docente=request.user, activo=True, asignatura__isnull=False)
-        .select_related('grupo', 'asignatura')
+        .filter(
+            docente=request.user,
+            activo=True,
+            asignatura__isnull=False,
+            grupo__plantel=request.user.plantel,
+        )
+        .select_related('grupo', 'grupo__carrera', 'asignatura')
+        .order_by('grupo__carrera__nivel', 'grupo__grado', 'grupo__nombre', 'asignatura__nombre')
     )
+
+    # Orden intuitivo: primaria antes que secundaria, antes que prepa, etc.
+    ORDEN_NIVELES = {'PRIMARIA': 0, 'SECUNDARIA': 1, 'PREPARATORIA': 2, 'UNIVERSIDAD': 3}
+
+    niveles = {}
+    for a in asignaciones:
+        nivel = a.grupo.carrera.nivel
+        grado = a.grupo.grado
+        niveles.setdefault(nivel, {}).setdefault(grado, []).append(a)
+
+    niveles_ordenados = []
+    for nivel in sorted(niveles.keys(), key=lambda n: ORDEN_NIVELES.get(n, 99)):
+        grados_ordenados = [
+            {'grado': grado, 'asignaciones': niveles[nivel][grado]}
+            for grado in sorted(niveles[nivel].keys())
+        ]
+        niveles_ordenados.append({'nivel': nivel, 'grados': grados_ordenados})
+
     return render(request, 'docente/parcial.html', {
-        'asignaciones': asignaciones,
+        'niveles_ordenados': niveles_ordenados,
     })
 
 

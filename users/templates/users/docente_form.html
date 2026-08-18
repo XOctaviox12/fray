@@ -206,4 +206,21 @@
     </form>
   </div>
 </div>
+{% csrf_token %}
+
+{% if form.errors %}
+<div style="background:#FDE9E6;border:1px solid #F02614;border-radius:10px;padding:12px 16px;margin-bottom:16px;color:#C71F10;font-size:13px;">
+  <strong>No se pudo guardar:</strong>
+  <ul style="margin:6px 0 0;padding-left:18px;">
+    {% for field in form %}
+      {% for error in field.errors %}
+        <li>{{ field.label }}: {{ error }}</li>
+      {% endfor %}
+    {% endfor %}
+    {% for error in form.non_field_errors %}
+      <li>{{ error }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
 {% endblock %}

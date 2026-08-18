@@ -21,7 +21,7 @@ urlpatterns = [
     # ── ASIGNATURAS ───────────────────────────────────────────────────────────
     path('asignaturas/',                     views.lista_asignaturas,       name='lista_asignaturas'),
     path('asignaturas/crear/',               views.crear_materia,           name='crear_materia'),
-
+    path('materias/editar/<int:pk>/', views.editar_materia, name='editar_materia'),
     # ── ALUMNOS ───────────────────────────────────────────────────────────────
     path('alumnos/agregar-tutor/',           views.agregar_tutor,           name='agregar_tutor'),
     path('alumno/<int:pk>/editar/',          views.editar_alumno,           name='editar_alumno'),

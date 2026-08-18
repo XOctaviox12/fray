@@ -17,7 +17,10 @@ from django.core.paginator import Paginator
 from datetime import date as ddate
 from datetime import time as dtime
 
+from users.models import DocenteGrupo
 
+from django.contrib.auth import get_user_model
+Usuario = get_user_model()
 # ─────────────────────────────────────────────────────────────────────────────
 # DECORADORES DE ROL
 # ─────────────────────────────────────────────────────────────────────────────
@@ -358,6 +361,60 @@ def lista_asignaturas(request):
     return render(request, 'academic/lista_asignaturas.html', {'carreras': carreras, **ctx})
 
 
+def _procesar_matriz(request, nueva_asignatura, grupos_destino):
+    """Lee la matriz docente-grupo del POST y sincroniza DocenteGrupo."""
+    grupo_ids_validos = set(grupos_destino.values_list('id', flat=True))
+    pares_raw = request.POST.getlist('matriz_docente_grupo')
+
+    asignaciones = set()
+    for par in pares_raw:
+        try:
+            docente_id_str, grupo_id_str = par.split('_')
+            docente_id, grupo_id = int(docente_id_str), int(grupo_id_str)
+        except ValueError:
+            continue
+        if grupo_id not in grupo_ids_validos:
+            continue
+        asignaciones.add((docente_id, grupo_id))
+
+    docentes_usados_ids = {d for d, _ in asignaciones}
+    docentes_map = {
+        d.id: d for d in Usuario.objects.filter(id__in=docentes_usados_ids, rol='DOCENTE')
+    }
+    nueva_asignatura.docentes.set(docentes_map.values())
+
+    # Quitar asignaciones que ya no están marcadas (importante para edición)
+    DocenteGrupo.objects.filter(
+        asignatura=nueva_asignatura
+    ).exclude(
+        docente_id__in=docentes_usados_ids
+    ).delete()
+
+    pares_existentes = set(
+        DocenteGrupo.objects.filter(asignatura=nueva_asignatura)
+        .values_list('docente_id', 'grupo_id')
+    )
+    DocenteGrupo.objects.filter(
+        asignatura=nueva_asignatura
+    ).exclude(
+        docente_id__in=[d for d, g in asignaciones],
+        grupo_id__in=[g for d, g in asignaciones]
+    ).delete()
+
+    for docente_id, grupo_id in asignaciones:
+        if (docente_id, grupo_id) in pares_existentes:
+            continue
+        docente = docentes_map.get(docente_id)
+        if not docente:
+            continue
+        DocenteGrupo.objects.get_or_create(
+            docente=docente,
+            grupo_id=grupo_id,
+            asignatura=nueva_asignatura,
+            defaults={'ciclo': '2026-1', 'activo': True}
+        )
+
+
 @login_required
 def crear_materia(request):
     plantel = request.user.plantel
@@ -370,32 +427,19 @@ def crear_materia(request):
             nivel    = form.cleaned_data['nivel_academico']
             todos    = form.cleaned_data['todos_los_grupos']
             grupos_elegidos = form.cleaned_data['grupos']
-            docentes_seleccionados = form.cleaned_data['docentes']
 
-            if todos:
-                grupos_destino = Grupo.objects.filter(plantel=plantel, carrera__nivel=nivel)
-            else:
-                grupos_destino = grupos_elegidos
+            grupos_destino = (
+                Grupo.objects.filter(plantel=plantel, carrera__nivel=nivel)
+                if todos else grupos_elegidos
+            )
 
             if grupos_destino.exists():
-                from users.models import DocenteGrupo
-
                 nueva_asignatura = Asignatura.objects.create(
                     carrera=grupos_destino.first().carrera,
                     nombre=nombre, clave=clave, creditos=creditos
                 )
                 nueva_asignatura.grupos.set(grupos_destino)
-
-                if docentes_seleccionados:
-                    nueva_asignatura.docentes.set(docentes_seleccionados)
-                    for grupo_c in grupos_destino:
-                        for docente in docentes_seleccionados:
-                            DocenteGrupo.objects.get_or_create(
-                                docente=docente,
-                                grupo=grupo_c,
-                                asignatura=nueva_asignatura,
-                                defaults={'ciclo': '2026-1', 'activo': True}
-                            )
+                _procesar_matriz(request, nueva_asignatura, grupos_destino)
 
                 messages.success(
                     request,
@@ -408,6 +452,60 @@ def crear_materia(request):
         form = AsignaturaForm(plantel=plantel)
     return render(request, 'academic/materia_form.html', {'form': form})
 
+
+@login_required
+def editar_materia(request, pk):
+    plantel = request.user.plantel
+    asignatura = get_object_or_404(Asignatura, pk=pk, carrera__plantel=plantel)
+
+    if request.method == 'POST':
+        form = AsignaturaForm(request.POST, instance=asignatura, plantel=plantel)
+        if form.is_valid():
+            nivel = form.cleaned_data['nivel_academico']
+            todos = form.cleaned_data['todos_los_grupos']
+            grupos_elegidos = form.cleaned_data['grupos']
+
+            grupos_destino = (
+                Grupo.objects.filter(plantel=plantel, carrera__nivel=nivel)
+                if todos else grupos_elegidos
+            )
+
+            if grupos_destino.exists():
+                asignatura.nombre = form.cleaned_data['nombre']
+                asignatura.clave = form.cleaned_data['clave']
+                asignatura.creditos = form.cleaned_data['creditos']
+                asignatura.carrera = grupos_destino.first().carrera
+                asignatura.save()
+                asignatura.grupos.set(grupos_destino)
+                _procesar_matriz(request, asignatura, grupos_destino)
+
+                messages.success(request, "Materia actualizada correctamente.")
+            else:
+                messages.error(request, f"No se encontraron grupos de nivel {nivel}.")
+            return redirect('lista_asignaturas')
+    else:
+        grupos_actuales = asignatura.grupos.all()
+        nivel_actual = grupos_actuales.first().carrera.nivel if grupos_actuales.exists() else ''
+        form = AsignaturaForm(
+            instance=asignatura,
+            plantel=plantel,
+            initial={
+                'nivel_academico': nivel_actual,
+                'grupos': grupos_actuales,
+                'todos_los_grupos': False,
+            }
+        )
+
+    matriz_existente = list(
+        DocenteGrupo.objects.filter(asignatura=asignatura)
+        .values_list('docente_id', 'grupo_id')
+    )
+    matriz_existente_json = json.dumps([f"{d}_{g}" for d, g in matriz_existente])
+
+    return render(request, 'academic/materia_form.html', {
+        'form': form,
+        'matriz_existente_json': matriz_existente_json,
+    })
 # ─────────────────────────────────────────────────────────────────────────────
 # ALUMNOS
 # ─────────────────────────────────────────────────────────────────────────────

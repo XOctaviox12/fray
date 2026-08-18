@@ -3,21 +3,21 @@ import time
 import logging
 import environ
 from pathlib import Path
-from dotenv import load_dotenv
 import os
 import cloudinary
-from decouple import config
-
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ── Carga de variables de entorno (única fuente de verdad) ───────────────────
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'), overwrite=True)
+
 # ── Seguridad básica ─────────────────────────────────────────────────────────
-SECRET_KEY = os.environ.get('SECRET_KEY')
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost').split(',') if h.strip()]
+SECRET_KEY = env('SECRET_KEY')
+DEBUG = env.bool('DEBUG', default=False)
+ALLOWED_HOSTS = [h.strip() for h in env('ALLOWED_HOSTS', default='localhost').split(',') if h.strip()]
 
 APPEND_SLASH = True
 
@@ -40,17 +40,31 @@ INSTALLED_APPS = [
     'tutor',
 ]
 
-
-#──  cloudary ────────────────────────────────────────────────────────────────
+# ── Cloudinary y Storages (Adaptativo Local / Producción) ─────────────────────
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY':    config('CLOUDINARY_API_KEY'),
-    'API_SECRET': config('CLOUDINARY_API_SECRET'),
+    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY':    env('CLOUDINARY_API_KEY'),
+    'API_SECRET': env('CLOUDINARY_API_SECRET'),
     'RESOURCE_TYPE': 'raw',
     'SECURE': True,
 }
 
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# Configuración inteligente: Estáticos locales si DEBUG=True, Cloudinary si es producción
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG else
+            "cloudinary_storage.storage.StaticCloudinaryStorage"
+        ),
+    },
+}
+
+# Variable de compatibilidad para evitar bloqueos en librerías externas
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # ── Middleware ────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
@@ -85,14 +99,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# ── Base de datos ──────────────────────────────────────────────────────────
-# "Happy Eyeballs" casero: probamos conexión TCP real (no solo DNS) contra
-# cada IP candidata (IPv4 e IPv6), con reintentos cortos por si el fallo es
-# momentáneo (por ejemplo, justo al arrancar el servidor). Nos quedamos con
-# la primera que conecta de verdad. Si ninguna responde tras los reintentos,
-# caemos de vuelta al hostname original y dejamos que libpq/psycopg2 decidan
-# como lo harían normalmente — nunca nos quedamos sin intentar conectar.
-
+# ── Base de datos (Happy Eyeballs IPv4/IPv6) ──────────────────────────────────
 def _pick_reachable_ip(hostname, port, timeout=2, attempts=2, prefer_ipv4_first=True):
     if not hostname:
         return hostname
@@ -111,7 +118,6 @@ def _pick_reachable_ip(hostname, port, timeout=2, attempts=2, prefer_ipv4_first=
             return 0 if is_ipv4 else 1
         return 0 if not is_ipv4 else 1
 
-    # Sin duplicados (a veces getaddrinfo repite la misma IP varias veces)
     seen = set()
     unique_candidates = []
     for c in candidates:
@@ -146,29 +152,22 @@ def _pick_reachable_ip(hostname, port, timeout=2, attempts=2, prefer_ipv4_first=
     )
     return hostname
 
-
-DB_HOST_RAW = os.environ.get('DB_HOST')
-DB_PORT_RAW = os.environ.get('DB_PORT', '5432')
+DB_HOST_RAW = env('DB_HOST', default=None)
+DB_PORT_RAW = env('DB_PORT', default='5432')
 DB_HOST_RESOLVED = _pick_reachable_ip(DB_HOST_RAW, DB_PORT_RAW)
 
 DATABASES = {
     'default': {
-        'ENGINE':   os.environ.get('DB_ENGINE', 'django.db.backends.postgresql'),
-        'NAME':     os.environ.get('DB_NAME'),
-        'USER':     os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'ENGINE':   env('DB_ENGINE', default='django.db.backends.postgresql'),
+        'NAME':     env('DB_NAME', default=None),
+        'USER':     env('DB_USER', default=None),
+        'PASSWORD': env('DB_PASSWORD', default=None),
         'HOST':     DB_HOST_RESOLVED,
         'PORT':     DB_PORT_RAW,
-        # Reutiliza conexiones 60s en vez de abrir una nueva por request
-        # (mejora rendimiento real y reduce presión sobre el límite de
-        # conexiones del pooler de Supabase).
         'CONN_MAX_AGE': 60,
         'OPTIONS': {
             'sslmode': 'require',
             'connect_timeout': 10,
-            # Keepalives TCP: detectan y descartan conexiones "colgadas"
-            # (por caídas de red intermitentes) en vez de esperar a que
-            # Django intente usarlas y falle a medio request.
             'keepalives': 1,
             'keepalives_idle': 30,
             'keepalives_interval': 10,
@@ -192,16 +191,21 @@ USE_I18N = True
 USE_TZ = True
 
 # ── Archivos estáticos y media ────────────────────────────────────────────────
-STATIC_URL  = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'   # ← línea nueva
+STATIC_URL  = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL   = '/media/'
 MEDIA_ROOT  = BASE_DIR / 'media'
+
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 CORS_ALLOW_ALL_ORIGINS = False
-_cors_env = os.environ.get('CORS_ALLOWED_ORIGINS')
+_cors_env = env('CORS_ALLOWED_ORIGINS', default=None)
 CORS_ALLOWED_ORIGINS = (
     [o.strip() for o in _cors_env.split(',') if o.strip()]
     if _cors_env else
@@ -215,37 +219,25 @@ LOGIN_REDIRECT_URL    = 'dashboard'
 LOGOUT_REDIRECT_URL   = 'login'
 
 # ── Seguridad de producción ──────────────────────────────────────────────────
-# Todo esto solo se activa cuando DEBUG=False (producción real en el
-# servidor del plantel), para no estorbar en desarrollo/local.
 if not DEBUG:
-    # nginx recibe HTTPS y reenvía a Gunicorn por HTTP interno; este header
-    # le dice a Django que la conexión original SÍ fue segura.
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True') == 'True'
+    SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = 'same-origin'
     X_FRAME_OPTIONS = 'DENY'
 
-    # HSTS: obliga HTTPS en el navegador durante 1 año una vez visitado.
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-    _csrf_trusted = os.environ.get('CSRF_TRUSTED_ORIGINS')
+    _csrf_trusted = env('CSRF_TRUSTED_ORIGINS', default=None)
     if _csrf_trusted:
         CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_trusted.split(',') if o.strip()]
 
 # ── Logging ──────────────────────────────────────────────────────────────────
-# Sin esto, los logger.warning/info de _pick_reachable_ip (y de Django en
-# general) no se ven en ningún lado útil en producción.
-BASE_DIR = Path(__file__).resolve().parent.parent
-env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
-
-PASSWORD_RECOVERY_KEY = env('PASSWORD_RECOVERY_KEY')
+PASSWORD_RECOVERY_KEY = env('PASSWORD_RECOVERY_KEY', default=None)
 
 LOGGING = {
     'version': 1,
@@ -269,7 +261,7 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO'),
+            'level': env('DJANGO_LOG_LEVEL', default='INFO'),
             'propagate': False,
         },
     },

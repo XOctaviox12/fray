@@ -18,6 +18,9 @@ from users.views import get_campus_theme
 
 @login_required
 def dashboard_view(request):
+    if request.user.is_superuser:
+        return redirect('/admin/')
+
     plantel = request.user.plantel
     theme   = get_campus_theme(request.user)
     periodos = Periodo.objects.filter(activo=True, plantel=request.user.plantel)
@@ -239,6 +242,8 @@ def busqueda_global(request):
     })
 @login_required
 def dashboard_docente(request):
+    if request.user.is_superuser:
+        return redirect('/admin/')
     if request.user.rol != 'DOCENTE':
         return redirect('dashboard')
 

@@ -51,7 +51,14 @@
 </style>
 
 <div class="form-page">
-  <a href="{% url 'lista_grupos' %}" class="back-link">
+  <a href="{% if user.rol == 'DOCENTE' %}{% url 'docente_mis_grupos' %}{% else %}{% url 'lista_grupos' %}{% endif %}" class="back-link">
+  <div class="back-icon">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <path d="M15 19l-7-7 7-7"/>
+    </svg>
+  </div>
+  {{ labels.dashboard_btn }}
+</a>5951
     <div class="back-icon">
       <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
     </div>

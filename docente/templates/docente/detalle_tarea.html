@@ -137,11 +137,15 @@
           {% endif %}
         </td>
         <td style="padding:.75rem 1.25rem;text-align:center">
-          {% if fila.entrega %}
-          <button onclick="abrirCalificar({{ fila.entrega.pk }}, '{{ fila.alumno.get_full_name }}', {{ fila.entrega.calificacion|default:'null' }}, '{{ fila.entrega.feedback|escapejs }}')"
-            style="height:30px;padding:0 12px;background:var(--accent-2);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
-            {% if fila.estado == 'CALIFICADA' %}Editar nota{% else %}Calificar{% endif %}
-          </button>
+          {% if fila.puede_calificar or fila.entrega %}
+           <button onclick="abrirCalificar({{ fila.entrega.pk|default:'undefined' }})" 
+              data-alumno-id="{{ fila.alumno.pk }}"
+              data-alumno="{{ fila.alumno.get_full_name }}"
+              data-calificacion="{{ fila.entrega.calificacion|default:'' }}"
+              data-feedback="{{ fila.entrega.feedback|default:''|escapejs }}"
+              style="height:30px;padding:0 12px;background:var(--accent-2);color:var(--accent);border:1px solid rgba(79,110,247,.2);border-radius:8px;font-size:11px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
+              {% if fila.estado == 'CALIFICADA' %}Editar nota{% else %}Calificar{% endif %}
+            </button>
           {% endif %}
         </td>
       </tr>
@@ -232,6 +236,8 @@
       {% csrf_token %}
       <input type="hidden" name="calificar" value="1">
       <input type="hidden" name="entrega_id" id="modalEntregaId">
+      <input type="hidden" name="alumno_id" id="modalAlumnoId">  <!-- ← AGREGA ESTA LÍNEA -->
+      
       <div style="margin-bottom:12px">
         <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Calificación (0–10)</label>
         <input type="number" name="calificacion" id="modalCal" min="0" max="10" step="0.1"
@@ -259,16 +265,25 @@
 
 {% block extra_js %}
 <script>
-function abrirCalificar(entregaId, nombre, cal, feedback) {
+function abrirCalificar(entregaId) {
+  const btn = event.currentTarget;
+  const alumnoId = btn.getAttribute('data-alumno-id');
+  const alumno = btn.getAttribute('data-alumno');
+  const cal = btn.getAttribute('data-calificacion');
+  const feedback = btn.getAttribute('data-feedback');
+  
   document.getElementById('modalEntregaId').value  = entregaId;
-  document.getElementById('modalAlumno').textContent = nombre;
-  document.getElementById('modalCal').value        = cal !== 'None' ? cal : '';
+  document.getElementById('modalAlumnoId').value   = alumnoId;
+  document.getElementById('modalAlumno').textContent = alumno;
+  document.getElementById('modalCal').value        = cal || '';
   document.getElementById('modalFeedback').value   = feedback || '';
   document.getElementById('modalCalificar').style.display = 'flex';
 }
+
 function cerrarModal() {
   document.getElementById('modalCalificar').style.display = 'none';
 }
+
 document.getElementById('modalCalificar').addEventListener('click', function(e) {
   if (e.target === this) cerrarModal();
 });
@@ -277,6 +292,7 @@ function editarComentario(id) {
   document.getElementById('texto-' + id).style.display = 'none';
   document.getElementById('form-editar-' + id).style.display = 'flex';
 }
+
 function cancelarEdicion(id) {
   document.getElementById('texto-' + id).style.display = 'block';
   document.getElementById('form-editar-' + id).style.display = 'none';

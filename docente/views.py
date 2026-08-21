@@ -502,7 +502,7 @@ def fix_pdf_url(url):
         url += '.pdf'
     return url
 
-
+@docente_required
 def detalle_tarea(request, pk):
     from academic.models import Tarea, EntregaTarea, ComentarioTarea
 
@@ -520,22 +520,38 @@ def detalle_tarea(request, pk):
             'alumno':  alumno,
             'entrega': entrega,
             'estado':  entrega.estado if entrega else 'PENDIENTE',
+            'puede_calificar': True,  # Siempre permite calificar
         })
 
     if request.method == 'POST' and 'calificar' in request.POST:
         entrega_id   = request.POST.get('entrega_id')
         calificacion = request.POST.get('calificacion')
         feedback     = request.POST.get('feedback', '').strip()
+        alumno_id    = request.POST.get('alumno_id')  # Agregar este campo al form
+        
         try:
-            entrega = EntregaTarea.objects.get(pk=entrega_id, tarea=tarea)
+            # Si no existe entrega_id, crear una nueva para ese alumno
+            if entrega_id == 'undefined' or not entrega_id:
+                if not alumno_id:
+                    messages.error(request, 'Falta información del alumno.')
+                    return redirect('detalle_tarea', pk=pk)
+                alumno = tarea.grupo.alumnos.get(pk=alumno_id)
+                entrega, _ = EntregaTarea.objects.get_or_create(
+                    tarea=tarea,
+                    alumno=alumno,
+                    defaults={'estado': 'PENDIENTE'}
+                )
+            else:
+                entrega = EntregaTarea.objects.get(pk=entrega_id, tarea=tarea)
+            
             entrega.calificacion  = calificacion
             entrega.feedback      = feedback
             entrega.estado        = 'CALIFICADA'
             entrega.calificada_en = timezone.now()
             entrega.save()
             messages.success(request, f'Entrega de {entrega.alumno.get_full_name()} calificada.')
-        except EntregaTarea.DoesNotExist:
-            messages.error(request, 'Entrega no encontrada.')
+        except (EntregaTarea.DoesNotExist, Exception) as e:
+            messages.error(request, f'Error: {str(e)}')
         return redirect('detalle_tarea', pk=pk)
 
     if request.method == 'POST' and 'toggle_publicar' in request.POST:
@@ -851,20 +867,34 @@ def detalle_actividad(request, pk):
             'alumno':  alumno,
             'entrega': entrega,
             'estado':  'CALIFICADA' if entrega and entrega.calificacion else ('ENTREGADA' if entrega else 'PENDIENTE'),
+            'puede_calificar': True,  # Permite calificar incluso sin entrega
         })
 
     if request.method == 'POST' and 'calificar' in request.POST:
         entrega_id   = request.POST.get('entrega_id')
         calificacion = request.POST.get('calificacion')
         feedback     = request.POST.get('feedback', '').strip()
+        alumno_id    = request.POST.get('alumno_id')
+        
         try:
-            entrega = EntregaActividad.objects.get(pk=entrega_id, actividad=actividad)
+            if entrega_id == 'undefined' or not entrega_id:
+                if not alumno_id:
+                    messages.error(request, 'Falta información del alumno.')
+                    return redirect('detalle_actividad', pk=pk)
+                alumno = actividad.grupo.alumnos.get(pk=alumno_id)
+                entrega, _ = EntregaActividad.objects.get_or_create(
+                    actividad=actividad,
+                    alumno=alumno
+                )
+            else:
+                entrega = EntregaActividad.objects.get(pk=entrega_id, actividad=actividad)
+            
             entrega.calificacion = calificacion
             entrega.feedback     = feedback
             entrega.save()
             messages.success(request, 'Entrega calificada.')
-        except EntregaActividad.DoesNotExist:
-            messages.error(request, 'Entrega no encontrada.')
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
         return redirect('detalle_actividad', pk=pk)
 
     if request.method == 'POST' and 'toggle_publicar' in request.POST:
@@ -2432,16 +2462,37 @@ def parcial_config(request, grupo_id, asig_id):
         'config':     config,
     })
     
+from academic.models import (
+    Grupo, Asignatura, ConfigEvaluacion, EvaluacionParcial,
+    EntregaTarea, EntregaActividad, Asistencia,
+    Tarea, Actividad, BoletaParcial, CierreParcial
+)
+
+def _parcial_vigente(grupo, asignatura):
+    cerrados = set(CierreParcial.objects.filter(
+        grupo=grupo, asignatura=asignatura
+    ).values_list('parcial', flat=True))
+    for n in [1, 2, 3, 4]:
+        if n not in cerrados:
+            return n
+    return 4
+
+def _parcial_borrador(grupo, asignatura):
+    cierre = CierreParcial.objects.filter(
+        grupo=grupo, asignatura=asignatura
+    ).order_by('-parcial').first()
+    if not cierre:
+        return None
+    hay_pendiente = BoletaParcial.objects.filter(
+        grupo=grupo, asignatura=asignatura, parcial=cierre.parcial, publicada=False
+    ).exists()
+    return cierre.parcial if hay_pendiente else None
+
+
 @docente_required
 def parcial_detalle(request, grupo_id, asig_id):
     import io
-    from academic.models import (
-        Grupo, Asignatura, ConfigEvaluacion, EvaluacionParcial,
-        EntregaTarea, EntregaActividad, Asistencia,
-        Tarea, Actividad, BoletaParcial
-    )
-    from users.models import DocenteGrupo
-    from django.db.models import Avg, Count, Q
+    from django.db.models import Count, Q
     from django.http import HttpResponse
 
     grupo      = get_object_or_404(Grupo, pk=grupo_id)
@@ -2462,93 +2513,92 @@ def parcial_detalle(request, grupo_id, asig_id):
         }
     )
     rubros_extra = normalizar_rubros_extra(config)
-
-    # ── Rubros manuales habilitados (Examen/Proyecto no siempre existen) ────
     examen_habilitado   = bool(config.pct_examen)
     proyecto_habilitado = bool(config.pct_proyecto)
 
-    parcial_num = int(request.GET.get('parcial') or request.POST.get('parcial_num') or 1)
-    if parcial_num not in [1, 2, 3, 4]:
-        parcial_num = 1
+    # ── Resolver qué parcial se está viendo/afectando ──────────────────────
+    parcial_vigente_num  = _parcial_vigente(grupo, asignatura)
+    parcial_borrador_num = _parcial_borrador(grupo, asignatura)
 
-    alumnos = grupo.alumnos.filter(
-        estatus='ACTIVO', rol='ALUMNO'
-    ).order_by('last_name', 'first_name')
+    vista = request.GET.get('vista', 'parcial')
+    override = request.GET.get('parcial') or request.POST.get('parcial_num')
+    if override:
+        parcial_num = int(override)
+        if parcial_num not in [1, 2, 3, 4]:
+            parcial_num = 1
+    elif vista == 'borrador' and parcial_borrador_num:
+        parcial_num = parcial_borrador_num
+    else:
+        parcial_num = parcial_vigente_num
+
+    es_borrador = CierreParcial.objects.filter(
+        grupo=grupo, asignatura=asignatura, parcial=parcial_num
+    ).exists()
+
+    alumnos = grupo.alumnos.filter(estatus='ACTIVO', rol='ALUMNO').order_by('last_name', 'first_name')
 
     tareas = Tarea.objects.filter(
-        grupo=grupo, asignatura=asignatura,
-        docente=request.user, publicada=True
+        grupo=grupo, asignatura=asignatura, docente=request.user,
+        publicada=True, parcial=parcial_num
     ).order_by('creada_en')
 
     actividades = Actividad.objects.filter(
-        grupo=grupo, asignatura=asignatura,
-        docente=request.user, publicada=True
+        grupo=grupo, asignatura=asignatura, docente=request.user,
+        publicada=True, parcial=parcial_num
     ).order_by('creada_en')
 
-    # ── Guardar examen/proyecto/extras manual ────────────────────────────────
+    # ── Guardar examen/proyecto/extras manual ────────────────────────────
     if request.method == 'POST' and 'guardar_notas' in request.POST:
         rubros_manuales = []
-        if examen_habilitado:
-            rubros_manuales.append('EXAMEN')
-        if proyecto_habilitado:
-            rubros_manuales.append('PROYECTO')
+        if examen_habilitado:   rubros_manuales.append('EXAMEN')
+        if proyecto_habilitado: rubros_manuales.append('PROYECTO')
 
         for alumno in alumnos:
             for rubro in rubros_manuales:
-                key = f'{rubro.lower()}_{alumno.pk}'
-                val = request.POST.get(key, '').strip()
+                val = request.POST.get(f'{rubro.lower()}_{alumno.pk}', '').strip()
                 if val:
                     try:
                         nota = float(val)
                         if 0 <= nota <= 10:
                             EvaluacionParcial.objects.update_or_create(
-                                alumno=alumno, grupo=grupo,
-                                asignatura=asignatura, rubro=rubro,
+                                alumno=alumno, grupo=grupo, asignatura=asignatura,
+                                rubro=rubro, parcial=parcial_num,
                                 defaults={'nota': nota, 'docente': request.user}
                             )
                     except ValueError:
                         pass
             for extra in rubros_extra:
-                key = f"extra_{extra['clave']}_{alumno.pk}"
-                val = request.POST.get(key, '').strip()
+                val = request.POST.get(f"extra_{extra['clave']}_{alumno.pk}", '').strip()
                 if val:
                     try:
                         nota = float(val)
                         if 0 <= nota <= 10:
                             EvaluacionParcial.objects.update_or_create(
-                                alumno=alumno, grupo=grupo,
-                                asignatura=asignatura, rubro=extra['clave'],
+                                alumno=alumno, grupo=grupo, asignatura=asignatura,
+                                rubro=extra['clave'], parcial=parcial_num,
                                 defaults={'nota': nota, 'docente': request.user}
                             )
                     except ValueError:
                         pass
         messages.success(request, 'Calificaciones guardadas.')
-        return redirect(f"{request.path}?parcial={parcial_num}")
+        return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
 
-    # ── Editar boleta manualmente (por si hubo un error) ─────────────────────
-    # Permite corregir los valores ya calculados de un alumno sin depender de
-    # que Tareas/Actividades sigan existiendo (pueden haberse borrado con
-    # "Cerrar Parcial"). Si la boleta ya estaba publicada, al editarla se
-    # oculta automáticamente para los papás — así nunca ven un dato a medio
-    # corregir; el docente decide cuándo volver a publicarla.
+    # ── Editar boleta manualmente ─────────────────────────────────────────
     if request.method == 'POST' and 'editar_boleta' in request.POST:
         alumno_id = request.POST.get('alumno_id')
         alumno = alumnos.filter(pk=alumno_id).first()
         if not alumno:
             messages.error(request, 'Ese alumno no pertenece a este grupo/asignatura.')
-            return redirect(f"{request.path}?parcial={parcial_num}")
+            return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
 
         boleta = BoletaParcial.objects.filter(
             alumno=alumno, grupo=grupo, asignatura=asignatura, parcial=parcial_num
         ).first()
         if not boleta:
             messages.error(request, 'Ese alumno todavía no tiene una boleta calculada para este parcial.')
-            return redirect(f"{request.path}?parcial={parcial_num}")
+            return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
 
         def parse_nota_edit(key):
-            """Devuelve (valor, ok). valor=None + ok=True significa 'sin dato'
-            (el rubro se excluye del cálculo). ok=False significa que lo
-            capturado no es un número válido entre 0 y 10."""
             val = request.POST.get(key, '')
             val = val.strip() if val is not None else ''
             if val == '':
@@ -2561,80 +2611,55 @@ def parcial_detalle(request, grupo_id, asig_id):
                 return None, False
             return round(n, 2), True
 
-        campos = {
-            'nota_tareas':      'nota_tareas',
-            'nota_actividades': 'nota_actividades',
-            'nota_asistencia':  'nota_asistencia',
-        }
-        if examen_habilitado:
-            campos['nota_examen'] = 'nota_examen'
-        if proyecto_habilitado:
-            campos['nota_proyecto'] = 'nota_proyecto'
+        campos = {'nota_tareas': 'nota_tareas', 'nota_actividades': 'nota_actividades', 'nota_asistencia': 'nota_asistencia'}
+        if examen_habilitado:   campos['nota_examen'] = 'nota_examen'
+        if proyecto_habilitado: campos['nota_proyecto'] = 'nota_proyecto'
 
         valores = {}
         errores = []
         for campo_post, campo_modelo in campos.items():
             valor, ok = parse_nota_edit(campo_post)
-            if not ok:
-                errores.append(campo_post)
-            else:
-                valores[campo_modelo] = valor
+            if not ok: errores.append(campo_post)
+            else: valores[campo_modelo] = valor
 
         valores_extra = {}
         for extra in rubros_extra:
             valor, ok = parse_nota_edit(f"extra_{extra['clave']}")
-            if not ok:
-                errores.append(extra['nombre'])
-            elif valor is not None:
-                valores_extra[extra['clave']] = valor
+            if not ok: errores.append(extra['nombre'])
+            elif valor is not None: valores_extra[extra['clave']] = valor
 
         if errores:
-            messages.error(
-                request,
-                f"No se guardó nada — revisa estos campos, deben ser un número entre 0 y 10 (o quedar vacíos): {', '.join(errores)}."
-            )
-            return redirect(f"{request.path}?parcial={parcial_num}")
+            messages.error(request, f"No se guardó nada — revisa estos campos, deben ser un número entre 0 y 10 (o quedar vacíos): {', '.join(errores)}.")
+            return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
 
-        # Si el rubro Examen/Proyecto está deshabilitado en la config, nunca
-        # se guarda valor para él, sin importar qué haya llegado en el POST.
-        if not examen_habilitado:
-            valores['nota_examen'] = None
-        if not proyecto_habilitado:
-            valores['nota_proyecto'] = None
+        if not examen_habilitado:   valores['nota_examen'] = None
+        if not proyecto_habilitado: valores['nota_proyecto'] = None
 
         def pond(nota, pct):
             return (nota * float(pct) / 100) if nota is not None else 0
 
         total_pct = 0
         cal_final = 0
-
         if valores.get('nota_tareas') is not None:
-            cal_final += pond(valores['nota_tareas'], config.pct_tareas)
-            total_pct += float(config.pct_tareas)
+            cal_final += pond(valores['nota_tareas'], config.pct_tareas); total_pct += float(config.pct_tareas)
         if valores.get('nota_actividades') is not None:
-            cal_final += pond(valores['nota_actividades'], config.pct_actividades)
-            total_pct += float(config.pct_actividades)
+            cal_final += pond(valores['nota_actividades'], config.pct_actividades); total_pct += float(config.pct_actividades)
         if valores.get('nota_asistencia') is not None:
-            cal_final += pond(valores['nota_asistencia'], config.pct_asistencia)
-            total_pct += float(config.pct_asistencia)
+            cal_final += pond(valores['nota_asistencia'], config.pct_asistencia); total_pct += float(config.pct_asistencia)
         if valores.get('nota_examen') is not None:
-            cal_final += pond(valores['nota_examen'], config.pct_examen)
-            total_pct += float(config.pct_examen)
+            cal_final += pond(valores['nota_examen'], config.pct_examen); total_pct += float(config.pct_examen)
         if valores.get('nota_proyecto') is not None:
-            cal_final += pond(valores['nota_proyecto'], config.pct_proyecto)
-            total_pct += float(config.pct_proyecto)
+            cal_final += pond(valores['nota_proyecto'], config.pct_proyecto); total_pct += float(config.pct_proyecto)
         for extra in rubros_extra:
             nota_e = valores_extra.get(extra['clave'])
             if nota_e is not None:
-                cal_final += pond(nota_e, extra['pct'])
-                total_pct += float(extra['pct'])
+                cal_final += pond(nota_e, extra['pct']); total_pct += float(extra['pct'])
 
         if total_pct == 0:
             messages.error(request, 'No se guardó nada — debes dejar al menos un rubro con nota para poder calcular la calificación final.')
-            return redirect(f"{request.path}?parcial={parcial_num}")
+            return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
 
         cal_final = round(cal_final * 100 / total_pct, 2) if total_pct < 100 else round(cal_final, 2)
-
         estaba_publicada = boleta.publicada
 
         boleta.nota_tareas        = valores.get('nota_tareas')
@@ -2645,8 +2670,6 @@ def parcial_detalle(request, grupo_id, asig_id):
         boleta.notas_extra        = valores_extra
         boleta.calificacion_final = cal_final
         boleta.docente            = request.user
-        # Cualquier edición oculta la boleta a los papás hasta que el
-        # docente decida publicarla de nuevo explícitamente.
         boleta.publicada    = False
         boleta.publicada_en = None
         boleta.save()
@@ -2655,182 +2678,143 @@ def parcial_detalle(request, grupo_id, asig_id):
             messages.success(request, f'Boleta de {alumno.get_full_name()} corregida y ocultada de los papás. Publícala de nuevo cuando la revises.')
         else:
             messages.success(request, f'Boleta de {alumno.get_full_name()} corregida.')
-        return redirect(f"{request.path}?parcial={parcial_num}")
+        return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
 
-    # ── Publicar boleta del parcial (sin cambios) ────────────────────────────
+    # ── Publicar / ocultar boleta del parcial ───────────────────────────
     if request.method == 'POST' and 'publicar_parcial' in request.POST:
         publicar = request.POST.get('publicar_parcial') == '1'
         count = 0
         for alumno in alumnos:
             boleta = BoletaParcial.objects.filter(
-                alumno=alumno, grupo=grupo,
-                asignatura=asignatura, parcial=parcial_num
+                alumno=alumno, grupo=grupo, asignatura=asignatura, parcial=parcial_num
             ).first()
             if boleta:
                 boleta.publicada    = publicar
                 boleta.publicada_en = timezone.now() if publicar else None
                 boleta.save()
                 count += 1
+
+        if publicar:
+            # Ya no hace falta el detalle crudo de este parcial: todo lo que
+            # el sistema necesita para promediar vive en BoletaParcial.
+            tareas_p      = Tarea.objects.filter(grupo=grupo, asignatura=asignatura, docente=request.user, parcial=parcial_num)
+            actividades_p = Actividad.objects.filter(grupo=grupo, asignatura=asignatura, docente=request.user, parcial=parcial_num)
+            EntregaTarea.objects.filter(tarea__in=tareas_p).delete()
+            EntregaActividad.objects.filter(actividad__in=actividades_p).delete()
+            tareas_p.delete()
+            actividades_p.delete()
+            Asistencia.objects.filter(alumno__in=alumnos, grupo=grupo, asignatura=asignatura, parcial=parcial_num).delete()
+            EvaluacionParcial.objects.filter(alumno__in=alumnos, grupo=grupo, asignatura=asignatura, parcial=parcial_num).delete()
+
         estado = 'publicadas' if publicar else 'ocultadas'
         messages.success(request, f'Boletas del Parcial {parcial_num} {estado} para {count} alumnos.')
-        return redirect(f"{request.path}?parcial={parcial_num}")
+        return redirect(f"{request.path}?vista=borrador&parcial={parcial_num}")
 
-    # ── Calcular y guardar boleta ─────────────────────────────────────────────
+    # ── Calcular y guardar boleta ────────────────────────────────────────
     if request.method == 'POST' and 'calcular_parcial' in request.POST:
         guardadas = 0
         for alumno in alumnos:
             vals_t = list(EntregaTarea.objects.filter(
-                tarea__in=tareas, alumno=alumno,
-                calificacion__isnull=False
+                tarea__in=tareas, alumno=alumno, calificacion__isnull=False
             ).values_list('calificacion', flat=True))
             prom_t = round(sum(float(v) for v in vals_t) / len(vals_t), 2) if vals_t else None
 
             vals_a = list(EntregaActividad.objects.filter(
-                actividad__in=actividades, alumno=alumno,
-                calificacion__isnull=False
+                actividad__in=actividades, alumno=alumno, calificacion__isnull=False
             ).values_list('calificacion', flat=True))
             prom_a = round(sum(float(v) for v in vals_a) / len(vals_a), 2) if vals_a else None
 
             total_clases = Asistencia.objects.filter(
-                alumno=alumno, grupo=grupo, asignatura=asignatura
+                alumno=alumno, grupo=grupo, asignatura=asignatura, parcial=parcial_num
             ).count()
             presentes = Asistencia.objects.filter(
-                alumno=alumno, grupo=grupo, asignatura=asignatura, estado='P'
+                alumno=alumno, grupo=grupo, asignatura=asignatura, parcial=parcial_num, estado='P'
             ).count()
             pct_asist  = round((presentes / total_clases) * 100, 1) if total_clases > 0 else 0
             nota_asist = round(pct_asist / 10, 2)
 
-            # Examen/Proyecto: solo se toman en cuenta si el rubro está
-            # habilitado en la config. Si se deshabilitó después de tener
-            # datos previos, esos datos viejos se ignoran para el cálculo.
             nota_ex = None
             if examen_habilitado:
                 examen = EvaluacionParcial.objects.filter(
-                    alumno=alumno, grupo=grupo, asignatura=asignatura, rubro='EXAMEN'
+                    alumno=alumno, grupo=grupo, asignatura=asignatura, rubro='EXAMEN', parcial=parcial_num
                 ).first()
                 nota_ex = float(examen.nota) if examen else None
 
             nota_pr = None
             if proyecto_habilitado:
                 proyecto = EvaluacionParcial.objects.filter(
-                    alumno=alumno, grupo=grupo, asignatura=asignatura, rubro='PROYECTO'
+                    alumno=alumno, grupo=grupo, asignatura=asignatura, rubro='PROYECTO', parcial=parcial_num
                 ).first()
                 nota_pr = float(proyecto.nota) if proyecto else None
 
             def pond(nota, pct):
                 return (nota * float(pct) / 100) if nota is not None else 0
 
-            total_pct  = 0
-            cal_final  = 0
-
+            total_pct = 0
+            cal_final = 0
             if prom_t is not None:
-                cal_final += pond(prom_t, config.pct_tareas)
-                total_pct += float(config.pct_tareas)
+                cal_final += pond(prom_t, config.pct_tareas); total_pct += float(config.pct_tareas)
             if prom_a is not None:
-                cal_final += pond(prom_a, config.pct_actividades)
-                total_pct += float(config.pct_actividades)
+                cal_final += pond(prom_a, config.pct_actividades); total_pct += float(config.pct_actividades)
             if total_clases > 0:
-                cal_final += pond(nota_asist, config.pct_asistencia)
-                total_pct += float(config.pct_asistencia)
+                cal_final += pond(nota_asist, config.pct_asistencia); total_pct += float(config.pct_asistencia)
             if nota_ex is not None:
-                cal_final += pond(nota_ex, config.pct_examen)
-                total_pct += float(config.pct_examen)
+                cal_final += pond(nota_ex, config.pct_examen); total_pct += float(config.pct_examen)
             if nota_pr is not None:
-                cal_final += pond(nota_pr, config.pct_proyecto)
-                total_pct += float(config.pct_proyecto)
+                cal_final += pond(nota_pr, config.pct_proyecto); total_pct += float(config.pct_proyecto)
 
             notas_extra_alumno = {}
             for extra in rubros_extra:
                 ev = EvaluacionParcial.objects.filter(
-                    alumno=alumno, grupo=grupo, asignatura=asignatura, rubro=extra['clave']
+                    alumno=alumno, grupo=grupo, asignatura=asignatura, rubro=extra['clave'], parcial=parcial_num
                 ).first()
                 nota_e = float(ev.nota) if ev else None
                 if nota_e is not None:
-                    cal_final += pond(nota_e, extra['pct'])
-                    total_pct += float(extra['pct'])
+                    cal_final += pond(nota_e, extra['pct']); total_pct += float(extra['pct'])
                     notas_extra_alumno[extra['clave']] = nota_e
 
             if total_pct > 0:
-                if total_pct < 100:
-                    cal_final = round(cal_final * 100 / total_pct, 2)
-                else:
-                    cal_final = round(cal_final, 2)
-
+                cal_final = round(cal_final * 100 / total_pct, 2) if total_pct < 100 else round(cal_final, 2)
                 BoletaParcial.objects.update_or_create(
-                    alumno=alumno, grupo=grupo,
-                    asignatura=asignatura, parcial=parcial_num,
+                    alumno=alumno, grupo=grupo, asignatura=asignatura, parcial=parcial_num,
                     defaults={
-                        'docente':           request.user,
-                        'nota_tareas':       prom_t,
-                        'nota_actividades':  prom_a,
-                        'nota_asistencia':   nota_asist,
-                        'nota_examen':       nota_ex,
-                        'nota_proyecto':     nota_pr,
-                        'notas_extra':       notas_extra_alumno,
-                        'calificacion_final': cal_final,
-                        'publicada':         False,
+                        'docente': request.user, 'nota_tareas': prom_t, 'nota_actividades': prom_a,
+                        'nota_asistencia': nota_asist, 'nota_examen': nota_ex, 'nota_proyecto': nota_pr,
+                        'notas_extra': notas_extra_alumno, 'calificacion_final': cal_final, 'publicada': False,
                     }
                 )
                 guardadas += 1
 
         messages.success(request, f'✅ Calificación del Parcial {parcial_num} calculada para {guardadas} alumnos. Revisa y publica cuando estés listo.')
-        return redirect(f"{request.path}?parcial={parcial_num}")
+        return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
 
-    # ── Construir filas (GET, y también insumo para exportar/cerrar parcial) ──
-    boletas_existentes = {
-        b.alumno_id: b
-        for b in BoletaParcial.objects.filter(
-            grupo=grupo, asignatura=asignatura, parcial=parcial_num
-        )
-    }
+    # ── Construir filas (GET) ────────────────────────────────────────────
+    boletas_existentes = {b.alumno_id: b for b in BoletaParcial.objects.filter(grupo=grupo, asignatura=asignatura, parcial=parcial_num)}
 
     mapa_tareas = {}
-    for e in EntregaTarea.objects.filter(
-        tarea__in=tareas, alumno__in=alumnos, calificacion__isnull=False
-    ).values('alumno_id', 'tarea_id', 'calificacion'):
+    for e in EntregaTarea.objects.filter(tarea__in=tareas, alumno__in=alumnos, calificacion__isnull=False).values('alumno_id', 'tarea_id', 'calificacion'):
         mapa_tareas.setdefault(e['alumno_id'], {})[e['tarea_id']] = float(e['calificacion'])
 
     mapa_activ = {}
-    for e in EntregaActividad.objects.filter(
-        actividad__in=actividades, alumno__in=alumnos, calificacion__isnull=False
-    ).values('alumno_id', 'actividad_id', 'calificacion'):
+    for e in EntregaActividad.objects.filter(actividad__in=actividades, alumno__in=alumnos, calificacion__isnull=False).values('alumno_id', 'actividad_id', 'calificacion'):
         mapa_activ.setdefault(e['alumno_id'], {})[e['actividad_id']] = float(e['calificacion'])
 
     mapa_asist = {
         a['alumno_id']: a
-        for a in Asistencia.objects.filter(
-            alumno__in=alumnos, grupo=grupo, asignatura=asignatura
-        ).values('alumno_id').annotate(
-            total=Count('id'),
-            presentes=Count('id', filter=Q(estado='P')),
-        )
+        for a in Asistencia.objects.filter(alumno__in=alumnos, grupo=grupo, asignatura=asignatura, parcial=parcial_num)
+            .values('alumno_id').annotate(total=Count('id'), presentes=Count('id', filter=Q(estado='P')))
     }
 
     mapa_examen = {}
     if examen_habilitado:
-        mapa_examen = {
-            e.alumno_id: float(e.nota)
-            for e in EvaluacionParcial.objects.filter(
-                alumno__in=alumnos, grupo=grupo, asignatura=asignatura, rubro='EXAMEN'
-            )
-        }
+        mapa_examen = {e.alumno_id: float(e.nota) for e in EvaluacionParcial.objects.filter(alumno__in=alumnos, grupo=grupo, asignatura=asignatura, rubro='EXAMEN', parcial=parcial_num)}
 
     mapa_proyecto = {}
     if proyecto_habilitado:
-        mapa_proyecto = {
-            e.alumno_id: float(e.nota)
-            for e in EvaluacionParcial.objects.filter(
-                alumno__in=alumnos, grupo=grupo, asignatura=asignatura, rubro='PROYECTO'
-            )
-        }
+        mapa_proyecto = {e.alumno_id: float(e.nota) for e in EvaluacionParcial.objects.filter(alumno__in=alumnos, grupo=grupo, asignatura=asignatura, rubro='PROYECTO', parcial=parcial_num)}
 
     mapa_extra = {
-        extra['clave']: {
-            e.alumno_id: float(e.nota)
-            for e in EvaluacionParcial.objects.filter(
-                alumno__in=alumnos, grupo=grupo, asignatura=asignatura, rubro=extra['clave']
-            )
-        }
+        extra['clave']: {e.alumno_id: float(e.nota) for e in EvaluacionParcial.objects.filter(alumno__in=alumnos, grupo=grupo, asignatura=asignatura, rubro=extra['clave'], parcial=parcial_num)}
         for extra in rubros_extra
     }
 
@@ -2840,78 +2824,41 @@ def parcial_detalle(request, grupo_id, asig_id):
     filas = []
     for alumno in alumnos:
         notas_alumno_tareas = mapa_tareas.get(alumno.pk, {})
-        notas_tareas = [
-            {'nota': notas_alumno_tareas.get(t.pk)} for t in tareas_list
-        ]
-        vals_t = [v for v in notas_alumno_tareas.values()]
+        notas_tareas = [{'nota': notas_alumno_tareas.get(t.pk)} for t in tareas_list]
+        vals_t = list(notas_alumno_tareas.values())
         prom_t = round(sum(vals_t) / len(vals_t), 2) if vals_t else None
 
         notas_alumno_activ = mapa_activ.get(alumno.pk, {})
-        notas_actividades = [
-            {'nota': notas_alumno_activ.get(a.pk)} for a in actividades_list
-        ]
-        vals_a = [v for v in notas_alumno_activ.values()]
+        notas_actividades = [{'nota': notas_alumno_activ.get(a.pk)} for a in actividades_list]
+        vals_a = list(notas_alumno_activ.values())
         prom_a = round(sum(vals_a) / len(vals_a), 2) if vals_a else None
 
         asist = mapa_asist.get(alumno.pk, {'total': 0, 'presentes': 0})
-        total_clases = asist['total']
-        presentes    = asist['presentes']
-        pct_asist    = round((presentes / total_clases) * 100, 1) if total_clases > 0 else 0
-        nota_asist   = round(pct_asist / 10, 2)
+        total_clases = asist['total']; presentes = asist['presentes']
+        pct_asist  = round((presentes / total_clases) * 100, 1) if total_clases > 0 else 0
+        nota_asist = round(pct_asist / 10, 2)
 
         boleta = boletas_existentes.get(alumno.pk)
-
         notas_extra_fila = [
-            {
-                'clave':  extra['clave'],
-                'nombre': extra['nombre'],
-                'pct':    extra['pct'],
-                'nota':   mapa_extra.get(extra['clave'], {}).get(alumno.pk),
-            }
+            {'clave': extra['clave'], 'nombre': extra['nombre'], 'pct': extra['pct'], 'nota': mapa_extra.get(extra['clave'], {}).get(alumno.pk)}
             for extra in rubros_extra
         ]
 
         filas.append({
-            'alumno':            alumno,
-            'notas_tareas':      notas_tareas,
-            'prom_tareas':       prom_t,
-            'notas_actividades': notas_actividades,
-            'prom_actividades':  prom_a,
-            'pct_asistencia':    pct_asist,
-            'nota_asistencia':   nota_asist,
-            'nota_examen':       mapa_examen.get(alumno.pk) if examen_habilitado else None,
-            'nota_proyecto':     mapa_proyecto.get(alumno.pk) if proyecto_habilitado else None,
-            'notas_extra':       notas_extra_fila,
-            'boleta':            boleta,
+            'alumno': alumno, 'notas_tareas': notas_tareas, 'prom_tareas': prom_t,
+            'notas_actividades': notas_actividades, 'prom_actividades': prom_a,
+            'pct_asistencia': pct_asist, 'nota_asistencia': nota_asist,
+            'nota_examen': mapa_examen.get(alumno.pk) if examen_habilitado else None,
+            'nota_proyecto': mapa_proyecto.get(alumno.pk) if proyecto_habilitado else None,
+            'notas_extra': notas_extra_fila, 'boleta': boleta,
             'calificacion_final': float(boleta.calificacion_final) if boleta else None,
-            'publicada':         boleta.publicada if boleta else False,
+            'publicada': boleta.publicada if boleta else False,
         })
 
     parcial_publicado = all(f['publicada'] for f in filas if f['boleta'])
     total_con_boleta  = sum(1 for f in filas if f['boleta'])
 
-    # ── Modo resumen: parciales ya cerrados ──────────────────────────────────
-    # Cuando un parcial ya se "Cerró" (Tareas y Actividades se borraron) no
-    # tiene caso mostrar la cuadrícula completa de captura — solo queda la
-    # calificación final guardada en cada boleta. En ese caso se muestra una
-    # pestaña/tabla resumen con únicamente Alumno, Nota Final, Estado y el
-    # botón de Publicar para padres (más Editar, por si hay que corregir algo).
-    modo_resumen = not tareas_list and not actividades_list and total_con_boleta > 0
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # Cerrar Parcial: exporta Excel con las calificaciones actuales y borra
-    # tareas/actividades para arrancar limpio el siguiente parcial. Las
-    # calificaciones ya se conservan porque BoletaParcial guarda los
-    # promedios como números, no como referencias vivas a las tareas/
-    # actividades — así que borrar Tarea y Actividad no afecta lo ya
-    # calculado y publicado. Examen/Proyecto solo se incluyen en el Excel
-    # si el rubro está habilitado en la config de este grupo/asignatura.
-    #
-    # IMPORTANTE: esta acción JAMÁS toca el campo `publicada` de ninguna
-    # BoletaParcial. Exportar/cerrar el parcial no publica nada para los
-    # papás ni oculta lo que ya estaba publicado — publicar sigue siendo
-    # una acción 100% manual y separada ("Publicar para padres").
-    # ═══════════════════════════════════════════════════════════════════════
+    # ── Cerrar Parcial y Exportar: ya NO borra nada, solo exporta y cierra ──
     if request.method == 'POST' and 'cerrar_parcial' in request.POST:
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment
@@ -2920,42 +2867,25 @@ def parcial_detalle(request, grupo_id, asig_id):
         ws = wb.active
         ws.title = f'Parcial {parcial_num}'[:31]
 
-        headers = ['Alumno', 'Usuario', 'Prom. Tareas', 'Prom. Actividades',
-                   '% Asistencia', 'Nota Asistencia']
-        if examen_habilitado:
-            headers.append('Examen')
-        if proyecto_habilitado:
-            headers.append('Proyecto')
-        for extra in rubros_extra:
-            headers.append(extra['nombre'])
+        headers = ['Alumno', 'Usuario', 'Prom. Tareas', 'Prom. Actividades', '% Asistencia', 'Nota Asistencia']
+        if examen_habilitado:   headers.append('Examen')
+        if proyecto_habilitado: headers.append('Proyecto')
+        for extra in rubros_extra: headers.append(extra['nombre'])
         headers += ['Calificación Final', 'Estado']
         ws.append(headers)
 
         header_font = Font(bold=True, color='FFFFFF')
         header_fill = PatternFill(start_color='10131C', end_color='10131C', fill_type='solid')
         for cell in ws[1]:
-            cell.font = header_font
-            cell.fill = header_fill
-            cell.alignment = Alignment(horizontal='center')
+            cell.font = header_font; cell.fill = header_fill; cell.alignment = Alignment(horizontal='center')
 
         for fila in filas:
             estado = 'Publicada' if fila['publicada'] else ('Borrador' if fila['boleta'] else 'Sin calcular')
-            row = [
-                fila['alumno'].get_full_name(),
-                fila['alumno'].username,
-                fila['prom_tareas'],
-                fila['prom_actividades'],
-                fila['pct_asistencia'],
-                fila['nota_asistencia'],
-            ]
-            if examen_habilitado:
-                row.append(fila['nota_examen'])
-            if proyecto_habilitado:
-                row.append(fila['nota_proyecto'])
-            for ex in fila['notas_extra']:
-                row.append(ex['nota'])
-            row.append(fila['calificacion_final'])
-            row.append(estado)
+            row = [fila['alumno'].get_full_name(), fila['alumno'].username, fila['prom_tareas'], fila['prom_actividades'], fila['pct_asistencia'], fila['nota_asistencia']]
+            if examen_habilitado:   row.append(fila['nota_examen'])
+            if proyecto_habilitado: row.append(fila['nota_proyecto'])
+            for ex in fila['notas_extra']: row.append(ex['nota'])
+            row.append(fila['calificacion_final']); row.append(estado)
             ws.append(row)
 
         for col in ws.columns:
@@ -2963,52 +2893,24 @@ def parcial_detalle(request, grupo_id, asig_id):
             ancho = max((len(v) for v in valores), default=10)
             ws.column_dimensions[col[0].column_letter].width = ancho + 3
 
-        # ── Borrar tareas y actividades de esta materia/grupo (todos los
-        #    parciales — el modelo no las distingue por parcial), conservando
-        #    entregas eliminadas explícitamente por seguridad ante el on_delete
-        #    real configurado en el modelo.
-        tareas_a_borrar      = Tarea.objects.filter(grupo=grupo, asignatura=asignatura, docente=request.user)
-        actividades_a_borrar = Actividad.objects.filter(grupo=grupo, asignatura=asignatura, docente=request.user)
-
-        total_tareas      = tareas_a_borrar.count()
-        total_actividades = actividades_a_borrar.count()
-
-        EntregaTarea.objects.filter(tarea__in=tareas_a_borrar).delete()
-        EntregaActividad.objects.filter(actividad__in=actividades_a_borrar).delete()
-        tareas_a_borrar.delete()
-        actividades_a_borrar.delete()
+        CierreParcial.objects.get_or_create(
+            grupo=grupo, asignatura=asignatura, parcial=parcial_num,
+            defaults={'docente': request.user}
+        )
 
         buffer = io.BytesIO()
         wb.save(buffer)
         buffer.seek(0)
-
         nombre_archivo = f"Parcial{parcial_num}_{grupo}_{asignatura}.xlsx".replace(' ', '_').replace('/', '-')
-        response = HttpResponse(
-            buffer.read(),
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
+        response = HttpResponse(buffer.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
-        # Nota: como la respuesta es el archivo, el mensaje de éxito no se
-        # verá hasta la siguiente vez que visiten una página normal. Si
-        # prefieres verlo, cambia el flujo a: guardar el .xlsx en MEDIA,
-        # messages.success(...) y redirect a una vista que ofrezca el link
-        # de descarga en vez de servir el archivo directo aquí.
         return response
 
     return render(request, 'docente/parcial_detalle.html', {
-        'grupo':               grupo,
-        'asignatura':          asignatura,
-        'config':              config,
-        'rubros_extra':        rubros_extra,
-        'tareas':              tareas_list,
-        'actividades':         actividades_list,
-        'filas':               filas,
-        'parcial_num':         parcial_num,
-        'parciales':           [1, 2, 3, 4],
-        'parcial_publicado':   parcial_publicado,
-        'total_con_boleta':    total_con_boleta,
-        'total_alumnos':       alumnos.count(),
-        'examen_habilitado':   examen_habilitado,
-        'proyecto_habilitado': proyecto_habilitado,
-        'modo_resumen':        modo_resumen,
+        'grupo': grupo, 'asignatura': asignatura, 'config': config, 'rubros_extra': rubros_extra,
+        'tareas': tareas_list, 'actividades': actividades_list, 'filas': filas,
+        'parcial_num': parcial_num, 'parcial_vigente': parcial_vigente_num, 'parcial_borrador': parcial_borrador_num,
+        'vista': vista, 'es_borrador': es_borrador,
+        'parcial_publicado': parcial_publicado, 'total_con_boleta': total_con_boleta,
+        'total_alumnos': alumnos.count(), 'examen_habilitado': examen_habilitado, 'proyecto_habilitado': proyecto_habilitado,
     })

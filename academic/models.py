@@ -200,6 +200,7 @@ class Asistencia(models.Model):
     )
     fecha    = models.DateField(default=timezone.now)   # <-- ya no auto_now_add para poder editar
     estado   = models.CharField(max_length=1, choices=ESTADOS, default='P')
+    parcial = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
         verbose_name = "Asistencia"
@@ -328,6 +329,7 @@ class Tarea(models.Model):
     creada_en  = models.DateTimeField(auto_now_add=True)
     activa     = models.BooleanField(default=True)
     publicada  = models.BooleanField(default=False)
+    parcial = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
         ordering = ['-creada_en']
@@ -396,6 +398,7 @@ class Actividad(models.Model):
     creada_en     = models.DateTimeField(auto_now_add=True)
     publicada    = models.BooleanField(default=False)
     publicada_en = models.DateTimeField(null=True, blank=True)
+    parcial = models.PositiveSmallIntegerField(default=1)
 
     @property
     def vencida(self):
@@ -818,6 +821,7 @@ class EvaluacionParcial(models.Model):
     nota       = models.DecimalField(max_digits=4, decimal_places=2)
     observacion= models.TextField(blank=True)
     fecha      = models.DateField(auto_now_add=True)
+    parcial = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
         unique_together = [['alumno', 'grupo', 'asignatura', 'rubro']]
@@ -825,6 +829,19 @@ class EvaluacionParcial(models.Model):
 
     def __str__(self):
         return f"{self.alumno} — {self.rubro}: {self.nota}"
+    
+class CierreParcial(models.Model):
+    grupo = models.ForeignKey('academic.Grupo', on_delete=models.CASCADE, related_name='cierres_parcial')
+    asignatura = models.ForeignKey('academic.Asignatura', on_delete=models.CASCADE, related_name='cierres_parcial')
+    parcial = models.PositiveSmallIntegerField()
+    docente = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    cerrado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('grupo', 'asignatura', 'parcial')
+
+    def __str__(self):
+        return f'Cierre Parcial {self.parcial} — {self.grupo} / {self.asignatura}'
 class BoletaParcial(models.Model):
     """Calificación final de un parcial, calculada y guardada por el docente."""
     PARCIALES = [

@@ -2,39 +2,179 @@
 {% block title %}Promoción Masiva{% endblock %}
 
 {% block content %}
-<div style="max-width:480px;margin:0 auto">
-  <div style="background:#10131c;border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;text-align:center">
-    <h1 style="font-size:20px;font-weight:700;color:#fff;margin:0 0 6px">Promoción Masiva</h1>
-    <p style="font-size:13px;color:rgba(255,255,255,.5);margin:0">Avanza todos los grupos al siguiente grado</p>
+<div class="pm-wrap">
+
+  <div class="pm-hero">
+    <h1 class="pm-hero-title">Promoción Masiva</h1>
+    <p class="pm-hero-subtitle">Avanza todos los grupos al siguiente grado</p>
   </div>
-  <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1rem">
-    <p style="font-size:13px;color:var(--ink-2);margin-bottom:1rem">Esta acción incrementará el grado de todos los grupos activos. Selecciona el nuevo periodo escolar:</p>
+
+  <div class="pm-card">
+    <p class="pm-card-intro">
+      Esta acción incrementará el grado de todos los grupos activos. Selecciona el nuevo periodo escolar:
+    </p>
+
     <form method="post">
       {% csrf_token %}
-      <div style="margin-bottom:14px">
-        <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Nuevo periodo *</label>
-        <select name="nuevo_periodo" required
-          style="width:100%;height:38px;border:1px solid var(--border);border-radius:9px;padding:0 10px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none">
+
+      <div class="pm-field">
+        <label class="pm-label">Nuevo periodo *</label>
+        <select name="nuevo_periodo" required class="pm-select">
           <option value="">— Selecciona —</option>
           {% for p in periodos %}
           <option value="{{ p.pk }}">{{ p.nombre }}</option>
           {% endfor %}
         </select>
       </div>
-      <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:9px;padding:.75rem 1rem;margin-bottom:14px">
-        <p style="font-size:12px;color:#92400e;margin:0">⚠️ Esta acción no se puede deshacer. Asegúrate de tener respaldo de los datos.</p>
+
+      <div class="pm-warning">
+        <p>⚠️ Esta acción no se puede deshacer. Asegúrate de tener respaldo de los datos.</p>
       </div>
-      <div style="display:flex;gap:8px">
-        <a href="{% url 'lista_grupos' %}"
-          style="flex:1;height:40px;background:#fff;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;justify-content:center;text-decoration:none">
-          Cancelar
-        </a>
-        <button type="submit"
-          style="flex:1;height:40px;background:#dc2626;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer">
-          Confirmar promoción
-        </button>
+
+      <div class="pm-actions">
+        <a href="{% url 'lista_grupos' %}" class="pm-btn pm-btn-cancel">Cancelar</a>
+        <button type="submit" class="pm-btn pm-btn-confirm">Confirmar promoción</button>
       </div>
     </form>
   </div>
 </div>
+
+<style>
+.pm-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.pm-hero {
+  background: linear-gradient(155deg, var(--text-primary, #161344) 0%, #0d0b2b 100%);
+  border-radius: 18px;
+  padding: 1.75rem 1.5rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+  box-shadow: 0 10px 30px -14px rgba(22, 19, 68, 0.45);
+}
+
+.pm-hero-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.pm-hero-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0;
+}
+
+.pm-card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 2px rgba(22, 19, 68, 0.04), 0 8px 20px -12px rgba(22, 19, 68, 0.08);
+}
+
+.pm-card-intro {
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+  margin: 0 0 1.25rem;
+  line-height: 1.6;
+}
+
+.pm-field {
+  margin-bottom: 14px;
+}
+
+.pm-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted, #9ca3af);
+  margin-bottom: 6px;
+}
+
+.pm-select {
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--border-medium, #dcdfe4);
+  border-radius: 10px;
+  padding: 0 12px;
+  font-size: 13px;
+  background: var(--bg-subtle, #fafafb);
+  color: var(--text-primary, #161344);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.pm-select:hover {
+  border-color: var(--border-strong, #c3c7cf);
+}
+
+.pm-select:focus {
+  border-color: var(--color-primary, #F02614);
+  box-shadow: 0 0 0 3px var(--color-primary-light, rgba(240, 38, 20, 0.1));
+}
+
+.pm-warning {
+  background: #fff7e6;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 14px;
+}
+
+.pm-warning p {
+  font-size: 12px;
+  color: #92400e;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.pm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pm-btn {
+  flex: 1;
+  height: 42px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.pm-btn-cancel {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-medium, #dcdfe4);
+  color: var(--text-secondary, #6b7280);
+}
+
+.pm-btn-cancel:hover {
+  border-color: var(--border-strong, #c3c7cf);
+  color: var(--text-primary, #161344);
+}
+
+.pm-btn-confirm {
+  background: #dc2626;
+  color: #fff;
+}
+
+.pm-btn-confirm:hover {
+  opacity: 0.92;
+  box-shadow: 0 6px 16px -8px rgba(220, 38, 38, 0.5);
+}
+</style>
 {% endblock %}

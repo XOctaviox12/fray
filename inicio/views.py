@@ -12,8 +12,13 @@ from users.models import User
 from academic.models import Periodo, Grupo, Calificacion, Asistencia, Asignatura
 from academic.forms import AlumnoForm
 from users.views import get_campus_theme
+from academic.models import Periodo
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+import logging
 
 
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -24,6 +29,7 @@ def dashboard_view(request):
     plantel = request.user.plantel
     theme   = get_campus_theme(request.user)
     periodos = Periodo.objects.filter(activo=True, plantel=request.user.plantel)
+    periodo_actual = periodos.first()
     hoy      = timezone.now().date()
 
     # ── Inscripción rápida desde el modal ────────────────────────────
@@ -560,3 +566,118 @@ def en_construccion(request):
     else:
         theme = {}
     return render(request, 'inicio/en_construccion.html', theme)
+
+@require_http_methods(["GET"])
+def api_periodo_activo(request):
+    """
+    Endpoint que devuelve el período activo actual en formato JSON.
+    Usado por el template base.html para mostrar el ciclo en el topbar.
+    
+    Respuesta exitosa:
+    {
+        "success": true,
+        "periodo": {
+            "id": 1,
+            "display_name": "2026 Agosto–Enero (NON)",
+            "tipo": "NON"
+        }
+    }
+    
+    Respuesta con error:
+    {
+        "success": false,
+        "error": "Descripción del error"
+    }
+    """
+    try:
+        logger.info(f"[API] Solicitud de período activo - Usuario: {request.user}, Autenticado: {request.user.is_authenticated}")
+        
+        # Verificar que el usuario esté autenticado
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'error': 'Usuario no autenticado'
+            }, status=401)
+        
+        periodo = None
+        
+        # Si el usuario tiene plantel, buscar en ese plantel específicamente
+        if hasattr(request.user, 'plantel') and request.user.plantel:
+            logger.info(f"[API] Buscando período activo para plantel: {request.user.plantel.id}")
+            periodo = Periodo.objects.filter(
+                plantel=request.user.plantel,
+                activo=True
+            ).first()
+        else:
+            # Si no tiene plantel (admin global), traer cualquier período activo
+            logger.info("[API] Usuario sin plantel específico, buscando cualquier período activo")
+            periodo = Periodo.objects.filter(activo=True).first()
+        
+        if not periodo:
+            logger.warning(f"[API] No se encontró período activo para usuario {request.user}")
+            return JsonResponse({
+                'success': False,
+                'error': 'No hay período activo configurado'
+            }, status=404)
+        
+        # Construir el display_name de forma segura
+        try:
+            # Intentar usar el método get_display_name() si existe
+            if hasattr(periodo, 'get_display_name') and callable(periodo.get_display_name):
+                display_name = periodo.get_display_name()
+            else:
+                # Fallback: construir manualmente el nombre
+                display_name = f"{periodo.fecha_inicio.year} {periodo.fecha_inicio.strftime('%B')}–{periodo.fecha_fin.strftime('%B')} ({periodo.tipo})"
+                logger.warning(f"[API] Período {periodo.id} no tiene método get_display_name(), usando fallback")
+        except Exception as e:
+            logger.error(f"[API] Error generando display_name para período {periodo.id}: {str(e)}")
+            display_name = f"Período {periodo.id} ({periodo.tipo})"
+        
+        logger.info(f"[API] Período activo encontrado: {display_name} (ID: {periodo.id})")
+        
+        return JsonResponse({
+            'success': True,
+            'periodo': {
+                'id': periodo.id,
+                'display_name': display_name,
+                'tipo': periodo.tipo
+            }
+        })
+    
+    except Exception as e:
+        logger.exception(f"[API] Error inesperado en api_periodo_activo: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': f'Error del servidor: {str(e)}'
+        }, status=500)
+    
+
+@login_required
+def lista_graduados(request):
+    """Muestra los grupos de 6° semestre cuyo período ya está cerrado —
+    es decir, generaciones que ya egresaron — agrupados por período."""
+    if request.user.rol not in ('DIRECTOR', 'COORD', 'ADMIN'):
+        messages.error(request, 'No tienes permiso para ver esta sección.')
+        return redirect('dashboard')
+
+    plantel = request.user.plantel
+
+    grupos_graduados = Grupo.objects.filter(
+        plantel=plantel, grado=6, periodo__activo=False
+    ).select_related('periodo', 'carrera').prefetch_related('alumnos').order_by(
+        '-periodo__fecha_fin', 'carrera__nombre', 'nombre'
+    )
+
+    from itertools import groupby
+    periodos_con_grupos = []
+    for periodo, grupos in groupby(grupos_graduados, key=lambda g: g.periodo):
+        grupos_lista = list(grupos)
+        periodos_con_grupos.append({
+            'periodo': periodo,
+            'grupos': grupos_lista,
+            'total_alumnos': sum(g.alumnos.count() for g in grupos_lista),
+        })
+
+    return render(request, 'inicio/graduados.html', {
+        'periodos_con_grupos': periodos_con_grupos,
+    })

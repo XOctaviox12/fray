@@ -46,4 +46,11 @@ urlpatterns = [
     path('horarios-pdf/',                    views.lista_horarios_pdf,  name='lista_horarios_pdf'),
     path('horarios-pdf/subir/',              views.subir_horario_pdf,   name='subir_horario_pdf'),
     path('horarios-pdf/<int:pk>/eliminar/',  views.eliminar_horario_pdf, name='eliminar_horario_pdf'),
+
+    # ── asignación de especialidades ──────────────────────────────────
+    path('asignar-especialidades/', views.asignar_especialidades, name='asignar_especialidades'),
+    path('api/grupos-especialidad/', views.api_grupos_especialidad, name='api_grupos_especialidad'),
+    path('crear-periodo/', views.crear_periodo, name='crear_periodo'),
+
+    path('alumnos/<int:pk>/historial/', views.historial_academico_alumno, name='historial_academico_alumno'),
 ]

@@ -1,17 +1,6 @@
 from django.contrib import admin
 from .models import Grupo, Asignatura, Calificacion, Asistencia, Carrera, Periodo, HorarioClase
 from .models import SesionClase, BloqueClase
-# --- 1. NUEVOS MODELOS (CARRERA Y PERIODO) ---
-@admin.register(Carrera)
-class CarreraAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'nivel', 'plantel', 'clave_rvoe')
-    list_filter = ('plantel', 'nivel')
-    search_fields = ('nombre',)
-
-@admin.register(Periodo)
-class PeriodoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'fecha_inicio', 'fecha_fin', 'activo')
-    list_filter = ('activo',)
 
 # --- 2. GRUPO (CORREGIDO) ---
 @admin.register(Grupo)
@@ -76,4 +65,45 @@ class BloqueClaseAdmin(admin.ModelAdmin):
     list_display  = ('sesion', 'tipo', 'titulo', 'orden', 'activo', 'creado_en')
     list_filter   = ('tipo', 'activo')
     search_fields = ('titulo', 'contenido', 'sesion__titulo')
- 
+@admin.register(Carrera)
+class CarreraAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'nivel', 'plantel', 'clave_rvoe')
+    list_filter = ('plantel', 'nivel')
+    search_fields = ('nombre',)
+
+@admin.register(Periodo)
+class PeriodoAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'plantel', 'tipo', 'fecha_inicio', 'fecha_fin', 'activo')
+    list_filter = ('activo', 'plantel', 'tipo')
+
+    actions = ['cerrar_ciclo']
+
+    @admin.action(description='Cerrar ciclo y promover alumnos al siguiente semestre')
+    def cerrar_ciclo(self, request, queryset):
+        if queryset.count() != 1:
+            self.message_user(request, 'Selecciona un solo periodo a la vez para cerrar.', level=messages.ERROR)
+            return
+
+        periodo = queryset.first()
+
+        if not periodo.activo:
+            self.message_user(request, f'"{periodo}" ya estaba cerrado.', level=messages.WARNING)
+            return
+
+        nuevo_periodo, pendientes = periodo.promover_ciclo()
+
+        self.message_user(
+            request,
+            f'Ciclo "{periodo}" cerrado. Se creó "{nuevo_periodo}" y se '
+            f'promovieron automáticamente los alumnos que no requieren elegir especialidad.',
+            level=messages.SUCCESS,
+        )
+
+        if pendientes:
+            nombres = ", ".join(a.get_full_name() or a.username for a in pendientes)
+            self.message_user(
+                request,
+                f'{len(pendientes)} alumno(s) de 4° necesitan que les asignes '
+                f'especialidad a mano antes de entrar a 5°: {nombres}',
+                level=messages.WARNING,
+            )

@@ -6,13 +6,66 @@ from campuses.models import Plantel
 from django.core.exceptions import ValidationError
 from cloudinary.models import CloudinaryField
 from decimal import Decimal
+from django.db import migrations
+from django.db.models import UniqueConstraint, Q
 
 
 # ==========================================
 # 1. CATÁLOGOS Y ESTRUCTURA
 # ==========================================
 
+def poblar_periodo_historico(apps, schema_editor):
+    Tarea = apps.get_model('academic', 'Tarea')
+    Asistencia = apps.get_model('academic', 'Asistencia')
+    Actividad = apps.get_model('academic', 'Actividad')
+    EvaluacionParcial = apps.get_model('academic', 'EvaluacionParcial')
+
+    for modelo in [Tarea, Asistencia, Actividad, EvaluacionParcial]:
+        for obj in modelo.objects.filter(periodo__isnull=True).select_related('grupo'):
+            if obj.grupo_id and obj.grupo.periodo_id:
+                obj.periodo_id = obj.grupo.periodo_id
+                obj.save(update_fields=['periodo'])
+
+
+def revertir(apps, schema_editor):
+    # No hay nada que revertir de forma segura: no queremos volver a poner
+    # periodo=NULL sobre datos ya poblados. No-op intencional.
+    pass
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        # ⚠️ ajusta esto al nombre real de tu migración anterior,
+        # la que agregó los campos `periodo` a los 4 modelos
+        ('academic', '00XX_agregar_periodo_a_modelos'),
+    ]
+
+    operations = [
+        migrations.RunPython(poblar_periodo_historico, revertir),
+    ]
+
 class Periodo(models.Model):
+    TIPOS = [
+        ('NON', 'Non (Agosto–Enero)'),
+        ('PAR', 'Par (Febrero–Junio)'),
+    ]
+
+    MESES_COMPLETO = {
+        1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+        5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+        9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre',
+    }
+    MESES_ABREVIADO = {
+        1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr',
+        5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago',
+        9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic',
+    }
+
+    tipo = models.CharField(
+        max_length=50,
+        default='regular'  
+    )
     nombre = models.CharField(max_length=50)
     fecha_inicio = models.DateField(null=True, blank=True)
     fecha_fin = models.DateField(null=True, blank=True)
@@ -23,16 +76,113 @@ class Periodo(models.Model):
         related_name='periodos',
         null=True, blank=True
     )
-    nombre = models.CharField(max_length=50)
 
     class Meta:
         verbose_name = "Periodo"
         verbose_name_plural = "Periodos"
         ordering = ['-fecha_inicio']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['plantel'],
+                condition=models.Q(activo=True),
+                name='uq_periodo_un_activo_por_plantel',
+            ),
+        ]
 
     def __str__(self):
         return self.nombre
 
+    def get_display_name(self, corto=False):
+        """Devuelve el período en español, ej: '2027 Febrero–Junio (PAR)'.
+        Si corto=True: '2027 Feb–Jun (PAR)'.
+        Si faltan fechas, cae en self.nombre como respaldo."""
+        if not self.fecha_inicio or not self.fecha_fin:
+            return self.nombre
+
+        meses = self.MESES_ABREVIADO if corto else self.MESES_COMPLETO
+        mes_inicio = meses.get(self.fecha_inicio.month, '')
+        mes_fin = meses.get(self.fecha_fin.month, '')
+        anio = self.fecha_fin.year
+
+        return f"{anio} {mes_inicio}–{mes_fin} ({self.tipo})"
+
+    def cerrar(self):
+        """Cierra este periodo. Bloquea nuevas tareas/asistencias/
+        actividades/calificaciones para todos los grupos de este
+        plantel que estén ligados a él; los registros ya creados siguen
+        consultables sin restricción."""
+        self.activo = False
+        self.save(update_fields=['activo'])
+
+    def promover_ciclo(self):
+        """Cierra este periodo, crea el siguiente Periodo del mismo
+        plantel, y para cada Grupo de este periodo:
+        - Si el siguiente grado no es 5° ni pasa de 6°: crea el Grupo
+          del siguiente grado (misma carrera/aula/docentes) y pasa
+          automáticamente a todos sus alumnos.
+        - Si el siguiente grado es 5° (viene de 4°): NO crea nada ni
+          mueve alumnos — requiere que el director asigne especialidad
+          a mano. Se devuelven esos alumnos para que la UI se los
+          muestre.
+        - Si el grupo es de 6° (egreso): no se crea grupo nuevo.
+        Devuelve (nuevo_periodo, alumnos_pendientes_especialidad).
+        """
+        from django.db import transaction
+
+        if not self.activo:
+            raise ValidationError('Este periodo ya estaba cerrado.')
+
+        with transaction.atomic():
+            self.cerrar()
+
+            anio_ref = self.fecha_fin.year if self.fecha_fin else self.fecha_inicio.year
+
+            if self.tipo == 'NON':
+                nuevo_tipo = 'PAR'
+                nueva_fecha_inicio = self.fecha_fin.replace(month=2, day=1) if self.fecha_fin else None
+                nueva_fecha_fin = self.fecha_fin.replace(month=6, day=30) if self.fecha_fin else None
+                nuevo_nombre = f"{anio_ref} Febrero–Junio"
+            else:
+                nuevo_tipo = 'NON'
+                nueva_fecha_inicio = self.fecha_fin.replace(month=8, day=1) if self.fecha_fin else None
+                nueva_fecha_fin = self.fecha_fin.replace(year=anio_ref + 1, month=1, day=31) if self.fecha_fin else None
+                nuevo_nombre = f"{anio_ref} Agosto–Enero"
+
+            nuevo_periodo = Periodo.objects.create(
+                nombre=nuevo_nombre,
+                tipo=nuevo_tipo,
+                fecha_inicio=nueva_fecha_inicio,
+                fecha_fin=nueva_fecha_fin,
+                activo=True,
+                plantel=self.plantel,
+            )
+
+            alumnos_pendientes = []
+
+            for grupo in self.plantel.grupos.filter(periodo=self):
+                grado_siguiente = grupo.grado + 1
+
+                if grado_siguiente == 5:
+                    alumnos_pendientes.extend(grupo.alumnos.all())
+                    continue
+
+                if grado_siguiente > 6:
+                    continue
+
+                nuevo_grupo = Grupo.objects.create(
+                    plantel=grupo.plantel,
+                    carrera=grupo.carrera,
+                    periodo=nuevo_periodo,
+                    nombre=grupo.nombre,
+                    grado=grado_siguiente,
+                    aula=grupo.aula,
+                    capacidad_maxima=grupo.capacidad_maxima,
+                )
+                nuevo_grupo.docentes.set(grupo.docentes.all())
+                grupo.alumnos.update(alumno_grupo=nuevo_grupo)
+
+        return nuevo_periodo, alumnos_pendientes
+        
 
 class Carrera(models.Model):
     NIVELES = [
@@ -60,12 +210,23 @@ class Carrera(models.Model):
 # ==========================================
 
 class Grupo(models.Model):
+    ESPECIALIDADES = [
+        ('QUIMICO_BIOLOGICO', 'Químico-Biológico'),
+        ('FISICO_QUIMICO',    'Físico-Químico'),
+        ('ECONOMICO_ADMIN',   'Económico-Administrativo'),
+        ('HISTORICO_SOCIAL',  'Histórico-Social'),
+    ]
+
     plantel  = models.ForeignKey(Plantel,  on_delete=models.CASCADE, related_name='grupos')
     carrera  = models.ForeignKey(Carrera,  on_delete=models.CASCADE, related_name='grupos',  null=True, blank=True)
     periodo  = models.ForeignKey(Periodo,  on_delete=models.SET_NULL, null=True, blank=True)
 
     nombre           = models.CharField(max_length=50)
     grado            = models.IntegerField(verbose_name="Grado o Semestre")
+    especialidad     = models.CharField(
+        max_length=30, choices=ESPECIALIDADES, null=True, blank=True,
+        help_text='Solo aplica de 5° a 6° semestre en Preparatoria.'
+    )
     aula             = models.CharField(max_length=50, null=True, blank=True)
     capacidad_maxima = models.IntegerField(default=30)
 
@@ -82,13 +243,31 @@ class Grupo(models.Model):
         verbose_name = "Grupo"
         verbose_name_plural = "Grupos"
         ordering = ['grado', 'nombre']
+        constraints = [
+            UniqueConstraint(
+                fields=['plantel', 'periodo', 'carrera', 'grado'],
+                condition=Q(especialidad__isnull=True),
+                name='unique_grupo_general_sin_especialidad',
+            ),
+            UniqueConstraint(
+                fields=['plantel', 'periodo', 'carrera', 'grado', 'especialidad'],
+                condition=Q(especialidad__isnull=False),
+                name='unique_grupo_por_especialidad',
+            ),
+        ]
+    def save(self, *args, **kwargs):
+        # Generar nombre automático basado en grado y especialidad
+        especialidad_label = dict(self.ESPECIALIDADES).get(self.especialidad)
+        if especialidad_label:
+            self.nombre = f"{self.grado}° Semestre - {especialidad_label}"
+        else:
+            self.nombre = f"{self.grado}° Semestre"
 
-    # ── Un solo __str__ limpio ──────────────────────────────────────
+        super().save(*args, **kwargs)
     def __str__(self):
         nombre_carrera = self.carrera.nombre if self.carrera else "General"
         return f"{nombre_carrera} — {self.grado}º {self.nombre}"
 
-    # ── KPIs ────────────────────────────────────────────────────────
     @property
     def ocupacion_porcentaje(self):
         if self.capacidad_maxima > 0:
@@ -116,8 +295,7 @@ class Grupo(models.Model):
         if total == 0:
             return 0
         return int((resultado['presentes'] / total) * 100)
-
-
+    
 # ==========================================
 # 3. ACADÉMICO
 # ==========================================
@@ -192,15 +370,14 @@ class Asistencia(models.Model):
 
     alumno   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='asistencias')
     grupo    = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='asistencias')
-    asignatura = models.ForeignKey(
-        'Asignatura',
-        on_delete=models.CASCADE,
-        related_name='asistencias',
-        null=True, blank=True,
+    asignatura = models.ForeignKey('Asignatura', on_delete=models.CASCADE, related_name='asistencias', null=True, blank=True)
+    periodo  = models.ForeignKey(
+        Periodo, on_delete=models.PROTECT,
+        related_name='asistencias', editable=False, null=True, blank=True,
     )
-    fecha    = models.DateField(default=timezone.now)   # <-- ya no auto_now_add para poder editar
+    fecha    = models.DateField(default=timezone.now)
     estado   = models.CharField(max_length=1, choices=ESTADOS, default='P')
-    parcial = models.PositiveSmallIntegerField(default=1)
+    parcial  = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
         verbose_name = "Asistencia"
@@ -210,11 +387,18 @@ class Asistencia(models.Model):
 
     @property
     def presente(self):
-        """Compatibilidad hacia atrás con código que use .presente"""
         return self.estado == 'P'
 
     def __str__(self):
         return f"{self.alumno} — {self.grupo} — {self.fecha} ({self.get_estado_display()})"
+
+    def save(self, *args, **kwargs):
+        if self.grupo_id and not self.pk:
+            periodo_grupo = self.grupo.periodo
+            if not periodo_grupo or not periodo_grupo.activo:
+                raise ValidationError('El ciclo de este grupo ya fue cerrado por el director. No se puede pasar lista.')
+            self.periodo = periodo_grupo
+        super().save(*args, **kwargs)
 
 # ==========================================
 # 4. HORARIOS
@@ -322,9 +506,13 @@ class Tarea(models.Model):
     docente    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tareas_creadas')
     grupo      = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='tareas')
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='tareas')
+    periodo    = models.ForeignKey(
+        Periodo, on_delete=models.PROTECT,
+        related_name='tareas', editable=False, null=True, blank=True,
+    )
     titulo     = models.CharField(max_length=200)
     descripcion= models.TextField(blank=True)
-    archivo = CloudinaryField('archivo', resource_type='raw',type='upload', blank=True, null=True)
+    archivo = CloudinaryField('archivo', resource_type='raw', type='upload', blank=True, null=True)
     fecha_entrega = models.DateTimeField()
     creada_en  = models.DateTimeField(auto_now_add=True)
     activa     = models.BooleanField(default=True)
@@ -342,6 +530,13 @@ class Tarea(models.Model):
         from django.utils import timezone
         return timezone.now() > self.fecha_entrega
 
+    def save(self, *args, **kwargs):
+        if self.grupo_id and not self.pk:
+            periodo_grupo = self.grupo.periodo
+            if not periodo_grupo or not periodo_grupo.activo:
+                raise ValidationError('El ciclo de este grupo ya fue cerrado por el director. No se pueden crear nuevas tareas.')
+            self.periodo = periodo_grupo
+        super().save(*args, **kwargs)
 
 class EntregaTarea(models.Model):
     ESTADOS = [
@@ -387,6 +582,10 @@ class Actividad(models.Model):
     docente       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     grupo         = models.ForeignKey(Grupo, on_delete=models.CASCADE)
     asignatura    = models.ForeignKey(Asignatura, on_delete=models.CASCADE)
+    periodo       = models.ForeignKey(
+        Periodo, on_delete=models.PROTECT,
+        related_name='actividades', editable=False, null=True, blank=True,
+    )
     titulo        = models.CharField(max_length=200)
     instrucciones = models.TextField(blank=True)
     tipo          = models.CharField(max_length=15, choices=TIPOS)
@@ -403,6 +602,14 @@ class Actividad(models.Model):
     @property
     def vencida(self):
         return timezone.now() > self.fecha_entrega
+
+    def save(self, *args, **kwargs):
+        if self.grupo_id and not self.pk:
+            periodo_grupo = self.grupo.periodo
+            if not periodo_grupo or not periodo_grupo.activo:
+                raise ValidationError('El ciclo de este grupo ya fue cerrado por el director. No se pueden crear nuevas actividades.')
+            self.periodo = periodo_grupo
+        super().save(*args, **kwargs)
 
 class PreguntaActividad(models.Model):
     TIPOS = [
@@ -817,18 +1024,30 @@ class EvaluacionParcial(models.Model):
     grupo      = models.ForeignKey(Grupo, on_delete=models.CASCADE, related_name='evaluaciones_parciales')
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='evaluaciones_parciales')
     docente    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='evaluaciones_dadas')
-    rubro      = models.CharField(max_length=30, choices=RUBROS)   # <- era max_length=10; ahora también guarda claves de categorías extra
+    periodo    = models.ForeignKey(
+        Periodo, on_delete=models.PROTECT,
+        related_name='evaluaciones_parciales', editable=False, null=True, blank=True,
+    )
+    rubro      = models.CharField(max_length=30, choices=RUBROS)
     nota       = models.DecimalField(max_digits=4, decimal_places=2)
     observacion= models.TextField(blank=True)
     fecha      = models.DateField(auto_now_add=True)
     parcial = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
-        unique_together = [['alumno', 'grupo', 'asignatura', 'rubro']]
+        unique_together = [['alumno', 'grupo', 'asignatura', 'rubro', 'parcial']]
         verbose_name = 'Evaluación Parcial'
 
     def __str__(self):
         return f"{self.alumno} — {self.rubro}: {self.nota}"
+
+    def save(self, *args, **kwargs):
+        if self.grupo_id and not self.pk:
+            periodo_grupo = self.grupo.periodo
+            if not periodo_grupo or not periodo_grupo.activo:
+                raise ValidationError('El ciclo de este grupo ya fue cerrado por el director. No se pueden capturar nuevas calificaciones.')
+            self.periodo = periodo_grupo
+        super().save(*args, **kwargs)
     
 class CierreParcial(models.Model):
     grupo = models.ForeignKey('academic.Grupo', on_delete=models.CASCADE, related_name='cierres_parcial')

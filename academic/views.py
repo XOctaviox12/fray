@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import F, Q, Avg, Count, Case, When, IntegerField
 import datetime
 import json
 from django.http import JsonResponse
-from .models import Grupo, Periodo, Asignatura, Calificacion, Asistencia, Carrera, HorarioClase
+from .models import Grupo, Periodo, Asignatura, Calificacion, Asistencia, Carrera, HorarioClase, BoletaParcial
 from users.models import User, Tutor
 from .forms import GrupoForm, AsignaturaForm, AlumnoForm, TutorForm
 from users.views import get_campus_theme
@@ -16,6 +17,7 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from datetime import date as ddate
 from datetime import time as dtime
+from django.db import transaction
 
 from users.models import DocenteGrupo
 
@@ -130,7 +132,13 @@ def actualizar_aulas(request):
 def lista_grupos(request):
     theme   = get_campus_theme(request.user)
     plantel = request.user.plantel
-    grupos_base = Grupo.objects.filter(plantel=plantel).prefetch_related('docentes', 'alumnos')
+
+    periodo_activo = Periodo.objects.filter(plantel=plantel, activo=True).first()
+
+    grupos_base = Grupo.objects.filter(
+        plantel=plantel,
+        periodo=periodo_activo,          
+    ).prefetch_related('docentes', 'alumnos')
 
     total_aulas        = getattr(plantel, 'total_aulas', 20)
     aulas_ocupadas     = grupos_base.count()
@@ -289,23 +297,106 @@ def detalle_grupo(request, pk):
     })
 
 
-@login_required
 def crear_grupo(request):
+    """
+    Crear un nuevo grupo académico.
+    
+    El flujo es:
+    1. GET: Mostrar formulario vacío
+    2. POST: Validar y guardar
+       - GrupoForm valida nivel/grado/especialidad
+       - GrupoForm.save() asigna periodo activo automáticamente
+       - No hay lógica de periodo en la vista
+    """
     ctx = get_plantel_context(request.user)
+    
     if request.method == 'POST':
         form = GrupoForm(request.POST, plantel=request.user.plantel)
         if form.is_valid():
-            g = form.save(commit=False)
-            g.plantel = request.user.plantel
-            g.save()
-            form.save_m2m()
-            messages.success(request, "Grupo creado.")
-            return redirect('lista_grupos')
+            try:
+                grupo = form.save(commit=False)
+                grupo.plantel = request.user.plantel
+                # GrupoForm.save() ahora asigna periodo automáticamente
+                grupo.save()
+                form.save_m2m()  # Guardar docentes (M2M)
+                
+                messages.success(request, f"✅ Grupo '{grupo}' creado exitosamente.")
+                return redirect('lista_grupos')
+            
+            except Exception as e:
+                messages.error(request, f"❌ Error al crear el grupo: {str(e)}")
     else:
         form = GrupoForm(plantel=request.user.plantel)
-    return render(request, 'academic/grupo_form.html', {'form': form, 'titulo': 'Nuevo Grupo', **ctx})
+    
+    return render(request, 'academic/grupo_form.html', {
+        'form': form,
+        'titulo': 'Nuevo Grupo Académico',
+        **ctx
+    })
+ 
+ 
+@login_required
+def editar_grupo(request, grupo_id):
+    ctx = get_plantel_context(request.user)
+    """
+    Editar un grupo existente.
+    
+    La especialidad NO se puede cambiar después de creada (regla de negocio).
+    """
+    grupo = get_object_or_404(Grupo, id=grupo_id, plantel=request.user.plantel)
+    
+    if request.method == 'POST':
+        form = GrupoForm(request.POST, instance=grupo, plantel=request.user.plantel)
+        if form.is_valid():
+            try:
+                grupo_actualizado = form.save(commit=False)
+                # No permitir cambiar periodo de un grupo existente
+                grupo_actualizado.periodo = grupo.periodo
+                grupo_actualizado.save()
+                form.save_m2m()
+                
+                messages.success(request, f"✅ Grupo '{grupo}' actualizado.")
+                return redirect('lista_grupos')
+            
+            except Exception as e:
+                messages.error(request, f"❌ Error al actualizar: {str(e)}")
+    else:
+        form = GrupoForm(instance=grupo, plantel=request.user.plantel)
+    
+    return render(request, 'academic/grupo_form.html', {
+        'form': form,
+        'titulo': f'Editar Grupo: {grupo}',
+        'grupo': grupo,
+        **ctx
+    })
 
-
+@login_required
+def api_nivel_grado_label(request):
+    """
+    AJAX: devuelve la etiqueta correcta para el grado según el nivel.
+    
+    GET /academic/api/nivel-grado-label/?carrera_id=5
+    
+    Response: {"label": "Semestre / Cuatrimestre"}
+    """
+    carrera_id = request.GET.get('carrera_id')
+    if not carrera_id:
+        return JsonResponse({'label': 'Grado Escolar'})
+    
+    try:
+        carrera = Carrera.objects.get(id=carrera_id, plantel=request.user.plantel)
+        
+        if carrera.nivel in ['PREPARATORIA', 'UNIVERSIDAD']:
+            label = 'Semestre / Cuatrimestre'
+        else:
+            label = 'Grado Escolar'
+        
+        return JsonResponse({'label': label})
+    
+    except:
+        return JsonResponse({'label': 'Grado Escolar'}, status=400)
+ 
+ 
 @login_required
 def editar_grupo(request, pk):
     ctx   = get_plantel_context(request.user)
@@ -330,23 +421,66 @@ def eliminar_grupo(request, pk):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
 def promocion_masiva(request):
+    """Vista de promoción masiva — permitir solo al director."""
     if request.user.rol != 'DIRECTOR':
         return redirect('dashboard')
+ 
+    plantel = request.user.plantel
+    if not plantel:
+        messages.error(request, 'No tienes plantel asignado.')
+        return redirect('dashboard')
+ 
+    periodo_actual = Periodo.objects.filter(plantel=plantel, activo=True).first()
+    if not periodo_actual:
+        messages.error(request, 'No hay período activo.')
+        return redirect('dashboard')
+ 
+    if request.method == 'GET':
+        grupos = plantel.grupos.filter(periodo=periodo_actual).order_by('grado')
+        pendientes_ids = request.session.get('alumnos_pendientes_especialidad', [])
+        context = {
+            'grupos': grupos,
+            'periodo': periodo_actual,
+            'pendientes_count': len(pendientes_ids),
+        }
+        return render(request, 'academic/promocion_masiva.html', context)
+ 
     if request.method == 'POST':
-        plantel          = request.user.plantel
-        nuevo_periodo_id = request.POST.get('nuevo_periodo')
-        Grupo.objects.filter(plantel=plantel).filter(Q(grado=1) | Q(grado=2)).update(
-            grado=F('grado') + 1,
-            periodo_id=nuevo_periodo_id,
-            fecha_inicio=F('fecha_inicio') + datetime.timedelta(days=365),
-            fecha_fin=F('fecha_fin') + datetime.timedelta(days=365)
-        )
-        messages.success(request, "Promoción completada.")
-        return redirect('lista_grupos')
-    return render(request, 'academic/confirmar_promocion.html', {
-        'periodos': Periodo.objects.filter(activo=True, plantel=request.user.plantel)
-    })
+        try:
+            # ── CAMBIO CRÍTICO: Ejecutar promoción y capturar alumnos pendientes ──
+            nuevo_periodo, alumnos_pendientes = periodo_actual.promover_ciclo()
+            
+            # ── NUEVO: Guardar en sesión para la siguiente vista ──
+            request.session['alumnos_pendientes_especialidad'] = [a.id for a in alumnos_pendientes]
+            request.session.modified = True
+            
+            # ── FIN DEL CAMBIO ──
+ 
+            if alumnos_pendientes:
+                # Hay alumnos que necesitan asignación de especialidad
+                messages.info(
+                    request,
+                    f'✅ Promoción completada. {len(alumnos_pendientes)} alumno(s) necesitan asignación de especialidad.'
+                )
+                # Redirigir a la nueva vista de asignación
+                return redirect('asignar_especialidades')
+            else:
+                # Sin pendientes — promoción completada sin necesidad de especialidades
+                messages.success(
+                    request,
+                    f'✅ Promoción completada exitosamente. Nuevo período: {nuevo_periodo.nombre}'
+                )
+                return redirect('lista_grupos')
+ 
+        except ValidationError as e:
+            messages.error(request, f'Error en promoción: {e}')
+            return redirect('promocion_masiva')
+        except Exception as e:
+            messages.error(request, f'Error inesperado: {str(e)}')
+            return redirect('promocion_masiva')
+ 
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -585,8 +719,12 @@ def detalle_alumno(request, pk):
         messages.success(request, f"Perfil de {alumno.get_full_name()} actualizado.")
         return redirect('detalle_alumno', pk=pk)
 
-    calificaciones = Calificacion.objects.filter(alumno=alumno).select_related('asignatura').order_by('-fecha')
-    promedio_alumno = calificaciones.aggregate(Avg('nota'))['nota__avg'] or 0.0
+    boletas = BoletaParcial.objects.filter(
+        alumno=alumno, 
+        publicada=True
+    ).select_related('asignatura', 'grupo').order_by('parcial')
+
+    promedio_alumno = boletas.aggregate(Avg('calificacion_final'))['calificacion_final__avg'] or 0.0
 
     asistencias         = Asistencia.objects.filter(alumno=alumno).order_by('-fecha')
     total_presentes = asistencias.filter(estado='P').count()
@@ -598,7 +736,7 @@ def detalle_alumno(request, pk):
 
     return render(request, 'academic/alumno_detalle.html', {
         'alumno':               alumno,
-        'calificaciones':       calificaciones,
+        'calificaciones':       boletas, 
         'promedio_alumno':      round(promedio_alumno, 1),
         'asistencias':          asistencias,
         'total_presentes':      total_presentes,
@@ -1157,3 +1295,309 @@ def eliminar_horario_pdf(request, pk):
         horario.delete()
         messages.success(request, 'Horario eliminado.')
     return redirect('lista_horarios_pdf')
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def asignar_especialidades(request):
+    """
+    Vista para asignar especialidades a alumnos que pasan de 4° a 5° en Preparatoria.
+
+    GET: Muestra formulario con lista de alumnos pendientes (desde sesión o BD)
+    POST: Procesa las asignaciones y mueve alumnos a grupos de 5°
+
+    Flujo híbrido: permite asignar uno por uno O por lotes.
+    Crea automáticamente grupos de 5° si no existen.
+    """
+
+    # Solo Director
+    if request.user.rol != 'DIRECTOR':
+        messages.error(request, 'Solo directores pueden asignar especialidades.')
+        return redirect('dashboard')
+
+    plantel = request.user.plantel
+    if not plantel:
+        messages.error(request, 'No tienes plantel asignado.')
+        return redirect('dashboard')
+
+    # Obtener periodo activo
+    periodo_activo = Periodo.objects.filter(plantel=plantel, activo=True).first()
+    if not periodo_activo:
+        messages.error(request, 'No hay período activo en tu plantel.')
+        return redirect('dashboard')
+
+    # Recuperar alumnos pendientes (desde sesión o BD)
+    alumnos_pendientes_ids = request.session.get('alumnos_pendientes_especialidad', [])
+
+    if not alumnos_pendientes_ids:
+        alumnos_pendientes = User.objects.filter(
+            rol='ALUMNO',
+            plantel=plantel,
+            alumno_grupo__isnull=True,
+        ).distinct().order_by('last_name', 'first_name')
+    else:
+        alumnos_pendientes = User.objects.filter(id__in=alumnos_pendientes_ids)
+
+    if not alumnos_pendientes.exists():
+        messages.info(request, 'No hay alumnos pendientes de asignación de especialidad.')
+        return redirect('promocion_masiva')
+
+    especialidades = Grupo.ESPECIALIDADES
+
+    if request.method == 'GET':
+        alumnos_data = []
+        for alumno in alumnos_pendientes:
+            alumnos_data.append({
+                'id': alumno.id,
+                'nombre': alumno.get_full_name() or alumno.username,
+                'username': alumno.username,
+            })
+
+        context = {
+            'alumnos': alumnos_data,
+            'especialidades': especialidades,
+            'total_pendientes': len(alumnos_data),
+            'periodo': periodo_activo,
+        }
+        return render(request, 'academic/asignar_especialidades.html', context)
+
+    # POST: Procesar asignaciones
+    if request.method == 'POST':
+        asignaciones = request.POST.getlist('asignaciones')  # Lista de "alumno_id:especialidad"
+
+        if not asignaciones:
+            messages.error(request, 'Debes seleccionar al menos una asignación.')
+            return redirect('asignar_especialidades')
+
+        # CAMBIO 3: bloquear alumno con más de una especialidad ANTES de procesar nada
+        alumno_ids_vistos = set()
+        for item in asignaciones:
+            aid = item.split(':')[0]
+            if aid in alumno_ids_vistos:
+                messages.error(request, f'El alumno {aid} tiene más de una especialidad seleccionada.')
+                return redirect('asignar_especialidades')
+            alumno_ids_vistos.add(aid)
+        # FIN CAMBIO 3
+
+        try:
+            with transaction.atomic():
+                resultados = {
+                    'exitosas': 0,
+                    'errores': [],
+                }
+
+                for item in asignaciones:
+                    alumno_id = item  # valor de respaldo para el reporte de error
+                    try:
+                        with transaction.atomic():  # CAMBIO 4: savepoint individual por alumno
+                            alumno_id, especialidad = item.split(':')
+                            alumno = User.objects.get(id=int(alumno_id), rol='ALUMNO')
+
+                            esp_dict = dict(Grupo.ESPECIALIDADES)
+                            if especialidad not in esp_dict:
+                                raise ValueError(f'Especialidad inválida: {especialidad}')
+
+                            carrera = Carrera.objects.filter(
+                                plantel=plantel,
+                                nivel='PREPARATORIA',
+                            ).first()
+
+                            if not carrera:
+                                raise ValueError('No existe carrera de Preparatoria en tu plantel.')
+
+                            grupo_5to, creado = Grupo.objects.get_or_create(
+                                plantel=plantel,
+                                periodo=periodo_activo,
+                                carrera=carrera,
+                                grado=5,
+                                especialidad=especialidad,
+                                defaults={
+                                    'aula': f'Aula 5° - {esp_dict[especialidad]}',
+                                    'capacidad_maxima': 30,
+                                }
+                            )
+
+                            alumno.alumno_grupo = grupo_5to
+                            alumno.save(update_fields=['alumno_grupo'])
+
+                            resultados['exitosas'] += 1
+                        # FIN CAMBIO 4 — este except cierra el 'with' interno, no el for
+
+                    except (User.DoesNotExist, ValueError, Carrera.DoesNotExist) as e:
+                        resultados['errores'].append({'alumno_id': alumno_id, 'mensaje': str(e)})
+
+                # Limpiar sesión
+                if 'alumnos_pendientes_especialidad' in request.session:
+                    del request.session['alumnos_pendientes_especialidad']
+
+                # Mensaje resumen
+                msg = f'✅ {resultados["exitosas"]} alumno(s) asignado(s) exitosamente.'
+                if resultados['errores']:
+                    msg += f' ⚠️ {len(resultados["errores"])} error(es).'
+                messages.success(request, msg)
+
+                return redirect('promocion_masiva')
+
+        except Exception as e:
+            messages.error(request, f'Error al procesar asignaciones: {str(e)}')
+            return redirect('asignar_especialidades')
+ 
+@login_required
+@require_http_methods(["GET"])
+def api_grupos_especialidad(request):
+    """
+    API AJAX: devuelve lista de grupos de 5° para una especialidad elegida.
+    GET params: especialidad (clave), para que el frontend pueda mostrar
+    el grupo actual o el que se va a crear.
+    """
+    especialidad = request.GET.get('especialidad', '')
+
+    # CAMBIO: respuesta JSON en vez de messages+redirect (esto es un endpoint AJAX)
+    if request.user.rol != 'DIRECTOR':
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    plantel = request.user.plantel
+    if not plantel:
+        return JsonResponse({'error': 'No tienes plantel asignado'}, status=400)
+
+    periodo_activo = Periodo.objects.filter(plantel=plantel, activo=True).first()
+
+    if not periodo_activo:
+        return JsonResponse({'error': 'No hay período activo'}, status=400)
+
+    # Buscar grupo de 5° con esa especialidad
+    grupo = Grupo.objects.filter(
+        plantel=plantel,
+        periodo=periodo_activo,
+        grado=5,
+        especialidad=especialidad,
+    ).first()
+
+    esp_dict = dict(Grupo.ESPECIALIDADES)
+    esp_label = esp_dict.get(especialidad, 'Desconocida')
+
+    return JsonResponse({
+        'especialidad': especialidad,
+        'label': esp_label,
+        'grupo_existe': grupo is not None,
+        'grupo': {
+            'id': grupo.id,
+            'nombre': grupo.nombre,
+            'ocupacion': grupo.ocupacion_porcentaje,
+            'alumnos': grupo.alumnos.count(),
+        } if grupo else None,
+    })
+
+@login_required
+@require_http_methods(["POST"])
+def crear_periodo(request):
+    """Alta manual de un período — usado desde el panel de promoción
+    masiva para configurar el primer período de un plantel nuevo, o
+    para registrar un período fuera del flujo automático de promoción."""
+    if request.user.rol != 'DIRECTOR':
+        messages.error(request, 'Solo el Director puede dar de alta un período.')
+        return redirect('promocion_masiva')
+
+    plantel = request.user.plantel
+
+    nombre       = request.POST.get('nombre', '').strip()
+    tipo         = request.POST.get('tipo', '').strip()
+    fecha_inicio = request.POST.get('fecha_inicio', '').strip()
+    fecha_fin    = request.POST.get('fecha_fin', '').strip()
+    activar      = request.POST.get('activar') == 'on'
+
+    if not nombre or not tipo or not fecha_inicio or not fecha_fin:
+        messages.error(request, 'Todos los campos son obligatorios.')
+        return redirect('promocion_masiva')
+
+    if tipo not in ('NON', 'PAR'):
+        messages.error(request, 'Tipo de período inválido.')
+        return redirect('promocion_masiva')
+
+    try:
+        with transaction.atomic():
+            if activar:
+                # Solo puede existir un período activo por plantel
+                # (constraint uq_periodo_un_activo_por_plantel), así
+                # que desactivamos el actual antes de crear el nuevo.
+                Periodo.objects.filter(plantel=plantel, activo=True).update(activo=False)
+
+            nuevo_periodo = Periodo.objects.create(
+                nombre=nombre,
+                tipo=tipo,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                activo=activar,
+                plantel=plantel,
+            )
+
+        logger.info(f"[crear_periodo] Período '{nombre}' creado por {request.user} (plantel {plantel.id}, activo={activar})")
+        messages.success(request, f'✅ Período "{nombre}" creado correctamente.')
+
+    except Exception as e:
+        logger.exception(f"[crear_periodo] Error al crear período: {e}")
+        messages.error(request, f'Ocurrió un error al crear el período: {e}')
+
+    return redirect('promocion_masiva')
+
+@login_required
+def historial_academico_alumno(request, pk):
+    """
+    Historial académico completo de un alumno: calificaciones finales
+    por parcial (BoletaParcial, ya publicadas), agrupadas por ciclo
+    (periodo) y por parcial dentro de cada ciclo.
+ 
+    Pensado principalmente para consultar el historial de alumnos ya
+    graduados (desde la sección Graduados), pero funciona para
+    cualquier alumno del plantel.
+    """
+    if request.user.rol not in ('DIRECTOR', 'COORD', 'ADMIN'):
+        messages.error(request, 'No tienes permiso para ver esta sección.')
+        return redirect('dashboard')
+ 
+    alumno = get_object_or_404(User, pk=pk, plantel=request.user.plantel, rol='ALUMNO')
+ 
+    boletas = BoletaParcial.objects.filter(
+        alumno=alumno, publicada=True
+    ).select_related('asignatura', 'grupo', 'grupo__periodo').order_by(
+        '-grupo__periodo__fecha_inicio', 'parcial', 'asignatura__nombre'
+    )
+ 
+    from itertools import groupby
+ 
+    ciclos = []
+    for periodo, boletas_periodo in groupby(boletas, key=lambda b: b.grupo.periodo):
+        boletas_periodo = list(boletas_periodo)
+        grupo_del_ciclo = boletas_periodo[0].grupo
+ 
+        # Agrupar por número de parcial dentro de este ciclo
+        parciales_dict = {}
+        for b in boletas_periodo:
+            parciales_dict.setdefault(b.parcial, []).append(b)
+ 
+        parciales_lista = []
+        for num_parcial in sorted(parciales_dict.keys()):
+            materias = parciales_dict[num_parcial]
+            notas = [float(b.calificacion_final) for b in materias]
+            promedio_parcial = round(sum(notas) / len(notas), 2) if notas else None
+            parciales_lista.append({
+                'numero': num_parcial,
+                'materias': materias,
+                'promedio': promedio_parcial,
+            })
+ 
+        notas_ciclo = [float(b.calificacion_final) for b in boletas_periodo]
+        promedio_ciclo = round(sum(notas_ciclo) / len(notas_ciclo), 2) if notas_ciclo else None
+ 
+        ciclos.append({
+            'periodo': periodo,
+            'grupo': grupo_del_ciclo,
+            'parciales': parciales_lista,
+            'promedio_ciclo': promedio_ciclo,
+        })
+ 
+    return render(request, 'academic/historial_academico.html', {
+        'alumno': alumno,
+        'ciclos': ciclos,
+    })
+ 

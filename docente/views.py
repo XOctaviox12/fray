@@ -22,6 +22,11 @@ from academic.models import (
     Actividad, EntregaActividad,
     MaterialApoyo, CarpetaMaterial, ComentarioMaterial,
 )
+from docente.forms import (
+    TareaForm, ActividadForm, AsistenciaForm, AsistenciaLoteForm,
+    EvaluacionParcialForm, CierreParcialForm, BoletaParcialForm
+)
+from django.core.exceptions import ValidationError
 
 # Cloudinary
 import cloudinary
@@ -199,20 +204,32 @@ def lista_asistencia(request):
             docente=request.user,
             activo=True,
             asignatura__isnull=False,
-            grupo__plantel=request.user.plantel,      # Fix: filtro plantel
+            grupo__plantel=request.user.plantel,
         )
         .select_related('grupo', 'asignatura', 'grupo__carrera')
         .order_by('grupo__nombre', 'asignatura__nombre')
     )
 
-    grupo_id      = request.POST.get('grupo_id')      or request.GET.get('grupo_id')
-    asignatura_id = request.POST.get('asignatura_id') or request.GET.get('asignatura_id')
-    fecha_str     = request.POST.get('fecha')         or request.GET.get('fecha')
+    form_filtro = AsistenciaLoteForm(
+        request.POST or request.GET or None,
+        docente=request.user,
+    )
 
-    try:
-        fecha = date.fromisoformat(fecha_str) if fecha_str else date.today()
-    except ValueError:
-        fecha = date.today()
+    if form_filtro.is_valid():
+        grupo_sel      = form_filtro.cleaned_data['grupo']
+        asignatura_sel = form_filtro.cleaned_data.get('asignatura')
+        fecha          = form_filtro.cleaned_data['fecha']
+        grupo_id       = grupo_sel.pk
+        asignatura_id  = asignatura_sel.pk if asignatura_sel else None
+    else:
+        # Primera carga de la página u otro request sin esos campos completos
+        grupo_id      = request.POST.get('grupo_id')      or request.GET.get('grupo_id')
+        asignatura_id = request.POST.get('asignatura_id') or request.GET.get('asignatura_id')
+        fecha_str     = request.POST.get('fecha')         or request.GET.get('fecha')
+        try:
+            fecha = date.fromisoformat(fecha_str) if fecha_str else date.today()
+        except ValueError:
+            fecha = date.today()
 
     hoy = timezone.now().date()
 
@@ -220,7 +237,7 @@ def lista_asistencia(request):
     asignatura  = None
     filas       = []
     ya_guardado = False
-    historial   = []   # NUEVO — paridad con la pestaña Historial de Ionic
+    historial   = []
 
     if grupo_id and asignatura_id:
         asignacion = asignaciones.filter(
@@ -234,6 +251,14 @@ def lista_asistencia(request):
 
         grupo      = asignacion.grupo
         asignatura = asignacion.asignatura
+
+        # Bloqueo por ciclo cerrado (AsistenciaLoteForm aún no valida esto en su clean())
+        if grupo.periodo and not grupo.periodo.activo:
+            messages.error(
+                request,
+                f'El ciclo "{grupo.periodo}" ya fue cerrado por el director. No se puede pasar lista.'
+            )
+            return redirect('docente_lista_asistencia')
 
         alumnos = (
             grupo.alumnos
@@ -268,17 +293,12 @@ def lista_asistencia(request):
                 'es_P':      estado_actual == 'P',
                 'es_A':      estado_actual == 'A',
                 'es_R':      estado_actual == 'R',
-                # NUEVO: si ya existía un registro guardado para este alumno en
-                # esta fecha, se considera "revisado" desde que carga la página
-                # (igual que en la app Ionic). Si no, empieza sin revisar hasta
-                # que el maestro toque explícitamente un botón P/R/A.
                 'guardado':  alumno.pk in registros_hoy,
                 'presentes': res['presentes'],
                 'ausentes':  res['ausentes'],
                 'retardos':  res['retardos'],
             })
 
-        # ── NUEVO: historial de esta materia+grupo (paridad con Ionic) ──
         historial_qs = (
             Asistencia.objects
             .filter(grupo=grupo, asignatura=asignatura)
@@ -336,13 +356,14 @@ def lista_asistencia(request):
 
     return render(request, 'docente/asistencia.html', {
         'asignaciones': asignaciones,
+        'form_filtro':  form_filtro,
         'grupo':        grupo,
         'asignatura':   asignatura,
         'filas':        filas,
         'fecha':        fecha,
         'ya_guardado':  ya_guardado,
         'hoy':          hoy,
-        'historial':    historial,   # NUEVO
+        'historial':    historial,
     })
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -428,74 +449,58 @@ def tareas(request):
 
 @docente_required
 def crear_tarea(request):
-    from academic.models import Tarea
-
-    asignaciones = (
-        DocenteGrupo.objects
-        .filter(
-            docente=request.user,
-            activo=True,
-            asignatura__isnull=False,
-            grupo__plantel=request.user.plantel,
-        )
-        .select_related('grupo', 'grupo__carrera', 'asignatura')
-    )
-
+    """Crear tarea usando TareaForm con validaciones de periodo."""
+    
     if request.method == 'POST':
-        grupo_id      = request.POST.get('grupo_id')
-        asignatura_id = request.POST.get('asignatura_id')
-        titulo        = request.POST.get('titulo', '').strip()
-        descripcion   = request.POST.get('descripcion', '').strip()
-        fecha_entrega = request.POST.get('fecha_entrega')
-        archivo       = request.FILES.get('archivo')
-
-        if not all([grupo_id, asignatura_id, titulo, fecha_entrega]):
-            messages.error(request, 'Completa todos los campos obligatorios.')
-        else:
-            asignacion = asignaciones.filter(
-                grupo_id=grupo_id, asignatura_id=asignatura_id
-            ).first()
-            if not asignacion:
-                messages.error(request, 'No tienes permiso para ese grupo/asignatura.')
-            else:
-                tarea = Tarea.objects.create(
-                    docente=request.user,
-                    grupo=asignacion.grupo,
-                    asignatura=asignacion.asignatura,
-                    titulo=titulo,
-                    descripcion=descripcion,
-                    fecha_entrega=fecha_entrega,
-                    archivo=archivo,
-                    publicada=request.POST.get('publicada') == '1',
-                )
-                messages.success(request, f'✅ Tarea "{titulo}" creada correctamente.')
+        form = TareaForm(request.POST, request.FILES, docente=request.user)
+        if form.is_valid():
+            tarea = form.save(commit=False)
+            tarea.docente = request.user
+            try:
+                tarea.save()
+                messages.success(request, f'✅ Tarea "{tarea.titulo}" creada correctamente.')
                 return redirect('detalle_tarea', pk=tarea.pk)
-
-    # --- Grupos únicos (sin repetir por cada materia) ---
-    grupos_vistos = {}
-    for a in asignaciones:
-        if a.grupo_id not in grupos_vistos:
-            grupos_vistos[a.grupo_id] = a.grupo
-    grupos_unicos = sorted(
-        grupos_vistos.values(),
-        key=lambda g: (g.carrera.nombre, g.grado, g.nombre)
-    )
-
-    # --- Mapa grupo_id -> [ {id, nombre} de asignaturas ] para la cascada en JS ---
-    import json
-    asignaturas_por_grupo = {}
-    for a in asignaciones:
-        asignaturas_por_grupo.setdefault(str(a.grupo_id), []).append({
-            'id': a.asignatura_id,
-            'nombre': a.asignatura.nombre,
-        })
-
+            except ValidationError as e:
+                messages.error(request, str(e))
+        else:
+            # Mostrar errores del formulario
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+    else:
+        form = TareaForm(docente=request.user)
+    
     return render(request, 'docente/crear_tarea.html', {
-        'asignaciones': asignaciones,
-        'grupos_unicos': grupos_unicos,
-        'asignaturas_por_grupo_json': json.dumps(asignaturas_por_grupo),
+        'form': form,
+        'titulo': 'Crear Tarea',
+    })
+ 
+ 
+@docente_required
+def editar_tarea(request, pk):
+    """Editar tarea existente."""
+    tarea = get_object_or_404(Tarea, pk=pk, docente=request.user)
+    
+    if request.method == 'POST':
+        form = TareaForm(request.POST, request.FILES, instance=tarea, docente=request.user)
+        if form.is_valid():
+            tarea = form.save()
+            messages.success(request, f'✅ Tarea "{tarea.titulo}" actualizada.')
+            return redirect('detalle_tarea', pk=pk)
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+    else:
+        form = TareaForm(instance=tarea, docente=request.user)
+    
+    return render(request, 'docente/editar_tarea.html', {
+        'form': form,
+        'tarea': tarea,
+        'titulo': 'Editar Tarea',
     })
 
+ 
 def fix_pdf_url(url):
     url = url.replace('http://', 'https://').replace('/image/upload/', '/raw/upload/')
     if not url.endswith('.pdf'):
@@ -654,49 +659,6 @@ def ver_pdf(request, pk, tipo):
     response['X-Frame-Options'] = 'SAMEORIGIN'
     return response
 
-
-@docente_required
-def editar_tarea(request, pk):
-    from academic.models import Tarea
-
-    tarea = get_object_or_404(Tarea, pk=pk, docente=request.user)
-
-    asignaciones = (
-        DocenteGrupo.objects
-        .filter(
-            docente=request.user,
-            activo=True,
-            asignatura__isnull=False,
-            grupo__plantel=request.user.plantel,      # Fix
-        )
-        .select_related('grupo', 'asignatura')
-    )
-
-    if request.method == 'POST':
-        titulo        = request.POST.get('titulo', '').strip()
-        descripcion   = request.POST.get('descripcion', '').strip()
-        fecha_entrega = request.POST.get('fecha_entrega')
-        archivo       = request.FILES.get('archivo')
-        publicada     = request.POST.get('publicada') == '1'
-
-        if not all([titulo, fecha_entrega]):
-            messages.error(request, 'Título y fecha son obligatorios.')
-        else:
-            tarea.titulo        = titulo
-            tarea.descripcion   = descripcion
-            tarea.fecha_entrega = fecha_entrega
-            tarea.publicada     = publicada
-            if archivo:
-                tarea.archivo = archivo
-            tarea.save()
-            messages.success(request, f'✅ Tarea "{titulo}" actualizada.')
-            return redirect('detalle_tarea', pk=pk)
-
-    return render(request, 'docente/editar_tarea.html', {
-        'tarea': tarea, 'asignaciones': asignaciones,
-    })
-
-
 @docente_required
 def eliminar_tarea(request, pk):
     from academic.models import Tarea
@@ -753,102 +715,30 @@ def actividades(request):
 
 @docente_required
 def crear_actividad(request):
-    from academic.models import Actividad, PreguntaActividad, OpcionRespuesta
-
-    asignaciones = (
-        DocenteGrupo.objects
-        .filter(
-            docente=request.user,
-            activo=True,
-            asignatura__isnull=False,
-            grupo__plantel=request.user.plantel,
-        )
-        .select_related('grupo', 'asignatura')
-    )
-
+    """Crear actividad usando ActividadForm."""
+    
     if request.method == 'POST':
-        grupo_id        = request.POST.get('grupo_id')
-        asignatura_id   = request.POST.get('asignatura_id')
-        titulo          = request.POST.get('titulo', '').strip()
-        instrucciones   = request.POST.get('instrucciones', '').strip()
-        tipo            = request.POST.get('tipo')  # 'CUESTIONARIO' | 'ARCHIVO' | 'INTERACTIVA'
-        fecha_entrega   = request.POST.get('fecha_entrega')
-        url_interactiva = request.POST.get('url_interactiva', '').strip()
-        archivo         = request.FILES.get('archivo')
-
-        if not all([grupo_id, asignatura_id, titulo, fecha_entrega, tipo]):
-            messages.error(request, 'Completa todos los campos obligatorios.')
+        form = ActividadForm(request.POST, request.FILES, docente=request.user)
+        if form.is_valid():
+            actividad = form.save(commit=False)
+            actividad.docente = request.user
+            try:
+                actividad.save()
+                messages.success(request, f'✅ Actividad "{actividad.titulo}" creada.')
+                return redirect('detalle_actividad', pk=actividad.pk)
+            except ValidationError as e:
+                messages.error(request, str(e))
         else:
-            asignacion = asignaciones.filter(
-                grupo_id=grupo_id, asignatura_id=asignatura_id
-            ).first()
-            if not asignacion:
-                messages.error(request, 'No tienes permiso para ese grupo/asignatura.')
-            else:
-                actividad = Actividad.objects.create(
-                    docente=request.user,
-                    grupo=asignacion.grupo,
-                    asignatura=asignacion.asignatura,
-                    titulo=titulo,
-                    instrucciones=instrucciones,
-                    tipo=tipo,
-                    fecha_entrega=fecha_entrega,
-                    url_interactiva=url_interactiva if tipo == 'INTERACTIVA' else '',
-                    archivo=archivo,
-                    calificacion_automatica=False,
-                    publicada=request.POST.get('publicada') == '1',
-                )
-
-                if tipo == 'CUESTIONARIO':
-                    textos     = request.POST.getlist('pregunta_texto')
-                    puntos_l   = request.POST.getlist('pregunta_puntos')
-                    tipos_preg = request.POST.getlist('pregunta_tipo')
-                    hay_autocalificable = False
-
-                    for i, texto in enumerate(textos):
-                        if not texto.strip():
-                            continue
-                        tipo_preg = tipos_preg[i] if i < len(tipos_preg) else 'MULTIPLE'
-
-                        pregunta = PreguntaActividad.objects.create(
-                            actividad=actividad,
-                            tipo=tipo_preg,
-                            texto=texto.strip(),
-                            orden=i,
-                            puntos=puntos_l[i] if i < len(puntos_l) else 1,
-                        )
-
-                        if tipo_preg == 'MULTIPLE':
-                            hay_autocalificable = True
-                            opciones     = request.POST.getlist(f'opcion_texto_{i}')
-                            correcta_idx = request.POST.get(f'opcion_correcta_{i}', '0')
-                            for j, op_texto in enumerate(opciones):
-                                if op_texto.strip():
-                                    OpcionRespuesta.objects.create(
-                                        pregunta=pregunta,
-                                        texto=op_texto.strip(),
-                                        es_correcta=(str(j) == correcta_idx),
-                                    )
-
-                        elif tipo_preg == 'VF':
-                            hay_autocalificable = True
-                            correcta = request.POST.get(f'opcion_correcta_{i}', '0')  # '0'=Verdadero, '1'=Falso
-                            OpcionRespuesta.objects.create(
-                                pregunta=pregunta, texto='Verdadero', es_correcta=(correcta == '0'),
-                            )
-                            OpcionRespuesta.objects.create(
-                                pregunta=pregunta, texto='Falso', es_correcta=(correcta == '1'),
-                            )
-                        # 'ABIERTA' (respuesta corta): sin opciones, no autocalifica
-
-                    if hay_autocalificable:
-                        actividad.calificacion_automatica = True
-                        actividad.save(update_fields=['calificacion_automatica'])
-
-                messages.success(request, f'✅ Actividad "{titulo}" creada.')
-                return redirect('docente_actividades')
-
-    return render(request, 'docente/crear_actividad.html', {'asignaciones': asignaciones})
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+    else:
+        form = ActividadForm(docente=request.user)
+    
+    return render(request, 'docente/crear_actividad.html', {
+        'form': form,
+        'titulo': 'Crear Actividad',
+    })
 
 @docente_required
 def detalle_actividad(request, pk):
@@ -917,72 +807,28 @@ def detalle_actividad(request, pk):
 
 @docente_required
 def editar_actividad(request, pk):
-    from academic.models import Actividad, PreguntaActividad, OpcionRespuesta
-
+    """Editar actividad existente."""
     actividad = get_object_or_404(Actividad, pk=pk, docente=request.user)
-
-    asignaciones = (
-        DocenteGrupo.objects
-        .filter(
-            docente=request.user,
-            activo=True,
-            asignatura__isnull=False,
-            grupo__plantel=request.user.plantel,      # Fix
-        )
-        .select_related('grupo', 'asignatura')
-    )
-
+    
     if request.method == 'POST':
-        titulo          = request.POST.get('titulo', '').strip()
-        instrucciones   = request.POST.get('instrucciones', '').strip()
-        fecha_entrega   = request.POST.get('fecha_entrega')
-        url_interactiva = request.POST.get('url_interactiva', '').strip()
-        archivo         = request.FILES.get('archivo')
-        publicada       = request.POST.get('publicada') == '1'
-
-        if not all([titulo, fecha_entrega]):
-            messages.error(request, 'Título y fecha son obligatorios.')
-        else:
-            actividad.titulo          = titulo
-            actividad.instrucciones   = instrucciones
-            actividad.fecha_entrega   = fecha_entrega
-            actividad.url_interactiva = url_interactiva
-            actividad.publicada       = publicada
-            if archivo:
-                actividad.archivo = archivo
-            actividad.save()
-
-            if actividad.tipo in ('MULTIPLE', 'ABIERTA'):
-                actividad.preguntas.all().delete()
-                textos   = request.POST.getlist('pregunta_texto')
-                puntos_l = request.POST.getlist('pregunta_puntos')
-                for i, texto in enumerate(textos):
-                    if not texto.strip():
-                        continue
-                    pregunta = PreguntaActividad.objects.create(
-                        actividad=actividad,
-                        texto=texto.strip(),
-                        orden=i,
-                        puntos=puntos_l[i] if i < len(puntos_l) else 1,
-                    )
-                    if actividad.tipo == 'MULTIPLE':
-                        opciones     = request.POST.getlist(f'opcion_texto_{i}')
-                        correcta_idx = request.POST.get(f'opcion_correcta_{i}', '0')
-                        for j, op_texto in enumerate(opciones):
-                            if op_texto.strip():
-                                OpcionRespuesta.objects.create(
-                                    pregunta=pregunta,
-                                    texto=op_texto.strip(),
-                                    es_correcta=(str(j) == correcta_idx),
-                                )
-
-            messages.success(request, f'✅ Actividad "{titulo}" actualizada.')
+        form = ActividadForm(request.POST, request.FILES, instance=actividad, docente=request.user)
+        if form.is_valid():
+            actividad = form.save()
+            messages.success(request, f'✅ Actividad "{actividad.titulo}" actualizada.')
             return redirect('detalle_actividad', pk=pk)
-
-    preguntas = actividad.preguntas.prefetch_related('opciones').order_by('orden')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+    else:
+        form = ActividadForm(instance=actividad, docente=request.user)
+    
     return render(request, 'docente/editar_actividad.html', {
-        'actividad': actividad, 'asignaciones': asignaciones, 'preguntas': preguntas,
+        'form': form,
+        'actividad': actividad,
+        'titulo': 'Editar Actividad',
     })
+ 
 
 
 @docente_required
@@ -2488,7 +2334,6 @@ def _parcial_borrador(grupo, asignatura):
     ).exists()
     return cierre.parcial if hay_pendiente else None
 
-
 @docente_required
 def parcial_detalle(request, grupo_id, asig_id):
     import io
@@ -2547,7 +2392,7 @@ def parcial_detalle(request, grupo_id, asig_id):
         publicada=True, parcial=parcial_num
     ).order_by('creada_en')
 
-    # ── Guardar examen/proyecto/extras manual ────────────────────────────
+    # ── Guardar examen/proyecto/extras manual — vía EvaluacionParcialForm ──
     if request.method == 'POST' and 'guardar_notas' in request.POST:
         rubros_manuales = []
         if examen_habilitado:   rubros_manuales.append('EXAMEN')
@@ -2556,17 +2401,24 @@ def parcial_detalle(request, grupo_id, asig_id):
         for alumno in alumnos:
             for rubro in rubros_manuales:
                 val = request.POST.get(f'{rubro.lower()}_{alumno.pk}', '').strip()
-                if val:
-                    try:
-                        nota = float(val)
-                        if 0 <= nota <= 10:
-                            EvaluacionParcial.objects.update_or_create(
-                                alumno=alumno, grupo=grupo, asignatura=asignatura,
-                                rubro=rubro, parcial=parcial_num,
-                                defaults={'nota': nota, 'docente': request.user}
-                            )
-                    except ValueError:
-                        pass
+                if not val:
+                    continue
+                form_ev = EvaluacionParcialForm(
+                    {
+                        'alumno': alumno.pk, 'grupo': grupo.pk, 'asignatura': asignatura.pk,
+                        'rubro': rubro, 'nota': val, 'parcial': parcial_num,
+                    },
+                    docente=request.user, grupo=grupo,
+                )
+                if form_ev.is_valid():
+                    EvaluacionParcial.objects.update_or_create(
+                        alumno=alumno, grupo=grupo, asignatura=asignatura,
+                        rubro=rubro, parcial=parcial_num,
+                        defaults={'nota': form_ev.cleaned_data['nota'], 'docente': request.user}
+                    )
+                else:
+                    messages.warning(request, f'{alumno.get_full_name()} — {rubro}: {form_ev.errors.as_text()}')
+
             for extra in rubros_extra:
                 val = request.POST.get(f"extra_{extra['clave']}_{alumno.pk}", '').strip()
                 if val:
@@ -2583,7 +2435,7 @@ def parcial_detalle(request, grupo_id, asig_id):
         messages.success(request, 'Calificaciones guardadas.')
         return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
 
-    # ── Editar boleta manualmente ─────────────────────────────────────────
+    # ── Editar boleta manualmente — vía BoletaParcialForm ──────────────────
     if request.method == 'POST' and 'editar_boleta' in request.POST:
         alumno_id = request.POST.get('alumno_id')
         alumno = alumnos.filter(pk=alumno_id).first()
@@ -2598,42 +2450,57 @@ def parcial_detalle(request, grupo_id, asig_id):
             messages.error(request, 'Ese alumno todavía no tiene una boleta calculada para este parcial.')
             return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
 
-        def parse_nota_edit(key):
-            val = request.POST.get(key, '')
-            val = val.strip() if val is not None else ''
+        post_data = request.POST.copy()
+        post_data['alumno']     = alumno.pk
+        post_data['grupo']      = grupo.pk
+        post_data['asignatura'] = asignatura.pk
+        post_data['parcial']    = parcial_num
+        # calificacion_final se calcula abajo, pero el form la exige — la
+        # llenamos con un valor temporal válido solo para pasar la validación
+        # de rango; el valor real se sobreescribe después del cálculo.
+        post_data.setdefault('calificacion_final', '0')
+
+        form_boleta = BoletaParcialForm(post_data, docente=request.user, grupo=grupo, instance=boleta)
+        if not form_boleta.is_valid():
+            messages.error(request, f"No se guardó nada — revisa: {form_boleta.errors.as_text()}")
+            return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
+
+        valores = {
+            'nota_tareas':      form_boleta.cleaned_data.get('nota_tareas'),
+            'nota_actividades': form_boleta.cleaned_data.get('nota_actividades'),
+            'nota_asistencia':  form_boleta.cleaned_data.get('nota_asistencia'),
+        }
+        if examen_habilitado:
+            valores['nota_examen'] = form_boleta.cleaned_data.get('nota_examen')
+        else:
+            valores['nota_examen'] = None
+        if proyecto_habilitado:
+            valores['nota_proyecto'] = form_boleta.cleaned_data.get('nota_proyecto')
+        else:
+            valores['nota_proyecto'] = None
+
+        valores_extra = {}
+        errores_extra = []
+        for extra in rubros_extra:
+            val = request.POST.get(f"extra_{extra['clave']}", '').strip()
             if val == '':
-                return None, True
+                continue
             try:
                 n = float(val)
             except ValueError:
-                return None, False
+                errores_extra.append(extra['nombre'])
+                continue
             if not (0 <= n <= 10):
-                return None, False
-            return round(n, 2), True
+                errores_extra.append(extra['nombre'])
+                continue
+            valores_extra[extra['clave']] = round(n, 2)
 
-        campos = {'nota_tareas': 'nota_tareas', 'nota_actividades': 'nota_actividades', 'nota_asistencia': 'nota_asistencia'}
-        if examen_habilitado:   campos['nota_examen'] = 'nota_examen'
-        if proyecto_habilitado: campos['nota_proyecto'] = 'nota_proyecto'
-
-        valores = {}
-        errores = []
-        for campo_post, campo_modelo in campos.items():
-            valor, ok = parse_nota_edit(campo_post)
-            if not ok: errores.append(campo_post)
-            else: valores[campo_modelo] = valor
-
-        valores_extra = {}
-        for extra in rubros_extra:
-            valor, ok = parse_nota_edit(f"extra_{extra['clave']}")
-            if not ok: errores.append(extra['nombre'])
-            elif valor is not None: valores_extra[extra['clave']] = valor
-
-        if errores:
-            messages.error(request, f"No se guardó nada — revisa estos campos, deben ser un número entre 0 y 10 (o quedar vacíos): {', '.join(errores)}.")
+        if errores_extra:
+            messages.error(
+                request,
+                f"No se guardó nada — estos rubros deben ser un número entre 0 y 10 (o quedar vacíos): {', '.join(errores_extra)}."
+            )
             return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
-
-        if not examen_habilitado:   valores['nota_examen'] = None
-        if not proyecto_habilitado: valores['nota_proyecto'] = None
 
         def pond(nota, pct):
             return (nota * float(pct) / 100) if nota is not None else 0
@@ -2695,8 +2562,6 @@ def parcial_detalle(request, grupo_id, asig_id):
                 count += 1
 
         if publicar:
-            # Ya no hace falta el detalle crudo de este parcial: todo lo que
-            # el sistema necesita para promediar vive en BoletaParcial.
             tareas_p      = Tarea.objects.filter(grupo=grupo, asignatura=asignatura, docente=request.user, parcial=parcial_num)
             actividades_p = Actividad.objects.filter(grupo=grupo, asignatura=asignatura, docente=request.user, parcial=parcial_num)
             EntregaTarea.objects.filter(tarea__in=tareas_p).delete()
@@ -2858,10 +2723,23 @@ def parcial_detalle(request, grupo_id, asig_id):
     parcial_publicado = all(f['publicada'] for f in filas if f['boleta'])
     total_con_boleta  = sum(1 for f in filas if f['boleta'])
 
-    # ── Cerrar Parcial y Exportar: ya NO borra nada, solo exporta y cierra ──
+    # ── Cerrar Parcial y Exportar — vía CierreParcialForm ──────────────────
     if request.method == 'POST' and 'cerrar_parcial' in request.POST:
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment
+
+        cierre_existente = CierreParcial.objects.filter(
+            grupo=grupo, asignatura=asignatura, parcial=parcial_num
+        ).first()
+
+        form_cierre = CierreParcialForm(
+            {'grupo': grupo.pk, 'asignatura': asignatura.pk, 'parcial': parcial_num},
+            docente=request.user,
+            instance=cierre_existente,
+        )
+        if not form_cierre.is_valid():
+            messages.error(request, form_cierre.errors.as_text())
+            return redirect(f"{request.path}?vista={vista}&parcial={parcial_num}")
 
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -2893,10 +2771,9 @@ def parcial_detalle(request, grupo_id, asig_id):
             ancho = max((len(v) for v in valores), default=10)
             ws.column_dimensions[col[0].column_letter].width = ancho + 3
 
-        CierreParcial.objects.get_or_create(
-            grupo=grupo, asignatura=asignatura, parcial=parcial_num,
-            defaults={'docente': request.user}
-        )
+        cierre = form_cierre.save(commit=False)
+        cierre.docente = request.user
+        cierre.save()
 
         buffer = io.BytesIO()
         wb.save(buffer)

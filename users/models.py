@@ -17,7 +17,7 @@ class User(AbstractUser):
     )
 
     plantel = models.ForeignKey(
-        Plantel,
+        Plantel,    
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='usuarios',

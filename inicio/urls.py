@@ -12,4 +12,7 @@ urlpatterns = [
     path('comunicados/<int:pk>/eliminar/', views.eliminar_comunicado, name='eliminar_comunicado'),
     path('comunicados/<int:pk>/adjunto/', views.ver_adjunto_comunicado, name='ver_adjunto_comunicado'),
     path('en-construccion/', views.en_construccion, name='en_construccion'),
+    path('api/periodo-activo/', views.api_periodo_activo, name='api_periodo_activo'),
+    path('graduados/', views.lista_graduados, name='lista_graduados'),
+    
 ]

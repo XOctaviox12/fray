@@ -344,14 +344,6 @@
     cursor: pointer; transition: all var(--dur) var(--ease); margin-top: 4px;
   }
   .btn-primary:hover { background: var(--accent); box-shadow: 0 6px 18px rgba(79,110,247,.3); }
-  .btn-confirm-danger {
-    width: 100%; min-height: 48px; padding: 0 13px; background: var(--danger); color: #fff;
-    border: none; border-radius: 12px; font-size: 11.5px;
-    font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800;
-    text-transform: uppercase; letter-spacing: .1em;
-    cursor: pointer; transition: opacity var(--dur) var(--ease);
-  }
-  .btn-confirm-danger:hover { opacity: .88; }
   .btn-text-cancel {
     background: none; border: none; min-height: 40px;
     font-size: 11.5px; font-weight: 700; color: var(--ink-2); cursor: pointer;
@@ -395,10 +387,11 @@
       <h1>Panel de Control</h1>
       <p><strong style="color:var(--ink);font-weight:600;">{{ user.plantel.nombre }}</strong> &nbsp;·&nbsp; Ciclo activo {% now "Y" %}</p>
     </div>
-    <button class="btn-danger" onclick="toggleModal('modal-promocion')" type="button">
+    {# ── Ahora navega directo a la vista de promoción en vez de abrir un modal ── #}
+    <a href="{% url 'promocion_masiva' %}" class="btn-danger" style="text-decoration:none;">
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
       Cerrar Ciclo
-    </button>
+    </a>
   </div>
 
   <!-- Quick strip -->
@@ -741,35 +734,6 @@
   </div>
 </div>
 
-<!-- ══ MODAL: CERRAR CICLO ══ -->
-<div id="modal-promocion" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="promocion-title" aria-describedby="promocion-sub">
-  <div class="modal-box" style="max-width:420px;">
-    <button class="modal-close" onclick="toggleModal('modal-promocion')" type="button" aria-label="Cerrar confirmación de cierre de ciclo">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
-    </button>
-    <div style="width:46px;height:46px;background:var(--danger-soft);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--danger);margin-bottom:14px;" aria-hidden="true">
-      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-    </div>
-    <h2 class="modal-title" id="promocion-title" style="color:var(--danger);">¿Cerrar Ciclo Escolar?</h2>
-    <p class="modal-sub" id="promocion-sub">Esta acción mueve a <strong>todos</strong> los grupos al siguiente grado. <span style="color:var(--danger);font-weight:700;">Es irreversible.</span></p>
-    <form action="{% url 'promocion_masiva' %}" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-      {% csrf_token %}
-      <div>
-        <label class="form-label" for="nuevo-periodo">Nuevo Periodo</label>
-        <select name="nuevo_periodo" id="nuevo-periodo" class="form-input">
-          {% for p in periodos %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}
-        </select>
-      </div>
-      <button type="submit" class="btn-confirm-danger">
-        Confirmar Cierre de Ciclo
-      </button>
-      <button type="button" onclick="toggleModal('modal-promocion')" class="btn-text-cancel">
-        Cancelar
-      </button>
-    </form>
-  </div>
-</div>
-
 <script>
 const modalOpeners = {};
 
@@ -809,7 +773,7 @@ function toggleModal(id) {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    ['modal-inscripcion', 'modal-promocion'].forEach(id => {
+    ['modal-inscripcion'].forEach(id => {
       const modal = document.getElementById(id);
       if (modal && modal.classList.contains('open')) closeModal(id);
     });

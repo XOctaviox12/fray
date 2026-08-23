@@ -1,0 +1,475 @@
+{% extends "inicio/base.html" %}
+{% load static %}
+
+{% block title %}Asignar Especialidades — 5° Semestre{% endblock %}
+
+{% block content %}
+<div class="asig-wrap">
+
+  <!-- Encabezado -->
+  <div class="asig-header">
+    <h1 class="asig-title">Asignar Especialidades</h1>
+    <p class="asig-subtitle">
+      Alumnos de 4° que pasan a 5° semestre de Preparatoria requieren seleccionar especialidad
+    </p>
+  </div>
+
+  <!-- Card informativo -->
+  <div class="asig-info-banner">
+    <p>ℹ️ Total pendientes: <strong>{{ total_pendientes }}</strong> alumno(s)</p>
+  </div>
+
+  <!-- Formulario -->
+  <form method="POST" id="form-asignaciones">
+    {% csrf_token %}
+
+    <!-- Tabs: Individual / Por lotes -->
+    <div class="asig-tabs">
+      <button type="button" class="tab-btn" data-tab="individual">Uno por uno</button>
+      <button type="button" class="tab-btn" data-tab="lotes">Por lotes</button>
+    </div>
+
+    <!-- TAB 1: INDIVIDUAL -->
+    <div id="tab-individual" class="tab-content" style="display: block;">
+      <div class="alumnos-cards">
+        {% for alumno in alumnos %}
+          <div class="alumno-card">
+            <span class="alumno-avatar">{{ alumno.nombre|first|upper }}</span>
+            <div class="alumno-info">
+              <p class="alumno-nombre">{{ alumno.nombre }}</p>
+              <p class="alumno-username">@{{ alumno.username }}</p>
+            </div>
+
+            <!-- Selector especialidad — SIN name="asignaciones": el JS arma los hidden inputs al enviar -->
+            <select class="especialidad-select" data-alumno-id="{{ alumno.id }}">
+              <option value="">— Seleccionar especialidad —</option>
+              {% for value, label in especialidades %}
+                <option value="{{ alumno.id }}:{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- TAB 2: POR LOTES -->
+    <div id="tab-lotes" class="tab-content" style="display: none;">
+      <div class="lotes-panel">
+
+        <label class="lotes-label">Selecciona especialidad y luego marca alumnos</label>
+
+        <!-- Selector global de especialidad -->
+        <select id="especialidad-lotes" class="lotes-select">
+          <option value="">— Elige especialidad para este lote —</option>
+          {% for value, label in especialidades %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+
+        <!-- Lista de checkboxes -->
+        <div class="lotes-list">
+          {% for alumno in alumnos %}
+            <label class="lotes-row">
+              <input type="checkbox" class="alumno-checkbox" data-alumno-id="{{ alumno.id }}" value="{{ alumno.id }}">
+              <span class="alumno-avatar">{{ alumno.nombre|first|upper }}</span>
+              <div class="alumno-info">
+                <p class="alumno-nombre">{{ alumno.nombre }}</p>
+                <p class="alumno-username">@{{ alumno.username }}</p>
+              </div>
+            </label>
+          {% endfor %}
+        </div>
+
+        <!-- Botón de acción rápida -->
+        <div class="lotes-actions">
+          <button type="button" id="btn-seleccionar-todos" class="btn-secundario">Marcar todos</button>
+          <button type="button" id="btn-deseleccionar-todos" class="btn-secundario">Desmarcar todos</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="asig-footer">
+      <a href="{% url 'promocion_masiva' %}" class="btn-secundario btn-cancelar">Cancelar</a>
+      <button type="submit" id="btn-guardar" class="btn-primario">Guardar asignaciones</button>
+    </div>
+  </form>
+
+  <!-- Mensajes de validación -->
+  <div id="error-box" class="asig-error" style="display: none;"></div>
+
+</div>
+
+<style>
+.asig-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.asig-header {
+  margin-bottom: 2rem;
+}
+
+.asig-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary, #161344);
+  margin: 0 0 8px;
+}
+
+.asig-subtitle {
+  color: var(--text-secondary, #6b7280);
+  font-size: 14px;
+  margin: 0;
+}
+
+.asig-info-banner {
+  background: var(--bg-accent, rgba(240, 38, 20, 0.06));
+  border-left: 4px solid var(--color-primary, #F02614);
+  padding: 12px 16px;
+  margin-bottom: 2rem;
+  border-radius: 8px;
+}
+
+.asig-info-banner p {
+  color: var(--text-accent, #92230f);
+  font-size: 13px;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Tabs */
+.asig-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-light, #e5e7eb);
+}
+
+.tab-btn {
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-secondary, #6b7280);
+  font-weight: 400;
+  font-size: 14px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary, #161344);
+}
+
+.tab-btn.active {
+  border-bottom-color: var(--color-primary, #F02614) !important;
+  color: var(--text-primary, #161344) !important;
+  font-weight: 600;
+}
+
+/* Avatar compartido */
+.alumno-avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary, #F02614);
+  background: var(--color-primary-light, rgba(240, 38, 20, 0.1));
+}
+
+.alumno-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.alumno-nombre {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary, #161344);
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alumno-username {
+  font-size: 12px;
+  color: var(--text-muted, #9ca3af);
+  margin: 0;
+}
+
+/* TAB individual */
+.alumnos-cards {
+  display: grid;
+  gap: 10px;
+}
+
+.alumno-card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.alumno-card:hover {
+  border-color: var(--border-medium, #dcdfe4);
+  box-shadow: 0 2px 8px -4px rgba(22, 19, 68, 0.12);
+}
+
+.especialidad-select {
+  min-width: 220px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border-medium, #dcdfe4);
+  border-radius: 10px;
+  font-size: 13px;
+  background: var(--bg-subtle, #fafafb);
+  color: var(--text-primary, #161344);
+  transition: border-color 0.2s;
+}
+
+.especialidad-select:hover {
+  border-color: var(--border-strong, #c3c7cf);
+}
+
+.especialidad-select:focus {
+  outline: none;
+  border-color: var(--color-primary, #F02614);
+  box-shadow: 0 0 0 3px var(--color-primary-light, rgba(240, 38, 20, 0.1));
+}
+
+/* TAB lotes */
+.lotes-panel {
+  background: var(--bg-subtle, #fafafb);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.lotes-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #161344);
+  margin-bottom: 8px;
+}
+
+.lotes-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-medium, #dcdfe4);
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 1rem;
+  background: var(--bg-surface, #fff);
+}
+
+.lotes-list {
+  display: grid;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.lotes-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-light, #eceef1);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lotes-row:hover {
+  border-color: var(--border-medium, #dcdfe4);
+  box-shadow: 0 2px 8px -4px rgba(22, 19, 68, 0.12);
+}
+
+.lotes-row .alumno-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-primary, #F02614);
+  flex-shrink: 0;
+}
+
+.lotes-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 8px;
+}
+
+/* Botones compartidos */
+.btn-secundario {
+  padding: 10px 16px;
+  border: 1px solid var(--border-medium, #dcdfe4);
+  border-radius: 10px;
+  background: var(--bg-surface, #fff);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #161344);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s;
+}
+
+.btn-secundario:hover {
+  border-color: var(--border-strong, #c3c7cf);
+}
+
+.btn-primario {
+  padding: 10px 20px;
+  background: var(--color-primary, #F02614);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.btn-primario:hover {
+  opacity: 0.92;
+}
+
+.asig-footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 2rem;
+  justify-content: flex-end;
+}
+
+.asig-error {
+  margin-top: 1rem;
+  padding: 12px 16px;
+  background: var(--bg-danger, #fef2f2);
+  color: var(--text-danger, #dc2626);
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+@media (max-width: 560px) {
+  .alumno-card {
+    flex-wrap: wrap;
+  }
+  .especialidad-select {
+    min-width: 100%;
+  }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+  const form = document.getElementById('form-asignaciones');
+  const errorBox = document.getElementById('error-box');
+
+  // ── Manejo de tabs ──────────────────────────────────────────────────
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const tabName = this.getAttribute('data-tab');
+
+      // Ocultar todos
+      tabContents.forEach(content => content.style.display = 'none');
+      tabButtons.forEach(b => b.classList.remove('active'));
+
+      // Mostrar seleccionado
+      document.getElementById(`tab-${tabName}`).style.display = 'block';
+      this.classList.add('active');
+    });
+  });
+
+  // Marcar primer tab como activo
+  tabButtons[0].classList.add('active');
+
+  // ── Lógica de lotes ────────────────────────────────────────────────
+  const especialidadLotes = document.getElementById('especialidad-lotes');
+  const alumnoCheckboxes = document.querySelectorAll('.alumno-checkbox');
+  const btnSeleccionarTodos = document.getElementById('btn-seleccionar-todos');
+  const btnDeseleccionarTodos = document.getElementById('btn-deseleccionar-todos');
+
+  btnSeleccionarTodos.addEventListener('click', function(e) {
+    e.preventDefault();
+    alumnoCheckboxes.forEach(cb => cb.checked = true);
+  });
+
+  btnDeseleccionarTodos.addEventListener('click', function(e) {
+    e.preventDefault();
+    alumnoCheckboxes.forEach(cb => cb.checked = false);
+  });
+
+  // ── Validación y envío ─────────────────────────────────────────────
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    errorBox.style.display = 'none';
+    errorBox.textContent = '';
+
+    const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-tab');
+    let asignacionesValidas = [];
+
+    if (activeTab === 'individual') {
+      document.querySelectorAll('.especialidad-select').forEach(select => {
+        if (select.value) {
+          asignacionesValidas.push(select.value);
+        }
+      });
+    } else {
+      const especialidadGlobal = especialidadLotes.value;
+
+      if (!especialidadGlobal) {
+        mostrarError('Debes seleccionar una especialidad.');
+        return;
+      }
+
+      alumnoCheckboxes.forEach(cb => {
+        if (cb.checked) {
+          asignacionesValidas.push(`${cb.value}:${especialidadGlobal}`);
+        }
+      });
+    }
+
+    if (asignacionesValidas.length === 0) {
+      mostrarError('Debes seleccionar al menos un alumno con especialidad.');
+      return;
+    }
+
+    asignacionesValidas.forEach(asignacion => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'asignaciones';
+      input.value = asignacion;
+      form.appendChild(input);
+    });
+
+    form.submit();
+  });
+
+  function mostrarError(mensaje) {
+    errorBox.textContent = mensaje;
+    errorBox.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+});
+</script>
+
+{% endblock %}

@@ -4,52 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstapi.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <title>{% block title %}FRAY | Sistema Escolar{% endblock %}</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; }
 
-        /* ============================================
-           DESIGN TOKENS — coherentes con el resto del sistema
-           ============================================ */
         :root {
             --sidebar-w: 248px;
-
             --color-primary:      #F57C00;
             --color-primary-hover:#E56E00;
             --color-primary-light:#FFF2E8;
-
             --color-secondary:      #0D47A1;
             --color-secondary-dark: #0A3576;
             --color-secondary-light:#EAF2FD;
-
             --color-danger:  #D32F2F;
             --color-danger-light:#FDECEC;
             --color-success: #22C55E;
             --color-success-light:#ECFDF3;
             --color-warning: #F59E0B;
             --color-warning-light:#FFF7E6;
-
             --bg-page:    #F8F9FB;
             --bg-surface: #FFFFFF;
             --bg-hover:   #F3F5F8;
-
             --text-primary:  #1F2937;
             --text-secondary:#6B7280;
             --text-muted:    #9CA3AF;
-
             --border-light: #E5E7EB;
-
             --radius-sm: 10px;
             --radius-md: 16px;
             --radius-lg: 20px;
             --radius-pill: 999px;
-
             --shadow-xs: 0 1px 2px rgba(15,23,42,.05);
             --shadow-sm: 0 4px 10px rgba(15,23,42,.05);
             --shadow-md: 0 10px 30px rgba(15,23,42,.08);
-
             --space-1: 4px;
             --space-2: 8px;
             --space-3: 12px;
@@ -57,18 +45,13 @@
             --space-5: 20px;
             --space-6: 24px;
             --space-7: 32px;
-
             --transition-fast:   150ms;
             --transition-normal: 220ms;
-
             --font-family: "Inter", "SF Pro Display", -apple-system, sans-serif;
         }
 
         body { font-family: var(--font-family); background: var(--bg-page); color: var(--text-primary); margin: 0; }
 
-        /* ============================================
-           SIDEBAR
-           ============================================ */
         #sidebar {
             width: var(--sidebar-w);
             background: linear-gradient(180deg, var(--color-secondary-dark) 0%, #081D3F 100%);
@@ -168,9 +151,6 @@
         .role-badge.coord     { background: var(--color-warning-light);   color: #FBBF24; border: 1px solid rgba(245,158,11,.25); }
         .role-badge.admin     { background: var(--color-danger-light);    color: #F87171; border: 1px solid rgba(211,47,47,.25); }
 
-        /* ============================================
-           PAGE WRAP / TOPBAR
-           ============================================ */
         #page-wrap {
             margin-left: var(--sidebar-w);
             min-height: 100vh;
@@ -200,20 +180,6 @@
         }
         .hamburger-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
 
-        .topbar-search {
-            display: flex; align-items: center; gap: var(--space-2);
-            background: var(--bg-surface);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-sm);
-            padding: var(--space-2) var(--space-4);
-            flex: 1; max-width: 320px;
-            box-shadow: var(--shadow-xs);
-            transition: border-color var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
-        }
-        .topbar-search:focus-within { border-color: var(--color-primary); box-shadow: 0 0 0 4px var(--color-primary-light); }
-        .topbar-search input { border: none; outline: none; background: transparent; font-size: 13px; font-family: var(--font-family); color: var(--text-primary); width: 100%; }
-        .topbar-search input::placeholder { color: var(--text-muted); }
-
         .topbar-center { display: flex; align-items: center; gap: var(--space-3); margin-left: auto; }
 
         .cycle-pill {
@@ -222,8 +188,23 @@
             border-radius: var(--radius-pill); padding: 6px 14px;
             display: flex; align-items: center; gap: var(--space-2);
             box-shadow: var(--shadow-xs);
+            transition: opacity var(--transition-fast) ease;
+            min-height: 36px;
         }
-        .cycle-pill span { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; }
+        .cycle-pill.loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .cycle-pill span { 
+            font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em;
+            white-space: nowrap;
+        }
+        .cycle-pill-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
+        }
 
         .icon-btn {
             width: 36px; height: 36px; border-radius: var(--radius-sm);
@@ -235,11 +216,6 @@
             box-shadow: var(--shadow-xs);
         }
         .icon-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
-        .icon-btn .notif-dot {
-            position: absolute; top: 6px; right: 6px;
-            width: 7px; height: 7px; background: var(--color-danger);
-            border-radius: 50%; border: 1.5px solid var(--bg-page);
-        }
 
         .logout-btn {
             font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
@@ -254,9 +230,6 @@
         }
         .logout-btn:hover { background: var(--color-danger); color: #fff; border-color: var(--color-danger); }
 
-        /* ============================================
-           CONTENT / FOOTER
-           ============================================ */
         #page-content { flex: 1; padding: var(--space-7) var(--space-7); }
 
         #page-footer {
@@ -272,9 +245,6 @@
         .footer-link { font-size: 10.5px; font-weight: 600; color: var(--text-muted); text-decoration: none; text-transform: uppercase; letter-spacing: .06em; transition: color var(--transition-fast) ease; }
         .footer-link:hover { color: var(--color-primary); }
 
-        /* ============================================
-           TOASTS
-           ============================================ */
         #toast-container {
             position: fixed; bottom: 20px; right: 20px; z-index: 500;
             display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2);
@@ -297,9 +267,6 @@
         .toast-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; opacity: .5; margin-bottom: 2px; }
         .toast-msg { font-size: 12.5px; font-weight: 600; line-height: 1.45; }
 
-        /* ============================================
-           RESPONSIVE
-           ============================================ */
         @media (max-width: 900px) {
             #sidebar { transform: translateX(-100%); }
             #sidebar.open { transform: translateX(0); }
@@ -309,12 +276,11 @@
             #page-content { padding: var(--space-5) var(--space-4); }
             #page-footer { padding: var(--space-4); flex-direction: column; align-items: flex-start; gap: var(--space-2); }
             #topbar { padding: 0 var(--space-4); }
-            .topbar-search { max-width: none; flex: 1; }
             .cycle-pill { display: none; }
         }
 
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-       .page-enter { animation: fadeUp var(--transition-normal) ease; }
+        .page-enter { animation: fadeUp var(--transition-normal) ease; }
 
         @media (prefers-reduced-motion: reduce) {
             .page-enter, .toast { animation: none; }
@@ -330,7 +296,6 @@
         FRAY
     </div>
 
-    {# ═══ MENÚ DIRECTOR / ADMIN / COORDINADOR ═══ #}
     {% if user.rol in 'ADMIN,DIRECTOR,COORD' %}
         {% if user.rol == 'ADMIN' %}
             <div class="role-badge admin">⚡ Súper Admin</div>
@@ -353,34 +318,23 @@
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h12"/></svg>
             Grupos
         </a>
-
+        <div class="nav-section">Historial</div>
+        <a href="{% url 'lista_graduados' %}" class="nav-item {% block nav_graduados %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>
+            Graduados
+        </a>
         <div class="nav-section">Académico</div>
         <a href="{% url 'lista_asignaturas' %}" class="nav-item {% block nav_materias %}{% endblock %}">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
             Materias
         </a>
-        {% comment %} <a href="{% url 'lista_horarios_pdf' %}" class="nav-item {% block nav_horarios_pdf %}{% endblock %}">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Horarios PDF
-        </a> {% endcomment %}
 
-        {% comment %} <a href="{% url 'lista_personal' %}" class="nav-item {% block nav_personal %}{% endblock %}">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-        Personal
-        </a> {% endcomment %}
-        {% comment %} <a href="{% url 'lista_coordinadores' %}" class="nav-item {% block nav_coordinadores %}{% endblock %}">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-            Coordinadores
-        </a> {% endcomment %}
-
-        {# ── Comunicados para directivos ── #}
         <div class="nav-section">Comunicación</div>
         <a href="{% url 'lista_comunicados' %}" class="nav-item {% block nav_comunicados %}{% endblock %}">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
             Comunicados
         </a>
 
-    {# ═══ MENÚ DOCENTE ═══ #}
     {% elif user.rol == 'DOCENTE' %}
         <div class="role-badge docente">📚 Docente</div>
 
@@ -393,10 +347,6 @@
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
             Mis Grupos
         </a>
-        {% comment %} <a href="{% url 'docente_horario' %}" class="nav-item {% block nav_docente_horario %}{% endblock %}">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-            Mi Horario
-        </a> {% endcomment %}
 
         <div class="nav-section">Clase</div>
         <a href="{% url 'docente_lista_asistencia' %}" class="nav-item {% block nav_asistencia %}{% endblock %}">
@@ -413,10 +363,6 @@
         </a>
 
         <div class="nav-section">Calificaciones</div>
-        {% comment %} <a href="{% url 'docente_boleta_lista' %}" class="nav-item {% block nav_boleta %}{% endblock %}">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2m-2 4h6m0-4h.01"/></svg>
-            Boleta / Concentrado
-        </a> {% endcomment %}
         <a href="{% url 'docente_parcial' %}" class="nav-item {% block nav_parcial %}{% endblock %}">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
             Calificación Parcial
@@ -427,12 +373,7 @@
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
             Material de Apoyo
         </a>
-        {% comment %} <a href="{% url 'docente_lista_planes' %}" class="nav-item {% block nav_planes %}{% endblock %}">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
-            Planes de Clase
-        </a> {% endcomment %}
 
-        {# ── Comunicados para docente ── #}
         <div class="nav-section">Comunicación</div>
         <a href="{% url 'lista_comunicados' %}" class="nav-item {% block nav_comunicados_docente %}{% endblock %}">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
@@ -464,22 +405,11 @@
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
 
-        {% comment %} <form action="{% url 'busqueda_global' %}" method="GET" class="topbar-search" role="search">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-muted); flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input type="text" name="q"
-                   placeholder="{% if user.rol == 'DOCENTE' %}Buscar alumno, grupo, tarea…{% else %}Buscar alumno, grupo, docente…{% endif %}"
-                   autocomplete="off" value="{{ request.GET.q|default:'' }}">
-        </form> {% endcomment %}
-
         <div class="topbar-center">
-            <div class="cycle-pill">
+            <div id="cycle-pill-container" class="cycle-pill loading">
                 <span>Ciclo</span>
-                Ene – Abr 2026
+                <div class="cycle-pill-text">Cargando...</div>
             </div>
-            {% comment %} <a href="#" class="icon-btn" title="Notificaciones">
-                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
-                <span class="notif-dot"></span>
-            </a> {% endcomment %}
             <a href="{% url 'perfil' %}" class="icon-btn" title="Mi Perfil">
                 <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </a>
@@ -542,11 +472,13 @@ function toggleSidebar() {
     document.getElementById('sidebar-overlay').classList.toggle('open');
     document.body.style.overflow = document.getElementById('sidebar').classList.contains('open') ? 'hidden' : '';
 }
+
 function closeSidebar() {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebar-overlay').classList.remove('open');
     document.body.style.overflow = '';
 }
+
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -555,6 +487,52 @@ document.addEventListener('DOMContentLoaded', () => {
         pageContent.classList.remove('page-enter');
     }, { once: true });
 });
+
+// ═════════════════════════════════════════════════════════════════════════════
+// FUNCIÓN: Cargar período activo dinámicamente (VERSIÓN MEJORADA)
+// ═════════════════════════════════════════════════════════════════════════════
+async function loadActivePeriod() {
+    const container = document.getElementById('cycle-pill-container');
+    const textDiv = container.querySelector('.cycle-pill-text');
+    
+    try {
+        const response = await fetch('{% url "api_periodo_activo" %}', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin'
+        });
+
+        console.log(`[loadActivePeriod] Status: ${response.status}`);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[loadActivePeriod] Error ${response.status}:`, errorText);
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('[loadActivePeriod] Response:', data);
+
+        if (data.success && data.periodo) {
+            const { display_name } = data.periodo;
+            textDiv.textContent = display_name || 'Sin período';
+            container.classList.remove('loading');
+            console.log('[loadActivePeriod] ✓ Período cargado exitosamente:', display_name);
+        } else {
+            throw new Error(data.error || 'No se pudo cargar el período');
+        }
+    } catch (error) {
+        console.error('[loadActivePeriod] Error:', error.message);
+        textDiv.textContent = 'Error al cargar';
+        container.classList.remove('loading');
+    }
+}
+
+// Cargar período cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', loadActivePeriod);
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>

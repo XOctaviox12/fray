@@ -1,9 +1,11 @@
+
 from django import forms
 from .models import Grupo, Asignatura, Carrera, Periodo, HorarioClase
 from users.models import User, Tutor
 import random
 import string
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 
 User = get_user_model()
 
@@ -29,10 +31,10 @@ class GrupoForm(forms.ModelForm):
         required=False,
         label="Asignar Docentes"
     )
-
+ 
     class Meta:
         model = Grupo
-        fields = ['carrera', 'grado', 'nombre', 'aula', 'capacidad_maxima', 'docentes']
+        fields = ['carrera', 'grado','especialidad', 'aula', 'capacidad_maxima', 'docentes']
         widgets = {
             'carrera': forms.Select(attrs={
                 'id': 'id_carrera_grupo',
@@ -43,9 +45,9 @@ class GrupoForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500',
                 'placeholder': 'Ej: 1, 3, 6...'
             }),
-            'nombre': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500',
-                'placeholder': 'Ej: A, B, Matutino...'
+            'especialidad': forms.Select(attrs={
+                'id': 'id_especialidad_grupo',
+                'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 bg-white'
             }),
             'aula': forms.TextInput(attrs={
                 'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500',
@@ -55,33 +57,110 @@ class GrupoForm(forms.ModelForm):
                 'class': 'w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500'
             }),
         }
-
-    # Nombres por defecto si el nivel aún no tiene Carrera creada en este plantel
+ 
     NIVELES_BASE = [
         ('SECUNDARIA', 'Secundaria General'),
         ('PREPARATORIA', 'Preparatoria General'),
         ('UNIVERSIDAD', 'Universidad General'),
     ]
-
+ 
     def __init__(self, *args, **kwargs):
         plantel = kwargs.pop('plantel', None)
+        self.plantel = plantel  # ← Guardar para usar en save()
         super().__init__(*args, **kwargs)
-
+ 
+        self.fields['especialidad'].required = False
+        self.fields['especialidad'].widget.choices = [('', '--- Sin especialidad (1° a 4° semestre) ---')] + list(Grupo.ESPECIALIDADES)
+ 
         if plantel:
-            # Aseguramos que el plantel tenga las 3 carreras base.
-            # get_or_create no duplica: si ya existe una Carrera con ese
-            # nivel para este plantel, la respeta tal cual está.
+            # Crear carreras base si no existen
             for nivel, nombre_default in self.NIVELES_BASE:
                 Carrera.objects.get_or_create(
                     plantel=plantel,
                     nivel=nivel,
                     defaults={'nombre': nombre_default}
                 )
-
+ 
             self.fields['carrera'].queryset = Carrera.objects.filter(plantel=plantel)
             self.fields['docentes'].queryset = User.objects.filter(plantel=plantel, rol='DOCENTE')
             self.fields['carrera'].empty_label = "--- Seleccione Nivel (Secu o Prepa) ---"
+ 
+    def clean(self):
+        cleaned = super().clean()
+        carrera = cleaned.get('carrera')
+        grado = cleaned.get('grado')
+        especialidad = cleaned.get('especialidad')
 
+        if carrera and grado is not None:
+            es_prepa_avanzada = carrera.nivel == 'PREPARATORIA' and grado >= 5
+
+            if es_prepa_avanzada:
+                # 5° y 6° semestre: especialidad OBLIGATORIA
+                if not especialidad:
+                    raise forms.ValidationError(
+                        'A partir del 5° semestre de Preparatoria debes seleccionar una especialidad.'
+                    )
+            else:
+                # 1°-4° semestre (y Secundaria/Universidad): especialidad NO permitida
+                if especialidad:
+                    raise forms.ValidationError(
+                        'La especialidad solo aplica a partir del 5° semestre de Preparatoria. '
+                        'Este grado no debe llevar especialidad.'
+                    )
+
+        # Validar que no exista ya un grupo con la misma identidad
+        # (identidad = carrera + grado, y en 5°/6° también especialidad)
+        if carrera and grado is not None and self.plantel:
+            qs = Grupo.objects.filter(
+                plantel=self.plantel,
+                carrera=carrera,
+                grado=grado,
+                especialidad=especialidad,
+                periodo__activo=True,
+            )
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError(
+                    'Ya existe un grupo con este grado' +
+                    (f' y especialidad "{especialidad}"' if especialidad else '') +
+                    ' en el periodo activo.'
+                )
+
+        return cleaned
+ 
+    def save(self, commit=True):
+        """
+        ⚠️ CRÍTICO: Asigna el periodo activo del plantel automáticamente.
+        Esto previene crear grupos huérfanos (periodo=NULL).
+        """
+        instance = super().save(commit=False)
+        
+        # Asignar plantel (ya se hace en la vista, pero lo dejamos acá por seguridad)
+        if self.plantel:
+            instance.plantel = self.plantel
+            
+            # ← CRITICAL FIX: Asignar periodo activo si no tiene
+            if not instance.periodo_id:
+                periodo_activo = Periodo.objects.filter(
+                    plantel=self.plantel,
+                    activo=True
+                ).first()
+                
+                if not periodo_activo:
+                    raise ValidationError(
+                        f'El plantel "{self.plantel.nombre}" no tiene un período activo. '
+                        'Crea uno primero en "Ciclos Escolares".'
+                    )
+                
+                instance.periodo = periodo_activo
+        
+        if commit:
+            instance.save()
+            self.save_m2m()
+        
+        return instance
+ 
 
 class AsignaturaForm(forms.ModelForm):
     # Coincide exactamente con Carrera.NIVELES del modelo

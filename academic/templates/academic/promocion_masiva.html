@@ -1,0 +1,409 @@
+{% extends "inicio/base.html" %}
+{% load static %}
+
+{% block title %}Promoción de Ciclo{% endblock %}
+
+{% block content %}
+<div class="promo-wrap">
+
+  <h1 class="promo-title">Promoción de Ciclo</h1>
+  <p class="promo-subtitle">
+    Período activo: <strong>{{ periodo.nombre|default:"Sin período activo" }}</strong>
+  </p>
+
+  {# ── Banner condicional: solo aparece si quedaron pendientes de especialidad ── #}
+  {% if pendientes_count > 0 %}
+  <div class="promo-warning-banner">
+    <div>
+      <p class="promo-warning-title">⚠️ {{ pendientes_count }} alumno(s) pendientes de especialidad</p>
+      <p class="promo-warning-text">
+        Estos alumnos pasaron de 4° a 5° y necesitan que asignes su especialidad para completar la promoción.
+      </p>
+    </div>
+    <a href="{% url 'asignar_especialidades' %}" class="promo-warning-btn">Asignar ahora →</a>
+  </div>
+  {% endif %}
+
+  <!-- Grupos del período -->
+  <div class="promo-card">
+    <h2 class="promo-card-title">Grupos en este período</h2>
+    <div class="grupos-list">
+      {% for grupo in grupos %}
+        <div class="grupo-row">
+          <span class="grupo-avatar">{{ grupo.nombre|first|upper }}</span>
+          <span class="grupo-nombre">{{ grupo.nombre }}</span>
+          <span class="grupo-count">{{ grupo.alumnos.count }} alumno{{ grupo.alumnos.count|pluralize }}</span>
+        </div>
+      {% empty %}
+        <p class="grupos-empty">No hay grupos en este período.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Ejecutar promoción -->
+  <form method="POST" class="promo-form">
+    {% csrf_token %}
+    <button type="submit"
+            {% if not periodo %}disabled{% endif %}
+            class="btn-promover {% if not periodo %}btn-promover-disabled{% endif %}"
+            onclick="return confirm('¿Seguro que quieres ejecutar la promoción de ciclo? Esta acción cierra el período actual y no se puede deshacer.');">
+      Ejecutar promoción
+    </button>
+    {% if not periodo %}
+      <p class="promo-error-text">No hay período activo — crea uno abajo antes de poder promover.</p>
+    {% endif %}
+  </form>
+
+  <!-- Alta manual de período — colapsable -->
+  <div class="promo-manual-section">
+    <button type="button" id="btn-toggle-periodo" class="btn-toggle-periodo">
+      + Dar de alta un nuevo período manualmente
+    </button>
+
+    <div id="form-periodo" class="promo-manual-form" style="display:none;">
+      <p class="promo-manual-help">
+        Úsalo para configurar el primer período de un plantel nuevo, o para registrar un período fuera del flujo automático de promoción.
+      </p>
+      <form method="POST" action="{% url 'crear_periodo' %}" class="periodo-grid">
+        {% csrf_token %}
+
+        <div>
+          <label class="periodo-label">Nombre del período</label>
+          <input type="text" name="nombre" placeholder="Ej. 2027 Agosto–Enero" required class="periodo-input">
+        </div>
+
+        <div class="periodo-row-2">
+          <div>
+            <label class="periodo-label">Tipo</label>
+            <select name="tipo" required class="periodo-input">
+              <option value="">— Selecciona —</option>
+              <option value="NON">Non (Agosto–Enero)</option>
+              <option value="PAR">Par (Febrero–Junio)</option>
+            </select>
+          </div>
+          <div class="periodo-checkbox-wrap">
+            <label class="periodo-checkbox-label">
+              <input type="checkbox" name="activar" checked class="periodo-checkbox">
+              Marcar como período activo
+            </label>
+          </div>
+        </div>
+
+        <div class="periodo-row-2">
+          <div>
+            <label class="periodo-label">Fecha de inicio</label>
+            <input type="date" name="fecha_inicio" required class="periodo-input">
+          </div>
+          <div>
+            <label class="periodo-label">Fecha de fin</label>
+            <input type="date" name="fecha_fin" required class="periodo-input">
+          </div>
+        </div>
+
+        {% if periodo %}
+        <p class="periodo-notice">
+          ⚠️ Si marcas "Período activo", se desactivará automáticamente el período actual ({{ periodo.nombre }}).
+        </p>
+        {% endif %}
+
+        <button type="submit" class="btn-guardar-periodo">Guardar período</button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<style>
+.promo-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.promo-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary, #161344);
+  margin: 0 0 8px;
+}
+
+.promo-subtitle {
+  color: var(--text-secondary, #6b7280);
+  font-size: 14px;
+  margin: 0 0 1.5rem;
+}
+
+/* Banner de advertencia */
+.promo-warning-banner {
+  background: #fff7e6;
+  border-left: 4px solid #f59e0b;
+  padding: 16px 20px;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.promo-warning-title {
+  margin: 0;
+  font-weight: 700;
+  color: #92400e;
+  font-size: 14px;
+}
+
+.promo-warning-text {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: #92400e;
+}
+
+.promo-warning-btn {
+  white-space: nowrap;
+  background: #f59e0b;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+  transition: opacity 0.2s;
+}
+
+.promo-warning-btn:hover {
+  opacity: 0.9;
+}
+
+/* Card de grupos */
+.promo-card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 2px rgba(22, 19, 68, 0.04), 0 8px 20px -12px rgba(22, 19, 68, 0.08);
+}
+
+.promo-card-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-primary, #161344);
+  margin: 0 0 14px;
+}
+
+.grupos-list {
+  display: grid;
+  gap: 8px;
+}
+
+.grupo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--bg-subtle, #fafafb);
+  border: 1px solid var(--border-light, #eceef1);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.grupo-row:hover {
+  border-color: var(--border-medium, #dcdfe4);
+  box-shadow: 0 2px 8px -4px rgba(22, 19, 68, 0.12);
+}
+
+.grupo-avatar {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-primary, #F02614);
+  background: var(--color-primary-light, rgba(240, 38, 20, 0.1));
+}
+
+.grupo-nombre {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #161344);
+}
+
+.grupo-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #9ca3af);
+  white-space: nowrap;
+}
+
+.grupos-empty {
+  color: var(--text-muted, #9ca3af);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Botón ejecutar promoción */
+.promo-form {
+  margin-bottom: 2rem;
+}
+
+.btn-promover {
+  background: #f57c00;
+  color: #fff;
+  font-weight: 700;
+  padding: 12px 22px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: opacity 0.2s;
+}
+
+.btn-promover:hover {
+  opacity: 0.92;
+}
+
+.btn-promover-disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+}
+
+.promo-error-text {
+  font-size: 12.5px;
+  color: #dc2626;
+  margin-top: 8px;
+}
+
+/* Alta manual de período */
+.promo-manual-section {
+  border-top: 1px solid var(--border-light, #e5e7eb);
+  padding-top: 1.5rem;
+}
+
+.btn-toggle-periodo {
+  background: none;
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-toggle-periodo:hover {
+  border-color: var(--border-medium, #dcdfe4);
+  color: var(--text-primary, #161344);
+}
+
+.promo-manual-form {
+  margin-top: 1rem;
+  background: var(--bg-page, #f8f9fb);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.promo-manual-help {
+  font-size: 12.5px;
+  color: var(--text-secondary, #6b7280);
+  margin: 0 0 16px;
+}
+
+.periodo-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.periodo-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.periodo-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #161344);
+  margin-bottom: 4px;
+}
+
+.periodo-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 10px;
+  font-size: 14px;
+  background: var(--bg-surface, #fff);
+}
+
+.periodo-checkbox-wrap {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 10px;
+}
+
+.periodo-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #161344);
+}
+
+.periodo-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary, #F02614);
+}
+
+.periodo-notice {
+  font-size: 12px;
+  color: #92400e;
+  background: #fff7e6;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin: 0;
+}
+
+.btn-guardar-periodo {
+  background: var(--text-primary, #161344);
+  color: #fff;
+  font-weight: 700;
+  padding: 11px 18px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  width: fit-content;
+  transition: opacity 0.2s;
+}
+
+.btn-guardar-periodo:hover {
+  opacity: 0.92;
+}
+
+@media (max-width: 560px) {
+  .periodo-row-2 {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<script>
+document.getElementById('btn-toggle-periodo').addEventListener('click', function() {
+  const form = document.getElementById('form-periodo');
+  const abierto = form.style.display === 'block';
+  form.style.display = abierto ? 'none' : 'block';
+  this.textContent = abierto ? '+ Dar de alta un nuevo período manualmente' : '− Ocultar formulario de período';
+});
+</script>
+{% endblock %}

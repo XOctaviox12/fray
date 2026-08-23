@@ -11,7 +11,7 @@
                 {{ grupo.carrera.nombre }}
             </span>
             <h3 class="text-2xl font-black text-slate-800 mt-1">
-                {{ grupo.grado }}º
+                {% if not grupo.nombre.0.isdigit %}{{ grupo.grado }}º {% endif %}
                 <span class="text-{{ color }}-600">{{ grupo.nombre }}</span>
             </h3>
         </div>

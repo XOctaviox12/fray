@@ -1,0 +1,299 @@
+{% extends "inicio/base.html" %}
+{% load static %}
+
+{% block title %}Generaciones Graduadas{% endblock %}
+{% block nav_graduados %}active{% endblock %}
+
+{% block content %}
+<div class="graduados-wrap">
+
+  <h1 class="graduados-title">Generaciones Graduadas</h1>
+  <p class="graduados-subtitle">
+    Grupos de 6° semestre cuyo período ya fue cerrado — historial de egreso.
+  </p>
+
+  {% if not periodos_con_grupos %}
+    <div class="graduados-empty">
+      Aún no hay generaciones graduadas registradas.
+    </div>
+  {% endif %}
+
+  {% for bloque in periodos_con_grupos %}
+  <section class="periodo-card">
+    <div class="periodo-header">
+      <h2 class="periodo-title">
+        <span class="periodo-emoji">🎓</span> {{ bloque.periodo.get_display_name }}
+      </h2>
+      <span class="periodo-badge">
+        {{ bloque.total_alumnos }} egresado{{ bloque.total_alumnos|pluralize }}
+      </span>
+    </div>
+
+    <div class="grupos-list">
+      {% for grupo in bloque.grupos %}
+        <details class="grupo-item">
+          <summary class="grupo-summary">
+            <span class="grupo-nombre">
+              {{ grupo.nombre }}
+              {% if grupo.carrera %}<span class="grupo-carrera">— {{ grupo.carrera.nombre }}</span>{% endif %}
+            </span>
+            <span class="grupo-meta">
+              {{ grupo.alumnos.count }} alumno{{ grupo.alumnos.count|pluralize }}
+              <svg class="grupo-caret" width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </summary>
+
+          <div class="grupo-alumnos">
+            {% if grupo.alumnos.all %}
+              <ul class="alumnos-list">
+                {% for alumno in grupo.alumnos.all %}
+                  <li>
+                    <a href="{% url 'historial_academico_alumno' alumno.pk %}" class="alumno-row">
+                      <span class="alumno-avatar">{{ alumno.first_name|default:alumno.username|first|upper }}</span>
+                      <span class="alumno-nombre">{% firstof alumno.get_full_name alumno %}</span>
+                      <svg class="alumno-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </a>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="alumnos-empty">Sin alumnos registrados en este grupo.</p>
+            {% endif %}
+          </div>
+        </details>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+
+</div>
+
+<style>
+.graduados-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+.graduados-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary, #161344);
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.graduados-subtitle {
+  color: var(--text-secondary, #6b7280);
+  font-size: 14px;
+  margin: 0 0 1.75rem;
+}
+
+.graduados-empty {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted, #9ca3af);
+  font-size: 14px;
+}
+
+.periodo-card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 18px;
+  padding: 22px;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 2px rgba(22, 19, 68, 0.04), 0 8px 20px -12px rgba(22, 19, 68, 0.08);
+}
+
+.periodo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-light, #f0f1f3);
+}
+
+.periodo-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-primary, #161344);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.periodo-emoji {
+  font-size: 16px;
+}
+
+.periodo-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-primary, #F02614);
+  background: var(--color-primary-light, rgba(240, 38, 20, 0.1));
+  padding: 5px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.grupos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.grupo-item {
+  border: 1px solid var(--border-light, #eceef1);
+  border-radius: 14px;
+  background: var(--bg-subtle, #fafafb);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.grupo-item:hover {
+  border-color: var(--border-medium, #dcdfe4);
+  box-shadow: 0 2px 8px -4px rgba(22, 19, 68, 0.12);
+}
+
+.grupo-item[open] {
+  background: var(--bg-surface, #fff);
+}
+
+.grupo-summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #161344);
+}
+
+.grupo-summary::-webkit-details-marker {
+  display: none;
+}
+
+.grupo-carrera {
+  font-weight: 400;
+  color: var(--text-secondary, #6b7280);
+  margin-left: 2px;
+}
+
+.grupo-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #9ca3af);
+  white-space: nowrap;
+}
+
+.grupo-caret {
+  color: var(--text-muted, #9ca3af);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.grupo-item[open] .grupo-caret {
+  transform: rotate(180deg);
+  color: var(--color-primary, #F02614);
+}
+
+.grupo-alumnos {
+  padding: 4px 16px 16px;
+  border-top: 1px solid var(--border-light, #f0f1f3);
+}
+
+.alumnos-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alumno-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-light, #f0f1f3);
+  min-width: 0;
+  text-decoration: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.alumno-row:hover {
+  border-color: var(--color-primary, #F02614);
+  box-shadow: 0 2px 8px -4px rgba(240, 38, 20, 0.25);
+}
+
+.alumno-row:hover .alumno-nombre {
+  color: var(--color-primary, #F02614);
+}
+
+.alumno-avatar {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-primary, #F02614);
+  background: var(--color-primary-light, rgba(240, 38, 20, 0.1));
+}
+
+.alumnos-list li {
+  list-style: none;
+}
+
+.alumno-nombre {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-secondary, #374151);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s ease;
+}
+
+.alumno-arrow {
+  flex-shrink: 0;
+  color: var(--text-muted, #9ca3af);
+}
+
+.alumnos-empty {
+  font-size: 13px;
+  color: var(--text-muted, #9ca3af);
+  margin: 12px 0 0;
+}
+
+@media (max-width: 560px) {
+  .alumnos-list {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}

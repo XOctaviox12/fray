@@ -130,7 +130,7 @@
     tbody tr:hover {
     background: #fafbff;
   }
-  
+
   @media (max-width: 768px) {
     tbody tr {
       display: block;
@@ -140,7 +140,7 @@
       overflow: hidden;
       background: white;
     }
-    
+
     tbody td {
       display: block;
       padding: 10px 12px;
@@ -148,15 +148,15 @@
       border: none;
       border-bottom: 1px solid #f3f4f6;
     }
-    
+
     tbody td:last-child {
       border-bottom: none;
     }
-    
+
     thead {
       display: none;
     }
-    
+
     tbody td::before {
       content: attr(data-label);
       font-weight: 700;
@@ -167,6 +167,48 @@
       margin-bottom: 4px;
     }
   }
+
+  /* ── Historial académico — rediseño ── */
+  .hist-summary-hero {
+    border-radius: 16px;
+    background: linear-gradient(135deg, #1f2937 0%, #111318 100%);
+    padding: 26px;
+    border: 1px solid rgba(79, 110, 247, 0.3);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 20px; color: #fff; margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(17, 19, 24, 0.25);
+  }
+  .hist-summary-hero .hist-hero-label { font-size: 9.5px; font-weight: 800; color: rgba(255,255,255,.5); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 6px; }
+  .hist-summary-hero .hist-hero-title { font-size: 16px; font-weight: 800; margin: 0; }
+  .hist-summary-hero .hist-hero-num {
+    font-family:'Instrument Serif',serif;font-size:46px;font-weight:400;line-height:1;
+  }
+  .hist-summary-hero .hist-hero-tag { font-size: 9.5px; text-transform: uppercase; letter-spacing: .1em; font-weight: 800; color: rgba(255,255,255,.6); margin-top: 6px; text-align: center; }
+  .hist-summary-hero .hist-hero-num-box { text-align:center;padding:18px 26px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:14px;min-width:130px; }
+
+  .hist-stat-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 26px; }
+  .hist-stat { border-radius: 12px; padding: 14px; border: 1px solid var(--border); background: var(--bg); text-align: center; }
+  .hist-stat-num { font-family: 'Instrument Serif', serif; font-size: 24px; font-weight: 400; line-height: 1; color: var(--ink); }
+  .hist-stat-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); margin-top: 4px; }
+
+  .hist-ciclo-card { border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 14px; background: #fff; }
+  .hist-ciclo-head { display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: #fafbff; border-bottom: 1px solid var(--border); }
+  .hist-ciclo-icon { width: 42px; height: 42px; border-radius: 11px; background: linear-gradient(135deg, #4f6ef7 0%, #3b56e8 100%); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 3px 8px rgba(79,110,247,.25); }
+  .hist-ciclo-name { font-size: 14px; font-weight: 800; color: var(--ink); line-height: 1.2; }
+  .hist-ciclo-meta { font-size: 10.5px; color: var(--ink-3); margin-top: 3px; }
+  .hist-ciclo-promedio { font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 99px; white-space: nowrap; }
+
+  .hist-parcial { border-top: 1px solid #f3f4f6; }
+  .hist-parcial summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 18px; font-size: 12.5px; font-weight: 700; color: var(--ink); }
+  .hist-parcial summary::-webkit-details-marker { display: none; }
+  .hist-parcial-meta { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 700; color: var(--ink-3); }
+  .hist-parcial-caret { transition: transform .2s ease; color: var(--ink-3); flex-shrink: 0; }
+  .hist-parcial[open] .hist-parcial-caret { transform: rotate(180deg); color: var(--accent); }
+  .hist-parcial-body { padding: 0 18px 16px; }
+
+  .hist-materias-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 10px; align-items: center; padding: 8px 4px; font-size: 12px; border-bottom: 1px solid #f5f6f8; }
+  .hist-materias-row:last-child { border-bottom: none; }
+  .hist-materias-head { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); padding-bottom: 6px; }
 </style>
 
 <div>
@@ -317,227 +359,128 @@
         </div>
       </div>
 
-<!-- Tab: Historial COMPLETO — Ciclos Actuales + Histórico -->
-<div id="tab-historial" class="tab-panel">
-  {% if calificaciones %}
-    {% regroup calificaciones by grupo.periodo as boletas_por_periodo %}
-    
-    <div style="display: flex; flex-direction: column; gap: 32px;">
-      
-      <!-- CADA CICLO ESCOLAR -->
-      {% for periodo_grupo in boletas_por_periodo %}
-        <div>
-          <!-- ENCABEZADO DEL CICLO -->
-          <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 3px solid var(--border);">
-            <div style="width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg, #4f6ef7 0%, #3b56e8 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(79, 110, 247, 0.3); flex-shrink: 0;">
-              <svg width="28" height="28" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-            </div>
-            <div style="flex: 1;">
-              <h2 style="font-size: 18px; font-weight: 800; color: var(--ink); margin: 0; line-height: 1;">
-                {{ periodo_grupo.grouper.nombre }}
-              </h2>
-              <p style="font-size: 11px; color: var(--ink-3); margin: 6px 0 0 0; text-transform: uppercase; letter-spacing: 0.09em; font-weight: 700;">
-                {% if periodo_grupo.grouper.activo %}
-                  <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 6px; background: #ecfdf5; color: var(--ok);">
-                    <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
-                    CICLO ACTIVO
-                  </span>
-                {% else %}
-                  <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 6px; background: #f3f4f6; color: var(--ink-3);">
-                    <span style="width: 6px; height: 6px; border-radius: 50%; background: currentColor;"></span>
-                    CICLO CERRADO
-                  </span>
-                {% endif %}
-              </p>
-            </div>
-            <div style="text-align: right; padding-left: 18px; border-left: 1px solid var(--border);">
-              <div style="font-size: 9px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; font-weight: 700;">Período</div>
-              <div style="font-size: 12px; font-weight: 700; color: var(--accent); line-height: 1.4;">
-                {% if periodo_grupo.grouper.fecha_inicio and periodo_grupo.grouper.fecha_fin %}
-                  {{ periodo_grupo.grouper.fecha_inicio|date:"d M" }} - {{ periodo_grupo.grouper.fecha_fin|date:"d M Y" }}
-                {% else %}
-                  {{ periodo_grupo.grouper.tipo }}
-                {% endif %}
-              </div>
-            </div>
-          </div>
+      <!-- Tab: Historial — resumen arriba + ciclos en acordeón -->
+      <div id="tab-historial" class="tab-panel">
+        {% if historial %}
 
-          <!-- SEPARACIÓN POR PARCIALES DENTRO DEL CICLO -->
-          {% regroup periodo_grupo.list by parcial as boletas_por_parcial %}
-          <div style="display: flex; flex-direction: column; gap: 24px;">
-            
-            {% for parcial_grupo in boletas_por_parcial %}
-            <!-- ENCABEZADO DEL PARCIAL -->
+          <!-- HERO: promedio general histórico -->
+          <div class="hist-summary-hero">
             <div>
-              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 2px solid #f3f4f6;">
-                <div style="width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(123, 60, 237, 0.3);">
-                  <span style="font-size: 18px; font-weight: 800; color: white;">P{{ parcial_grupo.grouper }}</span>
-                </div>
-                <div style="flex: 1;">
-                  <h4 style="font-size: 13px; font-weight: 800; color: var(--ink); margin: 0; line-height: 1.2;">
-                    Parcial {{ parcial_grupo.grouper }}
-                  </h4>
-                  <p style="font-size: 10px; color: var(--ink-3); margin: 2px 0 0 0;">{{ parcial_grupo.list|length }} materia{% if parcial_grupo.list|length != 1 %}s{% endif %}</p>
-                </div>
+              <div class="hist-hero-label">Desempeño Académico</div>
+              <p class="hist-hero-title">Promedio General Histórico</p>
+              <p style="font-size:11px;color:rgba(255,255,255,.6);margin:8px 0 0 0;">Basado en {{ calificaciones|length }} calificaciones de todos los ciclos</p>
+            </div>
+            <div class="hist-hero-num-box">
+              <div class="hist-hero-num" style="{% if promedio_alumno >= 8 %}color:#34d399;{% elif promedio_alumno >= 7 %}color:#60a5fa;{% elif promedio_alumno >= 6 %}color:#fbbf24;{% else %}color:#f87171;{% endif %}">
+                {{ promedio_alumno|floatformat:1 }}
               </div>
-
-              <!-- TABLA DEL PARCIAL -->
-              <div style="border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: white; box-shadow: 0 1px 3px rgba(0,0,0,.03); margin-left: 0;">
-                <table style="width: 100%; border-collapse: collapse;">
-                  <thead>
-                    <tr style="background: var(--bg); border-bottom: 1px solid var(--border);">
-                      <th style="padding: 12px 14px; text-align: left; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);">Materia</th>
-                      <th style="padding: 12px 14px; text-align: center; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);">Calificación</th>
-                      <th style="padding: 12px 14px; text-align: center; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);">Grado</th>
-                      <th style="padding: 12px 14px; text-align: center; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for boleta in parcial_grupo.list %}
-                    <tr style="border-bottom: 1px solid #f3f4f6; transition: background 0.12s; cursor: pointer;">
-                      <td style="padding: 12px 14px; font-weight: 700; color: var(--ink); font-size: 12px;">
-                        {{ boleta.asignatura.nombre }}
-                      </td>
-                      <td style="padding: 12px 14px; text-align: center;">
-                        <div style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 10px; font-size: 16px; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif;
-                          {% if boleta.calificacion_final >= 9 %}
-                            background: linear-gradient(135deg, #d4fc79 0%, #a7f3d0 100%); color: #065f46;
-                          {% elif boleta.calificacion_final >= 7 %}
-                            background: #ecfdf5; color: var(--ok);
-                          {% elif boleta.calificacion_final >= 6 %}
-                            background: #fffbeb; color: var(--warn);
-                          {% else %}
-                            background: #fff5f5; color: var(--danger);
-                          {% endif %}
-                        ">
-                          {{ boleta.calificacion_final }}
-                        </div>
-                      </td>
-                      <td style="padding: 12px 14px; text-align: center; color: var(--ink-3); font-size: 10px; font-weight: 600;">
-                        {{ boleta.grupo.grado }}º
-                      </td>
-                      <td style="padding: 12px 14px; text-align: center;">
-                        {% if boleta.calificacion_final >= 6 %}
-                          <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; background: #ecfdf5; color: var(--ok);">
-                            <span style="width: 5px; height: 5px; border-radius: 50%; background: currentColor;"></span>
-                            Aprobado
-                          </span>
-                        {% else %}
-                          <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; background: #fff5f5; color: var(--danger);">
-                            <span style="width: 5px; height: 5px; border-radius: 50%; background: currentColor;"></span>
-                            Reprobado
-                          </span>
-                        {% endif %}
-                      </td>
-                    </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
+              <div class="hist-hero-tag">
+                {% if promedio_alumno >= 9 %}Excelente
+                {% elif promedio_alumno >= 8 %}Muy Bien
+                {% elif promedio_alumno >= 7 %}Bien
+                {% elif promedio_alumno >= 6 %}Suficiente
+                {% else %}Insuficiente{% endif %}
               </div>
             </div>
+          </div>
+
+          <!-- Resumen rápido -->
+          <div class="hist-stat-strip">
+            <div class="hist-stat">
+              <div class="hist-stat-num">{{ calificaciones|length }}</div>
+              <div class="hist-stat-lbl">Total Materias</div>
+            </div>
+            <div class="hist-stat">
+              <div class="hist-stat-num">{{ historial|length }}</div>
+              <div class="hist-stat-lbl">Ciclos Cursados</div>
+            </div>
+            <div class="hist-stat">
+              <div class="hist-stat-num">{% widthratio historial|length 2 1 %}</div>
+              <div class="hist-stat-lbl">Años en la Institución</div>
+            </div>
+          </div>
+
+          <!-- Ciclos, cada uno como acordeón (mismo patrón que "Generaciones Graduadas") -->
+          {% for ciclo in historial %}
+          <div class="hist-ciclo-card">
+            <div class="hist-ciclo-head">
+              <div class="hist-ciclo-icon">
+                <svg width="20" height="20" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              </div>
+              <div style="flex:1;">
+                <div class="hist-ciclo-name">{{ ciclo.periodo.nombre }}</div>
+                <div class="hist-ciclo-meta">
+                  {{ ciclo.grupo.grado }}º Semestre
+                  {% if ciclo.periodo.fecha_inicio and ciclo.periodo.fecha_fin %}
+                    · {{ ciclo.periodo.fecha_inicio|date:"d M" }} – {{ ciclo.periodo.fecha_fin|date:"d M Y" }}
+                  {% endif %}
+                  {% if ciclo.periodo.activo %}
+                    · <span style="color:var(--ok);font-weight:800;">EN CURSO</span>
+                  {% else %}
+                    · <span style="color:var(--ink-3);font-weight:800;">CERRADO</span>
+                  {% endif %}
+                </div>
+              </div>
+              {% if ciclo.promedio_ciclo %}
+                <span class="hist-ciclo-promedio" style="{% if ciclo.promedio_ciclo < 6 %}background:#fff5f5;color:var(--danger);{% else %}background:#ecfdf5;color:var(--ok);{% endif %}">
+                  Promedio {{ ciclo.promedio_ciclo }}
+                </span>
+              {% endif %}
+            </div>
+
+            {% for parcial in ciclo.parciales %}
+            <details class="hist-parcial" {% if forloop.first %}open{% endif %}>
+              <summary>
+                <span>Parcial {{ parcial.numero }}</span>
+                <span class="hist-parcial-meta">
+                  {% if parcial.promedio %}Promedio {{ parcial.promedio }}{% endif %}
+                  {{ parcial.materias|length }} materia{% if parcial.materias|length != 1 %}s{% endif %}
+                  <svg class="hist-parcial-caret" width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </summary>
+              <div class="hist-parcial-body">
+                <div class="hist-materias-row hist-materias-head">
+                  <span>Materia</span><span>Calificación</span><span>Grado</span><span>Estado</span>
+                </div>
+                {% for boleta in parcial.materias %}
+                <div class="hist-materias-row">
+                  <span style="font-weight:700;color:var(--ink);">{{ boleta.asignatura.nombre }}</span>
+                  <span style="font-weight:800;text-align:center;{% if boleta.calificacion_final >= 9 %}color:#059669;{% elif boleta.calificacion_final >= 7 %}color:var(--ok);{% elif boleta.calificacion_final >= 6 %}color:var(--warn);{% else %}color:var(--danger);{% endif %}">
+                    {{ boleta.calificacion_final }}
+                  </span>
+                  <span style="text-align:center;color:var(--ink-3);font-size:11px;">{{ boleta.grupo.grado }}º</span>
+                  <span style="text-align:center;">
+                    {% if boleta.calificacion_final >= 6 %}
+                      <span class="status-pill" style="background:#ecfdf5;color:var(--ok);">Aprobado</span>
+                    {% else %}
+                      <span class="status-pill" style="background:#fff5f5;color:var(--danger);">Reprobado</span>
+                    {% endif %}
+                  </span>
+                </div>
+                {% endfor %}
+              </div>
+            </details>
             {% endfor %}
-
-            <!-- PROMEDIO DEL CICLO -->
-            {% with ciclo_boletas=periodo_grupo.list %}
-            {% if ciclo_boletas %}
-            <div style="border-radius: 12px; background: linear-gradient(135deg, #f3f4f6 0%, #eef0fe 100%); padding: 18px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px;">
-              <div>
-                <div style="font-size: 9px; font-weight: 800; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Promedio del Ciclo</div>
-                <p style="font-size: 12px; color: var(--ink-2); margin: 0;">{{ ciclo_boletas|length }} calificaciones parciales</p>
-              </div>
-              <div style="padding: 16px; background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.06); text-align: center; min-width: 100px;">
-                <!-- Calcular promedio con template tag -->
-                <div style="font-family: 'Instrument Serif', serif; font-size: 32px; font-weight: 400; line-height: 1; margin-bottom: 4px; color: var(--accent);">
-                  <!-- El promedio se calcula en la view por ciclo -->
-                  N/A
-                </div>
-                <div style="font-size: 8px; color: var(--ink-3); text-transform: uppercase; font-weight: 800; letter-spacing: 0.09em;">
-                  (Ver promedio general)
-                </div>
-              </div>
-            </div>
-            {% endif %}
-            {% endwith %}
-
           </div>
-        </div>
-      {% endfor %}
+          {% endfor %}
 
-      <!-- SEPARADOR HORIZONTAL -->
-      <div style="height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); margin: 8px 0;"></div>
-
-      <!-- PROMEDIO GENERAL DE TODOS LOS CICLOS -->
-      <div style="border-radius: 16px; background: linear-gradient(135deg, #1f2937 0%, #111318 100%); padding: 32px; border: 1px solid rgba(79, 110, 247, 0.3); display: flex; align-items: center; justify-content: space-between; gap: 28px; color: white; box-shadow: 0 8px 24px rgba(17, 19, 24, 0.3);">
-        <div>
-          <div style="font-size: 10px; font-weight: 800; color: rgba(255, 255, 255, 0.5); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px;">Desempeño Académico</div>
-          <h2 style="font-size: 20px; font-weight: 800; color: white; margin: 0; line-height: 1.2;">Promedio General Histórico</h2>
-          <p style="font-size: 11px; color: rgba(255, 255, 255, 0.6); margin: 8px 0 0 0;">Basado en {{ calificaciones|length }} calificaciones de todos los ciclos</p>
-        </div>
-        <div style="text-align: center; padding: 28px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; min-width: 160px;">
-          <div style="font-family: 'Instrument Serif', serif; font-size: 52px; font-weight: 400; line-height: 1; margin-bottom: 10px;
-            {% if promedio_alumno >= 8 %}color: #34d399;
-            {% elif promedio_alumno >= 7 %}color: #60a5fa;
-            {% elif promedio_alumno >= 6 %}color: #fbbf24;
-            {% else %}color: #f87171;{% endif %}
-          ">
-            {{ promedio_alumno|floatformat:1 }}
+        {% else %}
+        <!-- ESTADO VACÍO -->
+        <div class="empty-state" style="padding:80px 20px;">
+          <div class="empty-icon" style="width:72px;height:72px;border-radius:18px;">
+            <svg width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:var(--border);">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9h10"/>
+            </svg>
           </div>
-          <div style="font-size: 10px; color: rgba(255, 255, 255, 0.6); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 800;">
-            {% if promedio_alumno >= 9 %}Excelente
-            {% elif promedio_alumno >= 8 %}Muy Bien
-            {% elif promedio_alumno >= 7 %}Bien
-            {% elif promedio_alumno >= 6 %}Suficiente
-            {% else %}Insuficiente{% endif %}
-          </div>
+          <h3 style="font-size:16px;font-weight:800;color:var(--ink);margin:0 0 8px 0;">Sin Calificaciones Aún</h3>
+          <p class="empty-text">Las calificaciones aparecerán aquí cuando se publiquen desde los ciclos escolares</p>
         </div>
+        {% endif %}
       </div>
-
-      <!-- RESUMEN ACADÉMICO -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
-        {% with total_materias=calificaciones|length %}
-        {% with aprobadas=calificaciones|dictsort:"calificacion_final"|slice:"-1:" %}
-        <div style="border-radius: 12px; padding: 16px; background: #ecfdf5; border: 1px solid #a7f3d0;">
-          <div style="font-size: 9px; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px;">Total Materias</div>
-          <div style="font-size: 28px; font-weight: 800; color: var(--ok); font-family: 'Instrument Serif', serif; line-height: 1;">
-            {{ total_materias }}
-          </div>
-        </div>
-
-        <div style="border-radius: 12px; padding: 16px; background: #eef0fe; border: 1px solid #c7d2fe;">
-          <div style="font-size: 9px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px;">Ciclos Cursados</div>
-          <div style="font-size: 28px; font-weight: 800; color: var(--accent); font-family: 'Instrument Serif', serif; line-height: 1;">
-            {{ boletas_por_periodo|length }}
-          </div>
-        </div>
-
-        <div style="border-radius: 12px; padding: 16px; background: #fef3c7; border: 1px solid #fcd34d;">
-          <div style="font-size: 9px; font-weight: 800; color: #b45309; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px;">Años en la Institución</div>
-          <div style="font-size: 28px; font-weight: 800; color: var(--warn); font-family: 'Instrument Serif', serif; line-height: 1;">
-            {% widthratio boletas_por_periodo|length 3 1 %}
-          </div>
-        </div>
-        {% endwith %}
-        {% endwith %}
-      </div>
-
-    </div>
-
-  {% else %}
-  <!-- ESTADO VACÍO -->
-  <div style="padding: 80px 20px; text-align: center;">
-    <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #f4f5f9 0%, #eef0fe 100%); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; border: 2px solid var(--border);">
-      <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color: var(--border);">
-        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9h10"/>
-      </svg>
-    </div>
-    <h3 style="font-size: 16px; font-weight: 800; color: var(--ink); margin: 0 0 8px 0;">Sin Calificaciones Aún</h3>
-    <p style="font-size: 12px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.08em; margin: 0;">Las calificaciones aparecerán aquí cuando se publiquen desde los ciclos escolares</p>
-  </div>
-  {% endif %}
-</div>
-
 
       <!-- Tab: Asistencias -->
       <div id="tab-asistencias" class="tab-panel">

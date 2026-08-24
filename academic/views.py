@@ -708,7 +708,7 @@ def agregar_tutor(request):
 def detalle_alumno(request, pk):
     alumno = get_object_or_404(User, pk=pk, plantel=request.user.plantel, rol='ALUMNO')
     ctx    = get_plantel_context(request.user)
-
+ 
     if request.method == 'POST' and request.POST.get('accion') == 'editar':
         alumno.first_name = request.POST.get('first_name', alumno.first_name).strip()
         alumno.last_name  = request.POST.get('last_name',  alumno.last_name).strip()
@@ -718,29 +718,71 @@ def detalle_alumno(request, pk):
         alumno.save()
         messages.success(request, f"Perfil de {alumno.get_full_name()} actualizado.")
         return redirect('detalle_alumno', pk=pk)
-
+ 
+    # IMPORTANTE: ordenado por periodo (cronológico) y luego por parcial.
+    # {% regroup %} en el template NO sirve aquí porque con regroup anidado
+    # (periodo -> parcial) el orden se vuelve frágil apenas hay más de un
+    # nivel de agrupación; por eso se arma el historial ya agrupado en Python.
     boletas = BoletaParcial.objects.filter(
-        alumno=alumno, 
+        alumno=alumno,
         publicada=True
-    ).select_related('asignatura', 'grupo').order_by('parcial')
-
+    ).select_related('asignatura', 'grupo', 'grupo__periodo').order_by(
+        '-grupo__periodo__fecha_inicio', 'parcial', 'asignatura__nombre'
+    )
+ 
+    historial = []
+    ciclo_actual = None
+    for boleta in boletas:
+        periodo = boleta.grupo.periodo
+ 
+        if ciclo_actual is None or ciclo_actual['periodo'].pk != periodo.pk:
+            ciclo_actual = {
+                'periodo': periodo,
+                'grupo': boleta.grupo,
+                'parciales': [],
+                'notas': [],
+            }
+            historial.append(ciclo_actual)
+ 
+        parcial_actual = next(
+            (p for p in ciclo_actual['parciales'] if p['numero'] == boleta.parcial),
+            None,
+        )
+        if parcial_actual is None:
+            parcial_actual = {'numero': boleta.parcial, 'materias': [], 'notas': []}
+            ciclo_actual['parciales'].append(parcial_actual)
+ 
+        parcial_actual['materias'].append(boleta)
+        parcial_actual['notas'].append(boleta.calificacion_final)
+        ciclo_actual['notas'].append(boleta.calificacion_final)
+ 
+    for ciclo in historial:
+        ciclo['promedio_ciclo'] = (
+            round(sum(ciclo['notas']) / len(ciclo['notas']), 2) if ciclo['notas'] else None
+        )
+        for p in ciclo['parciales']:
+            p['promedio'] = (
+                round(sum(p['notas']) / len(p['notas']), 2) if p['notas'] else None
+            )
+ 
     promedio_alumno = boletas.aggregate(Avg('calificacion_final'))['calificacion_final__avg'] or 0.0
-
-    asistencias         = Asistencia.objects.filter(alumno=alumno).order_by('-fecha')
+ 
+    asistencias = Asistencia.objects.filter(alumno=alumno).order_by('-fecha')
     total_presentes = asistencias.filter(estado='P').count()
     total_faltas    = asistencias.filter(estado__in=['A', 'R']).count()
-    total_registros     = asistencias.count()
+    total_registros = asistencias.count()
     porcentaje_asistencia = (
         round((total_presentes / total_registros) * 100) if total_registros > 0 else 0
     )
-
+ 
     return render(request, 'academic/alumno_detalle.html', {
-        'alumno':               alumno,
-        'calificaciones':       boletas, 
-        'promedio_alumno':      round(promedio_alumno, 1),
-        'asistencias':          asistencias,
-        'total_presentes':      total_presentes,
-        'total_faltas':         total_faltas,
+        'alumno':                alumno,
+        'historial':             historial,           # NUEVO: usar esto en el template
+        'calificaciones':        boletas,              # se sigue usando para el resumen general
+        'promedio_alumno':       round(promedio_alumno, 1),
+        'asistencias':           asistencias,
+        'total_presentes':       total_presentes,
+        'total_faltas':          total_faltas,
         'porcentaje_asistencia': porcentaje_asistencia,
         **ctx,
     })

@@ -1,17 +1,42 @@
 """
-Carga datos de prueba COMPLETOS para Plantel 2:
-  1) Promoción Masiva — grupos en TODOS los grados (1° a 6°) del ciclo activo
-  2) Graduados + Historial Académico — un grupo de 6° en un ciclo YA CERRADO
-  3) Calificaciones Parciales (BoletaParcial) — 4 parciales x múltiples materias
-  4) Boleta Académica — historial completo de notas publicadas
-  5) Reporte de Calificaciones — datos listos para generar reportes
-  6) SesionClase + BloqueClase — sesiones en vivo de ejemplo
+Seed de prueba LIMPIO para Plantel 2, con PROGRESIÓN ACADÉMICA REAL (v3):
+
+  - Borra por completo los datos de prueba anteriores antes de generar.
+  - Genera 12 Periodos secuenciales alternando NON y PAR, donde solo UNO está activo.
+    Ej: 2024 NON, 2024 PAR, 2025 NON (ACTIVO si aplica), ...
+  - Distribuye los 6 grados correctamente por paridad:
+    * Grados impares (1°, 3°, 5°): en periodos NON
+    * Grados pares (2°, 4°, 6°): en periodos PAR
+  - Crea grupos de CADA grado en TODOS los periodos de su paridad (grid completo),
+    para poder reconstruir la progresión real de cualquier cohorte.
+
+  PROGRESIÓN REAL (lo nuevo en v3):
+    - Cada alumno actual, según su grado, tiene una "ruta" hacia atrás en el
+      tiempo: grado_final en idx_actual, grado_final-1 en idx_actual-1,
+      grado_final-2 en idx_actual-2, etc. — es decir, SÍ pasó por los grados
+      anteriores en periodos anteriores reales (no repite el mismo grado).
+    - Grado 1°: sin historial (ruta de un solo elemento, el periodo actual).
+    - Grado 2°: 1 semestre histórico (su propio 1°).
+    - Grado 3°: 2 semestres históricos (su propio 1° y 2°).
+    - ... y así sucesivamente. El grado 6° actual llega con 5 semestres
+      históricos completos.
+    - El periodo del grado_final ("grado actual") queda EN CURSO: solo
+      asistencia parcial, sin boletas (aún no termina el semestre).
+    - Los EGRESADOS son alumnos que YA completaron su 6° grado en un periodo
+      PAR histórico: su ruta completa (incluyendo el propio 6°) lleva
+      boletas + asistencia completas, porque ya se graduaron. Si la cohorte
+      es de las primeras (no hay suficientes periodos anteriores dentro de
+      la ventana de 12), su ruta se recorta automáticamente y no incluye
+      los grados más bajos (mismo criterio: sin datos inventados).
+
+Nota técnica:
+  - Asistencia.save() bloquea si periodo.activo=False.
+  - Para asistencia histórica usamos bulk_create() (sin validación).
 
 Uso:
-    python manage.py shell < seed_test_data_mejorado.py
+    python manage.py shell < seed_test_data_historial_v3.py
 
-Es idempotente (usa get_or_create) — puedes correrlo varias veces sin
-duplicar registros ni romper los unique_together.
+Re-ejecutable: el bloque de limpieza borra todo anterior antes de reconstruir.
 """
 
 import datetime
@@ -19,362 +44,552 @@ import random
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from campuses.models import Plantel
 from academic.models import (
-    Periodo, Carrera, Grupo, Asignatura, BoletaParcial,
-    SesionClase, BloqueClase
+    Periodo, Carrera, Grupo, Asignatura, BoletaParcial, Asistencia,
+    SesionClase, BloqueClase,
 )
-from users.models import User
+from users.models import User, DocenteGrupo
 
-# ── Cargar en Plantel 2 ──
-planteles = Plantel.objects.all().order_by('id')
-print(f"\n🏫 Planteles disponibles:")
-for p in planteles:
-    print(f"   - {p.id}: {p.nombre}")
-
+# ══════════════════════════════════════════════════════════════════
+# 0) PLANTEL
+# ══════════════════════════════════════════════════════════════════
 plantel = Plantel.objects.filter(id=2).first()
 if not plantel:
     print("\n❌ ERROR: No existe Plantel con id=2")
-    print(f"   Usa un ID de plantel válido o crea uno primero.")
     exit(1)
-
 print(f"\n✓ Usando plantel: {plantel} (ID={plantel.id})")
+
+
+def ciclo_str(periodo):
+    """String corto para DocenteGrupo.ciclo."""
+    return f"{periodo.fecha_inicio.year}-{periodo.tipo}"[:20]
+
+
+def crear_periodos_alternados(anio_inicio, cantidad=12, sufijo=" TEST"):
+    """
+    Crea 'cantidad' periodos alternados (NON, PAR, NON, PAR...) comenzando
+    desde 'anio_inicio' (tipo NON). Solo el último está activo.
+    Devuelve lista de Periodo en orden cronológico (más antiguo primero).
+    """
+    periodos = []
+    ano = anio_inicio
+    tipo_actual = "NON"
+
+    for i in range(cantidad):
+        if tipo_actual == "NON":
+            fecha_inicio = datetime.date(ano, 8, 1)
+            fecha_fin = datetime.date(ano + 1, 1, 31)
+            mes_inicio, mes_fin = "Agosto", "Enero"
+            anios_str = f"{ano}–{ano+1}"
+        else:  # PAR
+            fecha_inicio = datetime.date(ano + 1, 2, 1)
+            fecha_fin = datetime.date(ano + 1, 6, 30)
+            mes_inicio, mes_fin = "Febrero", "Junio"
+            anios_str = f"{ano+1}"
+
+        nombre = f"{anios_str} {mes_inicio}–{mes_fin}{sufijo}"
+        activo = (i == cantidad - 1)  # Solo el último período es activo
+
+        periodo, _ = Periodo.objects.get_or_create(
+            plantel=plantel,
+            nombre=nombre,
+            defaults={
+                "tipo": tipo_actual,
+                "fecha_inicio": fecha_inicio,
+                "fecha_fin": fecha_fin,
+                "activo": activo,
+            },
+        )
+        periodos.append(periodo)
+
+        # Cambiar tipo y/o año para el siguiente período
+        if tipo_actual == "NON":
+            tipo_actual = "PAR"
+        else:  # PAR
+            tipo_actual = "NON"
+            ano += 1
+
+    return periodos
+
+
+def fechas_muestra(periodo, n=6):
+    """n fechas repartidas dentro del rango del periodo."""
+    total_dias = (periodo.fecha_fin - periodo.fecha_inicio).days
+    paso = max(total_dias // (n + 1), 1)
+    return [
+        periodo.fecha_inicio + datetime.timedelta(days=paso * (i + 1))
+        for i in range(n)
+    ]
+
+
+def ruta_progresion(grado_final, idx_final):
+    """
+    Devuelve la ruta cronológica real de un alumno que hoy está en
+    'grado_final' dentro del periodo de índice 'idx_final'.
+
+    Ej: grado_final=4, idx_final=11 -> [(1,8), (2,9), (3,10), (4,11)]
+
+    Si no hay suficientes periodos anteriores dentro de la ventana
+    (idx < 0), esos grados más bajos simplemente no se incluyen —
+    no se inventan datos.
+    """
+    ruta = []
+    for g in range(1, grado_final + 1):
+        idx = idx_final - (grado_final - g)
+        if idx >= 0:
+            ruta.append((g, idx))
+    return ruta
+
 
 with transaction.atomic():
 
-    # Crear carrera según nivel del plantel
-    nivel_carrera = 'PREPARATORIA' if plantel.nivel_educativo == 'BASICA' else 'UNIVERSIDAD'
-    nombre_carrera = 'Bachillerato General' if nivel_carrera == 'PREPARATORIA' else 'Licenciatura en Sistemas'
-    
-    carrera, _ = Carrera.objects.get_or_create(
-        plantel=plantel, nombre=nombre_carrera, nivel=nivel_carrera,
-        defaults={'clave_rvoe': f'TEST-{plantel.id:03d}'},
-    )
-    print(f"Carrera: {carrera.nombre} ({carrera.get_nivel_display()})")
+    # ══════════════════════════════════════════════════════════════
+    # 1) LIMPIEZA — en orden, respetando FKs
+    # ══════════════════════════════════════════════════════════════
+    print("\n🧹 Limpiando datos de prueba anteriores...")
 
-    # ── Periodo activo (usa el que ya exista; si no hay, crea uno) ──
-    periodo_activo = Periodo.objects.filter(plantel=plantel, activo=True).first()
-    if not periodo_activo:
-        periodo_activo = Periodo.objects.create(
-            plantel=plantel, nombre='2026 Agosto–Enero TEST', tipo='NON',
-            fecha_inicio=datetime.date(2026, 8, 1),
-            fecha_fin=datetime.date(2027, 1, 31),
-            activo=True,
-        )
-    print(f"Periodo activo: {periodo_activo}")
+    from django.db import connection
 
-    # ── Periodo YA CERRADO, para simular una generación graduada ──
-    periodo_cerrado, creado = Periodo.objects.get_or_create(
-        plantel=plantel, nombre='2026 Febrero–Junio TEST',
-        defaults={
-            'tipo': 'PAR', 'activo': False,
-            'fecha_inicio': datetime.date(2026, 2, 1),
-            'fecha_fin': datetime.date(2026, 6, 30),
-        },
+    with connection.cursor() as cursor:
+        cursor.execute("DELETE FROM academic_comentarioactividad;")
+        print("   Tabla academic_comentarioactividad limpiada (vía SQL directo)")
+
+    from academic.models import ComentarioMaterial, ComentarioTarea
+
+    n_comentarios_material = ComentarioMaterial.objects.filter(
+        material__grupo__plantel=plantel
+    ).count()
+    ComentarioMaterial.objects.filter(material__grupo__plantel=plantel).delete()
+
+    n_comentarios_tarea = ComentarioTarea.objects.filter(
+        tarea__grupo__plantel=plantel
+    ).count()
+    ComentarioTarea.objects.filter(tarea__grupo__plantel=plantel).delete()
+
+    n_carreras = Carrera.objects.filter(plantel=plantel).count()
+    Carrera.objects.filter(plantel=plantel).delete()
+
+    n_periodos = Periodo.objects.filter(plantel=plantel).count()
+    Periodo.objects.filter(plantel=plantel).delete()
+
+    n_usuarios = User.objects.filter(
+        plantel=plantel, rol__in=["ALUMNO", "DOCENTE"]
+    ).filter(
+        Q(username__startswith="alumno.")
+        | Q(username__startswith="docente.")
+        | Q(username__startswith="egresado.")
+    ).count()
+    User.objects.filter(
+        plantel=plantel, rol__in=["ALUMNO", "DOCENTE"]
+    ).filter(
+        Q(username__startswith="alumno.")
+        | Q(username__startswith="docente.")
+        | Q(username__startswith="egresado.")
+    ).delete()
+
+    print(f"   Comentarios Material eliminados: {n_comentarios_material}")
+    print(f"   Comentarios Tarea eliminados: {n_comentarios_tarea}")
+    print(f"   Carreras eliminadas: {n_carreras}")
+    print(f"   Periodos eliminados: {n_periodos}")
+    print(f"   Usuarios de prueba eliminados: {n_usuarios}")
+
+    # ══════════════════════════════════════════════════════════════
+    # 2) CARRERA
+    # ══════════════════════════════════════════════════════════════
+    nivel_carrera = (
+        "PREPARATORIA" if plantel.nivel_educativo == "BASICA" else "UNIVERSIDAD"
     )
-    print(f"Periodo cerrado (para graduados): {periodo_cerrado} (nuevo={creado})")
+    nombre_carrera = (
+        "Bachillerato General"
+        if nivel_carrera == "PREPARATORIA"
+        else "Licenciatura en Sistemas"
+    )
+
+    carrera = Carrera.objects.create(
+        plantel=plantel,
+        nombre=nombre_carrera,
+        nivel=nivel_carrera,
+        clave_rvoe=f"TEST-{plantel.id:03d}",
+    )
+    print(f"\nCarrera: {carrera.nombre} ({carrera.get_nivel_display()})")
 
     docente, _ = User.objects.get_or_create(
-        username='docente.test', plantel=plantel,
-        defaults={'rol': 'DOCENTE', 'first_name': 'Docente', 'last_name': 'Prueba'},
+        username="docente.test",
+        plantel=plantel,
+        defaults={"rol": "DOCENTE", "first_name": "Docente", "last_name": "Prueba"},
     )
     if not docente.has_usable_password():
-        docente.set_password('test1234')
-        docente.set_password_recuperable('test1234')
+        docente.set_password("test1234")
+        docente.set_password_recuperable("test1234")
         docente.save()
 
     # ══════════════════════════════════════════════════════════════
-    # SETUP: Crear docentes adicionales (1 por materia)
+    # 3) DOCENTES POR MATERIA
     # ══════════════════════════════════════════════════════════════
     docentes_por_materia = {}
-    for i, nombre_mat in enumerate(['Matemáticas', 'Historia', 'Química', 'Inglés', 'Español', 'Física'], 1):
+    for i, nombre_mat in enumerate(
+        ["Matemáticas", "Historia", "Química", "Inglés", "Español", "Física"], 1
+    ):
         docente_mat, _ = User.objects.get_or_create(
-            username=f'docente.{nombre_mat.lower()}.{i}', plantel=plantel,
+            username=f"docente.{nombre_mat.lower()}.{i}",
+            plantel=plantel,
             defaults={
-                'rol': 'DOCENTE',
-                'first_name': f'Prof. {nombre_mat}',
-                'last_name': 'Prueba',
+                "rol": "DOCENTE",
+                "first_name": f"Prof. {nombre_mat}",
+                "last_name": "Prueba",
             },
         )
         if not docente_mat.has_usable_password():
-            docente_mat.set_password('test1234')
-            docente_mat.set_password_recuperable('test1234')
+            docente_mat.set_password("test1234")
+            docente_mat.set_password_recuperable("test1234")
             docente_mat.save()
         docentes_por_materia[nombre_mat] = docente_mat
         print(f"Docente: {docente_mat.username}")
 
     # ══════════════════════════════════════════════════════════════
-    # SETUP: Crear asignaturas por grado
+    # 4) ASIGNATURAS POR GRADO/SEMESTRE (1 a 6)
     # ══════════════════════════════════════════════════════════════
-    asignaturas_por_grado = {}
     materias_por_grado = {
-        1: ['Matemáticas I', 'Historia de México', 'Química', 'Inglés I'],
-        2: ['Matemáticas II', 'Historia Universal', 'Química II', 'Inglés II'],
-        3: ['Matemáticas III', 'Historia Moderna', 'Física', 'Inglés III'],
-        4: ['Matemáticas IV', 'Historia Contemporánea', 'Física II', 'Inglés IV'],
-        5: ['Matemáticas V', 'Historia de América', 'Química III', 'Inglés V'],
-        6: ['Matemáticas VI', 'Historia de México', 'Química', 'Inglés VI'],
+        1: ["Matemáticas I", "Historia de México", "Química", "Inglés I"],
+        2: ["Matemáticas II", "Historia Universal", "Química II", "Inglés II"],
+        3: ["Matemáticas III", "Historia Moderna", "Física", "Inglés III"],
+        4: ["Matemáticas IV", "Historia Contemporánea", "Física II", "Inglés IV"],
+        5: ["Matemáticas V", "Historia de América", "Química III", "Inglés V"],
+        6: ["Matemáticas VI", "Historia de México", "Química", "Inglés VI"],
     }
+    asignaturas_por_grado = {}
     for grado, materias in materias_por_grado.items():
         asignaturas_por_grado[grado] = []
         for nombre_mat in materias:
-            materia_base = nombre_mat.split()[0]  # Extraer "Matemáticas", "Historia", etc.
             asig, _ = Asignatura.objects.get_or_create(
-                carrera=carrera, nombre=nombre_mat,
-                defaults={'clave': nombre_mat[:6].upper(), 'creditos': 5},
+                carrera=carrera,
+                nombre=nombre_mat,
+                defaults={"clave": nombre_mat[:6].upper(), "creditos": 5},
             )
             asignaturas_por_grado[grado].append(asig)
-        print(f"Asignaturas grado {grado}: {len(asignaturas_por_grado[grado])} creadas/existentes")
+        print(f"Asignaturas semestre {grado}: {len(asignaturas_por_grado[grado])}")
 
     # ══════════════════════════════════════════════════════════════
-    # 1) GRUPOS DEL CICLO ACTIVO (grados 1-6) — para Promoción Masiva
+    # 5) PERIODOS: 12 alternados (NON, PAR, NON...) desde 2024
     # ══════════════════════════════════════════════════════════════
-    grupos_activos = {}
+    periodos = crear_periodos_alternados(anio_inicio=2024, cantidad=12)
+    periodo_activo = periodos[-1]
+
+    print("\n📅 Periodos generados (12 periodos alternados NON/PAR):")
+    for i, p in enumerate(periodos, 1):
+        estado = "ACTIVO" if p.activo else "cerrado"
+        print(f"   {i:2}. {p.nombre}  [{estado}]")
+
+    print(f"\n✓ Periodo activo: {periodo_activo.nombre} (tipo={periodo_activo.tipo})")
+
+    periodos_non = [i for i, p in enumerate(periodos) if p.tipo == "NON"]
+    periodos_par = [i for i, p in enumerate(periodos) if p.tipo == "PAR"]
+
+    print(f"\nPeriodos NON (impares: 1°, 3°, 5°): índices {periodos_non}")
+    print(f"Periodos PAR (pares: 2°, 4°, 6°): índices {periodos_par}")
+
+    # ══════════════════════════════════════════════════════════════
+    # 6) ALUMNOS ACTUALES — 3 por grado
+    # ══════════════════════════════════════════════════════════════
+    alumnos_por_grado = {}
     for grado in range(1, 7):
-        grupo, _ = Grupo.objects.get_or_create(
-            plantel=plantel, periodo=periodo_activo, carrera=carrera,
-            grado=grado, especialidad=None,
-            defaults={'aula': f'Aula {grado}', 'capacidad_maxima': 30},
-        )
-        grupos_activos[grado] = grupo
-        print(f"Grupo activo grado {grado}: {grupo} (id={grupo.id})")
-
-        # Agregar asignaturas al grupo (M2M)
-        for asig in asignaturas_por_grado.get(grado, []):
-            grupo.asignaturas.add(asig)
-            # Asignar docente a la asignatura (M2M)
-            materia_base = asig.nombre.split()[0]
-            if materia_base in docentes_por_materia:
-                asig.docentes.add(docentes_por_materia[materia_base])
-        
-        # También agregar los docentes al grupo (M2M)
-        for asig in asignaturas_por_grado.get(grado, []):
-            materia_base = asig.nombre.split()[0]
-            if materia_base in docentes_por_materia:
-                grupo.docentes.add(docentes_por_materia[materia_base])
-
-    # Crear alumnos y asignarles calificaciones
-    alumnos_por_grupo = {}
-    for grado, grupo in grupos_activos.items():
-        alumnos_por_grupo[grado] = []
-        for i in range(1, 4):  # 3 alumnos por grado
-            username = f'alumno.g{grado}.{i}'
+        alumnos_por_grado[grado] = []
+        for i in range(1, 4):
+            username = f"alumno.g{grado}.{i}"
             alumno, creado = User.objects.get_or_create(
-                username=username, plantel=plantel,
+                username=username,
+                plantel=plantel,
                 defaults={
-                    'rol': 'ALUMNO',
-                    'first_name': f'Alumno{grado}{i}',
-                    'last_name': 'Prueba',
-                    'alumno_grupo': grupo,
+                    "rol": "ALUMNO",
+                    "first_name": f"Alumno{grado}{i}",
+                    "last_name": "Prueba",
                 },
             )
             if creado:
-                alumno.set_password('test1234')
-                alumno.set_password_recuperable('test1234')
-                alumno.alumno_grupo = grupo
+                alumno.set_password("test1234")
+                alumno.set_password_recuperable("test1234")
                 alumno.save()
-            alumnos_por_grupo[grado].append(alumno)
+            alumnos_por_grado[grado].append(alumno)
+        print(f"Alumnos semestre {grado}: {len(alumnos_por_grado[grado])}")
 
     # ══════════════════════════════════════════════════════════════
-    # CARGAR CALIFICACIONES PARCIALES — Ciclo Activo (grados 1-6)
+    # 6b) ALUMNOS EGRESADOS — uno por cada generación PAR histórica
     # ══════════════════════════════════════════════════════════════
-    print("\n📊 Cargando calificaciones parciales para ciclo activo...")
-    boletas_creadas_activas = 0
-    for grado, grupo in grupos_activos.items():
-        for alumno in alumnos_por_grupo[grado]:
-            for parcial in range(1, 5):  # 4 parciales
-                for asig in asignaturas_por_grado[grado]:
-                    # Generar nota realista (6.0 a 10.0)
-                    nota = Decimal(str(round(random.uniform(6.0, 10.0), 2)))
-                    
-                    # Obtener docente de la asignatura
-                    docente_asig = asig.docentes.first() or docente
-                    
-                    _, creado = BoletaParcial.objects.get_or_create(
-                        alumno=alumno, grupo=grupo, asignatura=asig, parcial=parcial,
-                        defaults={
-                            'docente': docente_asig,
-                            'nota_examen': nota,
-                            'calificacion_final': nota,
-                            'publicada': True,
-                            'publicada_en': timezone.now(),
-                        },
+    print("\n👨‍🎓 Creando alumnos egresados (generaciones graduadas)...")
+    alumnos_egresados = {}  # {idx_periodo_graduacion: [alumnos]}
+
+    for idx_periodo in periodos_par[:-1]:  # todos los PAR excepto el actual
+        alumnos_egresados[idx_periodo] = []
+        periodo = periodos[idx_periodo]
+        for i in range(1, 4):
+            username = f"egresado.{periodo.tipo}.{periodo.fecha_inicio.year}.{i}"
+            alumno, creado = User.objects.get_or_create(
+                username=username,
+                plantel=plantel,
+                defaults={
+                    "rol": "ALUMNO",
+                    "first_name": f"Egresado{i}",
+                    "last_name": f"{periodo.fecha_inicio.year}",
+                },
+            )
+            if creado:
+                alumno.set_password("test1234")
+                alumno.set_password_recuperable("test1234")
+                alumno.save()
+            alumnos_egresados[idx_periodo].append(alumno)
+        print(f"   {len(alumnos_egresados[idx_periodo])} egresados → {periodo.nombre}")
+
+    # ══════════════════════════════════════════════════════════════
+    # 7) GRID COMPLETO DE GRUPOS (todos los grados x todos los periodos
+    #    de su paridad) — necesario para poder reconstruir cualquier ruta
+    # ══════════════════════════════════════════════════════════════
+    print("\n📚 Creando grupos (grid completo) por grado y período de su paridad...")
+
+    grupos_por_grado = {}  # {grado: {periodo_idx: grupo}}
+    docentegrupo_totales = 0
+
+    for grado in range(1, 7):
+        grupos_por_grado[grado] = {}
+        indices_periodos = periodos_non if grado % 2 == 1 else periodos_par
+
+        for idx_periodo in indices_periodos:
+            periodo = periodos[idx_periodo]
+
+            grupo, _ = Grupo.objects.get_or_create(
+                plantel=plantel,
+                periodo=periodo,
+                carrera=carrera,
+                grado=grado,
+                especialidad=None,
+                defaults={
+                    "aula": f"Aula {grado} ({periodo.get_display_name(corto=True)})",
+                    "capacidad_maxima": 30,
+                },
+            )
+            grupos_por_grado[grado][idx_periodo] = grupo
+
+            for asig in asignaturas_por_grado[grado]:
+                grupo.asignaturas.add(asig)
+                materia_base = asig.nombre.split()[0]
+                docente_mat = docentes_por_materia.get(materia_base)
+                if docente_mat:
+                    asig.docentes.add(docente_mat)
+                    grupo.docentes.add(docente_mat)
+                    _, dg_creado = DocenteGrupo.objects.get_or_create(
+                        docente=docente_mat,
+                        grupo=grupo,
+                        asignatura=asig,
+                        ciclo=ciclo_str(periodo),
+                        defaults={"activo": periodo.activo},
                     )
-                    if creado:
-                        boletas_creadas_activas += 1
-    print(f"✅ BoletaParcial creadas (ciclo activo): {boletas_creadas_activas}")
+                    if dg_creado:
+                        docentegrupo_totales += 1
+
+            print(f"   Grado {grado}° en {periodo.nombre}: grupo id={grupo.id}")
+
+    print(f"\n✅ DocenteGrupo creadas: {docentegrupo_totales}")
 
     # ══════════════════════════════════════════════════════════════
-    # 2) GRUPO DE 6° EN CICLO CERRADO — para Graduados + Historial
+    # 8) idx_actual por grado (dónde está HOY cada cohorte actual)
     # ══════════════════════════════════════════════════════════════
-    print("\n📚 Configurando grupo de graduados...")
-    grupo_graduado, _ = Grupo.objects.get_or_create(
-        plantel=plantel, periodo=periodo_cerrado, carrera=carrera,
-        grado=6, especialidad=None,
-        defaults={'aula': 'Aula Graduados TEST', 'capacidad_maxima': 30},
-    )
-    print(f"Grupo graduado: {grupo_graduado} (id={grupo_graduado.id})")
+    idx_actual_por_grado = {}
+    for grado in range(1, 7):
+        if grado % 2 == 1:  # NON impares: penúltimo NON (aún no marcado activo)
+            idx_actual_por_grado[grado] = periodos_non[-2]
+        else:  # PAR pares: el activo
+            idx_actual_por_grado[grado] = periodos_par[-1]
 
-    asignaturas_graduados = []
-    for nombre_mat in ['Matemáticas VI', 'Historia de México', 'Química', 'Inglés VI']:
-        asig, _ = Asignatura.objects.get_or_create(
-            carrera=carrera, nombre=nombre_mat,
-            defaults={'clave': nombre_mat[:6].upper(), 'creditos': 5},
-        )
-        grupo_graduado.asignaturas.add(asig)
-        asignaturas_graduados.append(asig)
-        
-        # Asignar docente a la asignatura
-        materia_base = nombre_mat.split()[0]
-        if materia_base in docentes_por_materia:
-            asig.docentes.add(docentes_por_materia[materia_base])
-            # También agregar al grupo
-            grupo_graduado.docentes.add(docentes_por_materia[materia_base])
-
-    alumnos_graduados = []
-    for i in range(1, 11):  # 10 egresados
-        username = f'alumno.graduado.{i}'
-        alumno, creado = User.objects.get_or_create(
-            username=username, plantel=plantel,
-            defaults={
-                'rol': 'ALUMNO',
-                'first_name': f'Graduado{i}',
-                'last_name': 'Prueba',
-                'alumno_grupo': grupo_graduado,
-            },
-        )
-        if creado:
-            alumno.set_password('test1234')
-            alumno.set_password_recuperable('test1234')
-            alumno.alumno_grupo = grupo_graduado
+    print("\n🎓 Asignando alumnos actuales a su grupo del periodo en curso...")
+    for grado in range(1, 7):
+        idx_actual = idx_actual_por_grado[grado]
+        grupo_actual = grupos_por_grado[grado][idx_actual]
+        for alumno in alumnos_por_grado[grado]:
+            alumno.alumno_grupo = grupo_actual
             alumno.save()
-        alumnos_graduados.append(alumno)
-    print(f"Alumnos graduados creados: {len(alumnos_graduados)}")
+        print(f"   {len(alumnos_por_grado[grado])} alumnos → {grupo_actual}")
 
-    # BoletaParcial publicadas: 4 parciales x 4 materias x 10 alumnos = 160 boletas
-    print("📝 Cargando calificaciones parciales para graduados...")
-    boletas_creadas_graduados = 0
-    for alumno in alumnos_graduados:
-        for parcial in range(1, 5):  # 4 parciales
-            for asig in asignaturas_graduados:
-                # Generar notas variadas (algunos con excelencia, otros regulares)
-                if random.random() > 0.7:  # 30% probabilidad de nota alta
-                    nota = Decimal(str(round(random.uniform(9.0, 10.0), 2)))
-                else:
-                    nota = Decimal(str(round(random.uniform(6.0, 8.5), 2)))
-                
+    print("\n👨‍🎓 Asignando egresados a su grupo de 6° (graduación)...")
+    for idx_periodo in periodos_par[:-1]:
+        grupo_6 = grupos_por_grado[6][idx_periodo]
+        for alumno in alumnos_egresados[idx_periodo]:
+            alumno.alumno_grupo = grupo_6
+            alumno.save()
+        print(f"   {len(alumnos_egresados[idx_periodo])} egresados → {grupo_6}")
+
+    # ══════════════════════════════════════════════════════════════
+    # 9) CONSTRUCCIÓN DE HISTORIAL — progresión real por ruta
+    # ══════════════════════════════════════════════════════════════
+    boletas_totales = 0
+    asistencias_totales = 0
+
+    def crear_boletas_y_asistencia_completas(alumno, grado, idx_periodo):
+        global boletas_totales, asistencias_totales
+        periodo = periodos[idx_periodo]
+        grupo = grupos_por_grado[grado][idx_periodo]
+
+        for parcial in range(1, 5):
+            for asig in asignaturas_por_grado[grado]:
+                nota = Decimal(str(round(random.uniform(6.0, 10.0), 2)))
                 docente_asig = asig.docentes.first() or docente
-                
                 _, creado = BoletaParcial.objects.get_or_create(
-                    alumno=alumno, grupo=grupo_graduado, asignatura=asig, parcial=parcial,
+                    alumno=alumno,
+                    grupo=grupo,
+                    asignatura=asig,
+                    parcial=parcial,
                     defaults={
-                        'docente': docente_asig,
-                        'nota_examen': nota,
-                        'calificacion_final': nota,
-                        'publicada': True,
-                        'publicada_en': timezone.now(),
+                        "docente": docente_asig,
+                        "nota_examen": nota,
+                        "calificacion_final": nota,
+                        "publicada": True,
+                        "publicada_en": timezone.now(),
                     },
                 )
                 if creado:
-                    boletas_creadas_graduados += 1
-    print(f"✅ BoletaParcial creadas (graduados): {boletas_creadas_graduados}")
+                    boletas_totales += 1
+
+        fechas = fechas_muestra(periodo, n=6)
+        nuevas = []
+        for asig in asignaturas_por_grado[grado]:
+            for fecha in fechas:
+                estado = "P" if random.random() < 0.85 else random.choice(["A", "R"])
+                nuevas.append(
+                    Asistencia(
+                        alumno=alumno,
+                        grupo=grupo,
+                        asignatura=asig,
+                        periodo=periodo,
+                        fecha=fecha,
+                        estado=estado,
+                        parcial=1,
+                    )
+                )
+        if nuevas:
+            Asistencia.objects.bulk_create(nuevas, ignore_conflicts=True)
+            asistencias_totales += len(nuevas)
+
+    def crear_asistencia_parcial_en_curso(alumno, grado, idx_periodo, n=4):
+        global asistencias_totales
+        periodo = periodos[idx_periodo]
+        grupo = grupos_por_grado[grado][idx_periodo]
+        fechas = fechas_muestra(periodo, n=n)
+        nuevas = []
+        for asig in asignaturas_por_grado[grado]:
+            for fecha in fechas:
+                estado = "P" if random.random() < 0.85 else random.choice(["A", "R"])
+                nuevas.append(
+                    Asistencia(
+                        alumno=alumno,
+                        grupo=grupo,
+                        asignatura=asig,
+                        periodo=periodo,
+                        fecha=fecha,
+                        estado=estado,
+                        parcial=1,
+                    )
+                )
+        if nuevas:
+            Asistencia.objects.bulk_create(nuevas, ignore_conflicts=True)
+            asistencias_totales += len(nuevas)
+
+    # ── Alumnos actuales: ruta completa, el último tramo (grado actual)
+    #    queda EN CURSO (solo asistencia parcial, sin boletas) ──
+    print("\n📊 Generando historial (progresión real) para alumnos actuales...")
+    for grado in range(1, 7):
+        idx_actual = idx_actual_por_grado[grado]
+        ruta = ruta_progresion(grado, idx_actual)
+        for alumno in alumnos_por_grado[grado]:
+            for g, idx in ruta:
+                if g == grado and idx == idx_actual:
+                    # tramo en curso: sin boletas, asistencia parcial
+                    crear_asistencia_parcial_en_curso(alumno, g, idx, n=4)
+                else:
+                    crear_boletas_y_asistencia_completas(alumno, g, idx)
+        n_hist = len(ruta) - 1
+        print(f"   Grado {grado}°: {n_hist} semestre(s) histórico(s) + 1 en curso")
+
+    # ── Egresados: ruta completa incluyendo el propio 6° (ya graduados,
+    #    todo el tramo lleva boletas + asistencia completas) ──
+    print("\n📜 Generando historial completo para egresados (incluye su 6°)...")
+    for idx_periodo in periodos_par[:-1]:
+        ruta = ruta_progresion(6, idx_periodo)
+        for alumno in alumnos_egresados[idx_periodo]:
+            for g, idx in ruta:
+                crear_boletas_y_asistencia_completas(alumno, g, idx)
+        print(
+            f"   Generación {periodos[idx_periodo].nombre}: "
+            f"{len(ruta)} semestre(s) en el historial"
+        )
+
+    print(f"\n   ✅ BoletaParcial creadas: {boletas_totales}")
+    print(f"   ✅ Asistencias creadas: {asistencias_totales}")
 
     # ══════════════════════════════════════════════════════════════
-    # 3) SESIONES DE CLASE EN VIVO — ejemplo de una clase
+    # 10) SESIÓN DE CLASE EN VIVO — ejemplo
     # ══════════════════════════════════════════════════════════════
-    print("\n🎬 Creando sesiones de clase en vivo...")
-    
-    # Tomar el primer grupo activo y su primer docente
-    primer_grupo = grupos_activos.get(1)
-    primer_docente = list(docentes_por_materia.values())[0]
-    primer_asignatura = asignaturas_por_grado.get(1, [])[0] if asignaturas_por_grado.get(1) else None
-    
-    if primer_grupo and primer_docente and primer_asignatura:
+    print("\n🎬 Creando sesión de clase en vivo de ejemplo...")
+
+    idx_ejemplo = periodos_par[-1]
+    grupo_ejemplo = grupos_por_grado[2][idx_ejemplo]
+    docente_ejemplo = list(docentes_por_materia.values())[0]
+    asig_ejemplo = asignaturas_por_grado[2][0]
+
+    if grupo_ejemplo and docente_ejemplo and asig_ejemplo:
         sesion, creada = SesionClase.objects.get_or_create(
-            docente=primer_docente,
-            grupo=primer_grupo,
-            asignatura=primer_asignatura,
-            titulo='Introducción a la Sesión de Clase',
+            docente=docente_ejemplo,
+            grupo=grupo_ejemplo,
+            asignatura=asig_ejemplo,
+            titulo="Introducción a la Sesión de Clase",
             defaults={
-                'estado': SesionClase.Estado.FINALIZADA,
-                'fecha': datetime.date.today(),
-            }
+                "estado": SesionClase.Estado.FINALIZADA,
+                "fecha": datetime.date.today(),
+            },
         )
-        
         if creada:
-            # Agregar bloques de contenido
             contenidos = [
-                ('texto', 'Bienvenida a la clase', 'Hoy vamos a aprender sobre los conceptos fundamentales de esta materia.'),
-                ('texto', 'Objetivo', 'Al final de esta clase, serás capaz de entender y aplicar los conceptos clave.'),
-                ('link', 'Material de referencia', 'https://example.com/material'),
-                ('actividad', 'Actividad Interactiva', 'Responde las siguientes preguntas sobre lo que hemos visto.'),
+                ("texto", "Bienvenida", "Hoy vamos a aprender conceptos fundamentales."),
+                ("texto", "Objetivo", "Serás capaz de entender y aplicar los conceptos clave."),
+                ("link", "Material", "https://example.com/material"),
+                ("actividad", "Actividad", "Responde sobre lo visto."),
             ]
-            
             for idx, (tipo, titulo, contenido) in enumerate(contenidos, 1):
                 BloqueClase.objects.create(
-                    sesion=sesion,
-                    tipo=tipo,
-                    titulo=titulo,
-                    contenido=contenido,
-                    orden=idx,
+                    sesion=sesion, tipo=tipo, titulo=titulo, contenido=contenido, orden=idx
                 )
-            print(f"   ✓ Sesión '{sesion.titulo}' con {len(contenidos)} bloques")
+            print(f"   ✓ Sesión con {len(contenidos)} bloques")
         else:
-            print(f"   ℹ Sesión ya existe")
+            print("   ℹ Sesión ya existe")
 
     # ══════════════════════════════════════════════════════════════
-    # RESUMEN
+    # 11) RESUMEN
     # ══════════════════════════════════════════════════════════════
-    total_grupos_activos = len(grupos_activos)
-    total_alumnos_activos = sum(len(alumnos) for alumnos in alumnos_por_grupo.values())
-    total_asignaturas_activas = sum(len(asigs) for asigs in asignaturas_por_grado.values())
-    total_boletas_activas = boletas_creadas_activas
-    
-    total_alumnos_graduados = len(alumnos_graduados)
-    total_asignaturas_graduados = len(asignaturas_graduados)
-    total_boletas_graduados = boletas_creadas_graduados
-    
-    # Contar sesiones de clase
-    total_sesiones = SesionClase.objects.filter(grupo__plantel=plantel).count()
-    total_bloques = BloqueClase.objects.filter(sesion__grupo__plantel=plantel).count()
-    
-    print("\n" + "="*70)
-    print("✅ DATOS DE PRUEBA CARGADOS EN PLANTEL 2 - EXITOSAMENTE")
-    print("="*70)
-    
-    print(f"\n📊 CICLO ACTIVO ({periodo_activo.nombre}):")
-    print(f"   • Grupos: {total_grupos_activos} (grados 1-6)")
-    print(f"   • Alumnos: {total_alumnos_activos} ({3} por grado)")
-    print(f"   • Asignaturas: {total_asignaturas_activas} (≈4 por grado)")
-    print(f"   • Boletas Parciales: {total_boletas_activas} (4 parciales × {3} alumnos × ≈4 materias)")
-    print(f"   • Docentes: {len(docentes_por_materia)}")
-    
-    print(f"\n📚 CICLO CERRADO ({periodo_cerrado.nombre}):")
-    print(f"   • Grupos de Graduados: 1 (6° grado)")
-    print(f"   • Alumnos Graduados: {total_alumnos_graduados}")
-    print(f"   • Asignaturas: {total_asignaturas_graduados}")
-    print(f"   • Boletas Parciales: {total_boletas_graduados} (4 × 4 × 10)")
-    
-    print(f"\n🎬 SESIONES DE CLASE EN VIVO:")
-    print(f"   • Sesiones: {total_sesiones}")
-    print(f"   • Bloques de contenido: {total_bloques}")
-    
+    total_grupos = Grupo.objects.filter(plantel=plantel).count()
+    total_boletas = BoletaParcial.objects.filter(grupo__plantel=plantel).count()
+    total_asistencias = Asistencia.objects.filter(grupo__plantel=plantel).count()
+    total_dg = DocenteGrupo.objects.filter(grupo__plantel=plantel).count()
+
+    print("\n" + "=" * 80)
+    print("✅ DATOS DE PRUEBA CON PROGRESIÓN REAL RECONSTRUIDOS EN PLANTEL 2")
+    print("=" * 80)
+
+    print(f"\n📚 Totales en el plantel:")
+    print(f"   • Períodos: {len(periodos)} (NON/PAR alternados)")
+    print(f"   • Grupos (grid completo): {total_grupos}")
+    print(f"   • BoletaParcial: {total_boletas}")
+    print(f"   • Asistencias: {total_asistencias}")
+    print(f"   • DocenteGrupo: {total_dg}")
+
     print(f"\n🔑 USUARIOS DE PRUEBA:")
-    print(f"   Alumnos activos:   alumno.g[1-6].[1-3]")
-    print(f"   Alumnos graduados: alumno.graduado.[1-10]")
-    print(f"   Docentes:          docente.test, docente.[materia].[1-6]")
-    print(f"   Contraseña:        test1234 (todos)")
-    
-    print(f"\n🧪 CASOS DE PRUEBA DISPONIBLES:")
-    print(f"   ✓ Promoción Masiva (6 grupos, 18 alumnos)")
-    print(f"   ✓ Historial Académico de Graduados (10 alumnos, 4 parciales cada uno)")
-    print(f"   ✓ Boleta Parcial (todas las materias, todos los parciales)")
-    print(f"   ✓ Reporte de Calificaciones (por grupo, por materia, por parcial)")
-    print(f"   ✓ Acceso por Rol (docente → su grupo, alumno → su boleta)")
-    print(f"   ✓ Sesiones de Clase en Vivo (ver bloques de contenido)")
-    
-    print("\n" + "="*70)
+    print(f"   Alumnos actuales: alumno.g[1-6].[1-3]  (progresión real, grado1 sin historial)")
+    print(f"   Egresados:        egresado.PAR.[año].[1-3]  (historial completo hasta 6°)")
+    print(f"   Docentes:         docente.test, docente.[materia].[1-6]")
+    print(f"   Contraseña:       test1234 (todos)")
+
+    print(f"\n⏱️  PERÍODO ACTIVO: {periodo_activo.nombre} ({periodo_activo.tipo})")
+
+    print("\n" + "=" * 80)
     print(f"🏫 PLANTEL: {plantel.nombre} (ID={plantel.id})")
-    print("="*70)
+    print("=" * 80)

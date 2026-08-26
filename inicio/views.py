@@ -389,7 +389,6 @@ def crear_comunicado(request):
         return redirect('lista_comunicados')
 
     # Materias: docente solo las que imparte; directivo todas las del plantel
-    # Materias: docente solo las que imparte; directivo todas las del plantel
     if es_docente:
         asignaturas = Asignatura.objects.filter(
             carrera__plantel=plantel, docentes=request.user
@@ -398,10 +397,13 @@ def crear_comunicado(request):
         asignaturas = Asignatura.objects.filter(carrera__plantel=plantel).order_by('nombre')
 
     # Grupos base: docente solo los suyos; directivo todos los del plantel
+    # Fix: solo grupos con periodo activo (igual que crear_tarea/crear_actividad)
     if es_docente:
-        grupos_base = Grupo.objects.filter(plantel=plantel, docentes=request.user)
+        grupos_base = Grupo.objects.filter(
+            plantel=plantel, docentes=request.user, periodo__activo=True
+        )
     else:
-        grupos_base = Grupo.objects.filter(plantel=plantel)
+        grupos_base = Grupo.objects.filter(plantel=plantel, periodo__activo=True)
 
     grupos = grupos_base.prefetch_related('asignaturas').order_by('grado', 'nombre').distinct()
 
@@ -449,10 +451,18 @@ def crear_comunicado(request):
 
         creados = []
         if destinatario == 'GRUPO':
+            # grupos_validos ya viene filtrado por periodo__activo vía grupos_base
             grupos_validos = grupos_base.filter(pk__in=grupo_ids)
             if asignatura_id:
                 grupos_validos = grupos_validos.filter(asignaturas=asignatura_id)
             grupos_validos = grupos_validos.distinct()
+
+            if not grupos_validos.exists():
+                messages.error(
+                    request,
+                    'Ninguno de los grupos seleccionados es válido (verifica que el ciclo escolar esté activo).'
+                )
+                return render(request, 'inicio/crear_comunicado.html', contexto_error)
 
             for grupo in grupos_validos:
                 c = Comunicado(

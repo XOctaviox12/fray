@@ -34,7 +34,7 @@ class TareaForm(forms.ModelForm):
     
     class Meta:
         model = Tarea
-        fields = ['grupo', 'asignatura', 'titulo', 'descripcion', 'archivo', 'fecha_entrega', 'parcial']
+        fields = ['grupo', 'asignatura', 'titulo', 'descripcion', 'archivo', 'fecha_entrega']
         widgets = {
             'grupo': forms.Select(attrs={
                 'class': INPUT_CLASSES,
@@ -62,14 +62,7 @@ class TareaForm(forms.ModelForm):
                 'class': INPUT_CLASSES,
                 'type': 'datetime-local',
                 'required': True,
-            }),
-            'parcial': forms.NumberInput(attrs={
-                'class': INPUT_CLASSES,
-                'type': 'number',
-                'min': 1,
-                'max': 4,
-                'value': 1,
-            }),
+            })
         }
     
     def __init__(self, *args, docente=None, **kwargs):
@@ -92,7 +85,6 @@ class TareaForm(forms.ModelForm):
         # Etiquetas amigables
         self.fields['grupo'].label = "Grupo"
         self.fields['asignatura'].label = "Materia"
-        self.fields['parcial'].label = "Parcial (1-4)"
     
     def clean(self):
         cleaned = super().clean()
@@ -113,106 +105,51 @@ class TareaForm(forms.ModelForm):
 # ═════════════════════════════════════════════════════════════════════════════
  
 class ActividadForm(forms.ModelForm):
-    """Formulario para crear/editar Actividades.
-    
-    El campo `periodo` se auto-completa en el modelo.save() desde grupo.periodo.
-    """
-    
     class Meta:
         model = Actividad
         fields = [
             'grupo', 'asignatura', 'titulo', 'instrucciones', 'tipo',
             'archivo', 'url_interactiva', 'fecha_entrega', 'valor_total',
-            'calificacion_automatica', 'parcial'
-        ]
+            'calificacion_automatica'
+        ]  # sin 'parcial'
         widgets = {
-            'grupo': forms.Select(attrs={
-                'class': INPUT_CLASSES,
-                'required': True,
-            }),
-            'asignatura': forms.Select(attrs={
-                'class': INPUT_CLASSES,
-                'required': True,
-            }),
-            'titulo': forms.TextInput(attrs={
-                'class': INPUT_CLASSES,
-                'placeholder': 'Título de la actividad',
-                'required': True,
-            }),
-            'instrucciones': forms.Textarea(attrs={
-                'class': f"{INPUT_CLASSES} min-h-[100px]",
-                'placeholder': 'Instrucciones para los alumnos',
-                'rows': 4,
-            }),
-            'tipo': forms.Select(attrs={
-                'class': INPUT_CLASSES,
-                'required': True,
-            }),
-            'archivo': forms.ClearableFileInput(attrs={
-                'class': INPUT_CLASSES,
-                'accept': '.pdf,.doc,.docx,.jpg,.png,.zip',
-            }),
-            'url_interactiva': forms.URLInput(attrs={
-                'class': INPUT_CLASSES,
-                'placeholder': 'https://www.geogebra.org/... o similar',
-            }),
-            'fecha_entrega': forms.DateTimeInput(attrs={
-                'class': INPUT_CLASSES,
-                'type': 'datetime-local',
-                'required': True,
-            }),
-            'valor_total': forms.NumberInput(attrs={
-                'class': INPUT_CLASSES,
-                'type': 'number',
-                'step': '0.01',
-                'min': '0',
-                'value': '10',
-            }),
-            'calificacion_automatica': forms.CheckboxInput(attrs={
-                'class': 'w-4 h-4 rounded border-slate-300',
-            }),
-            'parcial': forms.NumberInput(attrs={
-                'class': INPUT_CLASSES,
-                'type': 'number',
-                'min': 1,
-                'max': 4,
-                'value': 1,
-            }),
+            'grupo': forms.Select(attrs={'class': INPUT_CLASSES, 'required': True}),
+            'asignatura': forms.Select(attrs={'class': INPUT_CLASSES, 'required': True}),
+            'titulo': forms.TextInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'Título de la actividad', 'required': True}),
+            'instrucciones': forms.Textarea(attrs={'class': f"{INPUT_CLASSES} min-h-[100px]", 'placeholder': 'Instrucciones para los alumnos', 'rows': 4}),
+            'tipo': forms.Select(attrs={'class': INPUT_CLASSES, 'required': True}),
+            'archivo': forms.ClearableFileInput(attrs={'class': INPUT_CLASSES, 'accept': '.pdf,.doc,.docx,.jpg,.png,.zip'}),
+            'url_interactiva': forms.URLInput(attrs={'class': INPUT_CLASSES, 'placeholder': 'https://www.geogebra.org/... o similar'}),
+            'fecha_entrega': forms.DateTimeInput(attrs={'class': INPUT_CLASSES, 'type': 'datetime-local', 'required': True}),
+            'valor_total': forms.NumberInput(attrs={'class': INPUT_CLASSES, 'type': 'number', 'step': '0.01', 'min': '0', 'value': '10'}),
+            'calificacion_automatica': forms.CheckboxInput(attrs={'class': 'w-4 h-4 rounded border-slate-300'}),
+            # sin 'parcial'
         }
-    
+
     def __init__(self, *args, docente=None, **kwargs):
         super().__init__(*args, **kwargs)
-        
         if docente:
-            self.fields['grupo'].queryset = Grupo.objects.filter(
-                docentes=docente
-            ).select_related('carrera', 'periodo').order_by('grado', 'nombre')
-            
-            self.fields['asignatura'].queryset = Asignatura.objects.filter(
-                docentes=docente
-            ).order_by('nombre')
+            self.fields['grupo'].queryset = Grupo.objects.filter(docentes=docente).select_related('carrera', 'periodo').order_by('grado', 'nombre')
+            self.fields['asignatura'].queryset = Asignatura.objects.filter(docentes=docente).order_by('nombre')
         else:
             self.fields['grupo'].queryset = Grupo.objects.all().select_related('carrera', 'periodo')
             self.fields['asignatura'].queryset = Asignatura.objects.all()
-        
+
         self.fields['grupo'].label = "Grupo"
         self.fields['asignatura'].label = "Materia"
         self.fields['tipo'].label = "Tipo de Actividad"
         self.fields['calificacion_automatica'].label = "¿Calificar automáticamente?"
-        self.fields['parcial'].label = "Parcial (1-4)"
-    
+        # sin la línea de 'parcial'
+
     def clean(self):
         cleaned = super().clean()
         grupo = cleaned.get('grupo')
-        
         if grupo and grupo.periodo and not grupo.periodo.activo:
             raise ValidationError(
                 f'El ciclo "{grupo.periodo}" ya fue cerrado por el director. '
                 'No se pueden crear nuevas actividades.'
             )
-        
         return cleaned
- 
  
 # ═════════════════════════════════════════════════════════════════════════════
 # 3. FORMULARIOS DE ASISTENCIA

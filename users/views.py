@@ -254,7 +254,17 @@ def regenerar_password_docente(request, pk):
 def detalle_docente(request, pk):
     theme = get_campus_theme(request.user)
     docente = get_object_or_404(User, pk=pk, plantel=request.user.plantel, rol='DOCENTE')
-    return render(request, 'users/docente_detail.html', {'docente': docente, **theme})
+    # Carga académica del docente: Asignatura tiene M2M 'docentes'
+    # (related_name='materias_impartidas' en el modelo User). select_related
+    # de carrera y prefetch de grupos evita golpear la DB una vez por cada
+    # materia/grupo al renderizar el template.
+    materias = (
+        docente.materias_impartidas
+        .select_related('carrera')
+        .prefetch_related('grupos')
+        .order_by('nombre')
+    )
+    return render(request, 'users/docente_detail.html', {'docente': docente, 'materias': materias, **theme})
 
 @login_required
 def editar_docente(request, pk):
@@ -356,4 +366,3 @@ def editar_permisos(request, pk):
         'permisos':          permisos,
         'roles_disponibles': ROLES_DISPONIBLES,
     })
-

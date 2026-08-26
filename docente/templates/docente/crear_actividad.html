@@ -154,11 +154,11 @@
       </div>
       <div class="field-group">
         <label class="field-label">Grupo *</label>
-        <select name="grupo_id" id="selGrupo" class="field-select" required>
+        <select name="grupo" id="selGrupo" class="field-select" required>
           <option value="">— Primero elige materia —</option>
         </select>
       </div>
-      <input type="hidden" name="asignatura_id" id="asignaturaInput">
+      <input type="hidden" name="asignatura" id="asignaturaInput">
     </div>
 
     <div class="card">
@@ -167,6 +167,9 @@
         <input type="datetime-local" name="fecha_entrega" class="field-input" required>
       </div>
     </div>
+
+    {# Campo requerido por el modelo pero sin input visible en este diseño — valor fijo de 10 #}
+    <input type="hidden" name="valor_total" value="10">
 
     <div class="card">
       <div class="publish-row">

@@ -32,7 +32,7 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div>
             <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Grupo *</label>
-            <select name="grupo_id" id="selGrupo" onchange="filtrarAsig()" required
+            <select name="grupo" id="selGrupo" onchange="filtrarAsig()" required
   style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none;box-sizing:border-box">
   <option value="">— Selecciona —</option>
   {% for grupo in grupos_unicos %}
@@ -42,7 +42,7 @@
           </div>
           <div>
             <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin-bottom:5px">Asignatura *</label>
-            <select name="asignatura_id" id="selAsig" required
+            <select name="asignatura" id="selAsig" required
               style="width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px;font-size:13px;background:#f7f8fc;color:var(--ink);outline:none;box-sizing:border-box">
               <option value="">— Primero elige grupo —</option>
             </select>

@@ -445,17 +445,37 @@ def tareas(request):
         'grupo_id':      grupo_id,
         'asignatura_id': asignatura_id,
     })
-
+    
+def obtener_parcial_activo(grupo, asignatura, docente):
+    cerrados = CierreParcial.objects.filter(
+        grupo=grupo, asignatura=asignatura, docente=docente,
+    ).values_list('parcial', flat=True)
+    for numero in range(1, 5):
+        if numero not in cerrados:
+            return numero
+    return 4
 
 @docente_required
 def crear_tarea(request):
-    """Crear tarea usando TareaForm con validaciones de periodo."""
-    
+    grupos_unicos = (
+        request.user.grupos_asignados
+        .select_related('carrera', 'periodo')
+        .filter(periodo__activo=True)
+        .order_by('grado', 'nombre')
+    )
+    asignaciones = [
+        {'grupo': grupo, 'asignatura': materia}
+        for grupo in grupos_unicos
+        for materia in grupo.asignaturas.filter(docentes=request.user)
+    ]
+
     if request.method == 'POST':
         form = TareaForm(request.POST, request.FILES, docente=request.user)
         if form.is_valid():
             tarea = form.save(commit=False)
             tarea.docente = request.user
+            tarea.parcial = obtener_parcial_activo(tarea.grupo, tarea.asignatura, request.user)
+            tarea.publicada = request.POST.get('publicada') == '1'   # ← esto faltaba
             try:
                 tarea.save()
                 messages.success(request, f'✅ Tarea "{tarea.titulo}" creada correctamente.')
@@ -463,24 +483,38 @@ def crear_tarea(request):
             except ValidationError as e:
                 messages.error(request, str(e))
         else:
-            # Mostrar errores del formulario
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f'{field}: {error}')
     else:
         form = TareaForm(docente=request.user)
-    
+
     return render(request, 'docente/crear_tarea.html', {
         'form': form,
         'titulo': 'Crear Tarea',
+        'grupos_unicos': grupos_unicos,
+        'asignaciones': asignaciones,
     })
- 
- 
+    
+    
 @docente_required
 def editar_tarea(request, pk):
     """Editar tarea existente."""
     tarea = get_object_or_404(Tarea, pk=pk, docente=request.user)
-    
+
+    # Bloqueo: no editar si el parcial de la tarea ya fue cerrado
+    parcial_cerrado = CierreParcial.objects.filter(
+        grupo=tarea.grupo,
+        asignatura=tarea.asignatura,
+        parcial=tarea.parcial,
+    ).exists()
+    if parcial_cerrado:
+        messages.error(
+            request,
+            f'No puedes editar esta tarea: el Parcial {tarea.parcial} ya fue cerrado por el director.'
+        )
+        return redirect('detalle_tarea', pk=pk)
+
     if request.method == 'POST':
         form = TareaForm(request.POST, request.FILES, instance=tarea, docente=request.user)
         if form.is_valid():
@@ -493,13 +527,13 @@ def editar_tarea(request, pk):
                     messages.error(request, f'{field}: {error}')
     else:
         form = TareaForm(instance=tarea, docente=request.user)
-    
+
     return render(request, 'docente/editar_tarea.html', {
         'form': form,
         'tarea': tarea,
         'titulo': 'Editar Tarea',
     })
-
+    
  
 def fix_pdf_url(url):
     url = url.replace('http://', 'https://').replace('/image/upload/', '/raw/upload/')
@@ -715,13 +749,28 @@ def actividades(request):
 
 @docente_required
 def crear_actividad(request):
-    """Crear actividad usando ActividadForm."""
-    
+
+    grupos_unicos = (
+        request.user.grupos_asignados
+        .select_related('carrera', 'periodo')
+        .filter(periodo__activo=True)
+        .order_by('grado', 'nombre')
+    )
+    asignaciones = [
+        {'grupo': grupo, 'asignatura': materia}
+        for grupo in grupos_unicos
+        for materia in grupo.asignaturas.filter(docentes=request.user)
+    ]
+
     if request.method == 'POST':
         form = ActividadForm(request.POST, request.FILES, docente=request.user)
         if form.is_valid():
             actividad = form.save(commit=False)
             actividad.docente = request.user
+            actividad.parcial = obtener_parcial_activo(actividad.grupo, actividad.asignatura, request.user)
+            publicar = request.POST.get('publicada') == '1'        # ← esto faltaba
+            actividad.publicada = publicar
+            actividad.publicada_en = timezone.now() if publicar else None
             try:
                 actividad.save()
                 messages.success(request, f'✅ Actividad "{actividad.titulo}" creada.')
@@ -734,12 +783,13 @@ def crear_actividad(request):
                     messages.error(request, f'{field}: {error}')
     else:
         form = ActividadForm(docente=request.user)
-    
+
     return render(request, 'docente/crear_actividad.html', {
         'form': form,
         'titulo': 'Crear Actividad',
+        'asignaciones': asignaciones,
     })
-
+    
 @docente_required
 def detalle_actividad(request, pk):
     from academic.models import Actividad, EntregaActividad
@@ -809,7 +859,20 @@ def detalle_actividad(request, pk):
 def editar_actividad(request, pk):
     """Editar actividad existente."""
     actividad = get_object_or_404(Actividad, pk=pk, docente=request.user)
-    
+
+    # Bloqueo: no editar si el parcial de la actividad ya fue cerrado
+    parcial_cerrado = CierreParcial.objects.filter(
+        grupo=actividad.grupo,
+        asignatura=actividad.asignatura,
+        parcial=actividad.parcial,
+    ).exists()
+    if parcial_cerrado:
+        messages.error(
+            request,
+            f'No puedes editar esta actividad: el Parcial {actividad.parcial} ya fue cerrado por el director.'
+        )
+        return redirect('detalle_actividad', pk=pk)
+
     if request.method == 'POST':
         form = ActividadForm(request.POST, request.FILES, instance=actividad, docente=request.user)
         if form.is_valid():
@@ -822,7 +885,7 @@ def editar_actividad(request, pk):
                     messages.error(request, f'{field}: {error}')
     else:
         form = ActividadForm(instance=actividad, docente=request.user)
-    
+
     return render(request, 'docente/editar_actividad.html', {
         'form': form,
         'actividad': actividad,

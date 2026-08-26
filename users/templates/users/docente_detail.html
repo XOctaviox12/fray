@@ -120,6 +120,21 @@
   .coming-label { font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: var(--space-2); }
   .coming-sub { font-size: 11.5px; color: var(--text-muted); font-style: italic; }
 
+  /* Carga académica — lista de materias del docente */
+  .materias-card { text-align: left; }
+  .materias-list { display: flex; flex-direction: column; gap: var(--space-3); }
+  .materia-item {
+    padding: var(--space-3); background: var(--bg-page);
+    border: 1px solid var(--border-light); border-radius: var(--radius-sm);
+  }
+  .materia-nombre { font-size: 12.5px; font-weight: 700; color: var(--text-primary); }
+  .materia-meta { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+  .materia-grupos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-2); }
+  .grupo-badge {
+    font-size: 9.5px; font-weight: 700; color: var(--color-secondary);
+    background: var(--color-secondary-light); padding: 3px 9px; border-radius: 999px;
+  }
+
   .pass-box {
     background: var(--bg-page); border: 1px solid var(--border-light);
     border-radius: var(--radius-sm); padding: var(--space-3); margin-bottom: var(--space-3);
@@ -250,9 +265,30 @@
         </a>
       </div>
 
-      <div class="coming-card">
+      <!-- Carga académica: materias reales del docente (M2M Asignatura.docentes) -->
+      <div class="coming-card materias-card">
         <div class="coming-label">Carga Académica</div>
-        <div class="coming-sub">Materias asignadas próximamente.</div>
+        {% if materias %}
+          <div class="materias-list">
+            {% for materia in materias %}
+              <div class="materia-item">
+                <div class="materia-nombre">{{ materia.nombre }}</div>
+                <div class="materia-meta">
+                  {% if materia.clave %}{{ materia.clave }} · {% endif %}{{ materia.carrera.nombre|default:"Sin carrera" }}
+                </div>
+                {% if materia.grupos.all %}
+                  <div class="materia-grupos">
+                    {% for grupo in materia.grupos.all %}
+                      <span class="grupo-badge">{{ grupo.grado }}° {{ grupo.nombre }}</span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="coming-sub">Sin materias asignadas todavía.</div>
+        {% endif %}
       </div>
     </div>
   </div>

@@ -7,7 +7,7 @@ import datetime
 import json
 from django.http import JsonResponse
 from .models import Grupo, Periodo, Asignatura, Calificacion, Asistencia, Carrera, HorarioClase, BoletaParcial
-from users.models import User, Tutor
+from users.models import User, Tutor, AlumnoTutor
 from .forms import GrupoForm, AsignaturaForm, AlumnoForm, TutorForm
 from users.views import get_campus_theme
 from django.views.generic import DetailView
@@ -706,87 +706,335 @@ def agregar_tutor(request):
 
 @login_required
 def detalle_alumno(request, pk):
-    alumno = get_object_or_404(User, pk=pk, plantel=request.user.plantel, rol='ALUMNO')
-    ctx    = get_plantel_context(request.user)
+    """
+    Vista que muestra el detalle completo del alumno:
+    - Información personal
+    - Tutores asignados (NUEVO: con posibilidad de agregar/quitar)
+    - Calificaciones
+    - Asistencia
+    """
+    alumno = get_object_or_404(User, pk=pk, rol='ALUMNO')
  
-    if request.method == 'POST' and request.POST.get('accion') == 'editar':
-        alumno.first_name = request.POST.get('first_name', alumno.first_name).strip()
-        alumno.last_name  = request.POST.get('last_name',  alumno.last_name).strip()
-        alumno.email      = request.POST.get('email',      alumno.email).strip()
-        alumno.telefono   = request.POST.get('telefono',   '').strip() or None
-        alumno.direccion  = request.POST.get('direccion',  '').strip() or None
-        alumno.save()
-        messages.success(request, f"Perfil de {alumno.get_full_name()} actualizado.")
-        return redirect('detalle_alumno', pk=pk)
+    # Verificar permisos: solo director, coord, admin, o el mismo alumno
+    if request.user.rol not in ('DIRECTOR', 'COORD', 'ADMIN') and request.user != alumno:
+        return render(request, '403.html', status=403)
  
-    # IMPORTANTE: ordenado por periodo (cronológico) y luego por parcial.
-    # {% regroup %} en el template NO sirve aquí porque con regroup anidado
-    # (periodo -> parcial) el orden se vuelve frágil apenas hay más de un
-    # nivel de agrupación; por eso se arma el historial ya agrupado en Python.
-    boletas = BoletaParcial.objects.filter(
-        alumno=alumno,
-        publicada=True
-    ).select_related('asignatura', 'grupo', 'grupo__periodo').order_by(
-        '-grupo__periodo__fecha_inicio', 'parcial', 'asignatura__nombre'
+    # Obtener tutores activos del plantel
+    plantel = alumno.plantel
+    tutores_disponibles = list(
+        Tutor.objects.filter(plantel=plantel, activo=True)
+        .values('id', 'nombre', 'parentesco', 'telefono', 'codigo_acceso')
+    )
+    
+    # Tutores ya asignados a este alumno
+    tutores_asignados = alumno.tutores_asignados.all()
+    tutores_asignados_ids = list(tutores_asignados.values_list('tutor_id', flat=True))
+ 
+    # Datos para JavaScript
+    tutores_disponibles_json = json.dumps(tutores_disponibles)
+    tutores_asignados_json = json.dumps(tutores_asignados_ids)
+ 
+    # Calificaciones del alumno
+    calificaciones = Calificacion.objects.filter(alumno=alumno).select_related(
+        'asignatura', 'grupo'
+    ).order_by('-fecha')
+ 
+    # Asistencias del alumno
+    asistencias = Asistencia.objects.filter(alumno=alumno).select_related(
+        'grupo', 'asignatura'
+    ).order_by('-fecha')
+    
+    # Estadísticas de asistencia
+    total_asistencias = asistencias.count()
+    total_presentes = asistencias.filter(estado='P').count()
+    total_faltas = asistencias.filter(estado='A').count()
+    porcentaje_asistencia = (
+        int((total_presentes / total_asistencias) * 100) if total_asistencias > 0 else 0
     )
  
+    # Historial académico (por periodo/ciclo)
+    periodo_activo = Periodo.objects.filter(plantel=plantel, activo=True).first()
     historial = []
-    ciclo_actual = None
-    for boleta in boletas:
-        periodo = boleta.grupo.periodo
- 
-        if ciclo_actual is None or ciclo_actual['periodo'].pk != periodo.pk:
-            ciclo_actual = {
-                'periodo': periodo,
-                'grupo': boleta.grupo,
-                'parciales': [],
-                'notas': [],
-            }
-            historial.append(ciclo_actual)
- 
-        parcial_actual = next(
-            (p for p in ciclo_actual['parciales'] if p['numero'] == boleta.parcial),
-            None,
+    
+    if alumno.alumno_grupo:
+        # Obtener todos los boletas parciales agrupadas por ciclo
+        boletas_por_ciclo = (
+            BoletaParcial.objects.filter(alumno=alumno)
+            .select_related('grupo', 'asignatura')
+            .order_by('grupo__periodo__fecha_inicio', 'parcial')
         )
-        if parcial_actual is None:
-            parcial_actual = {'numero': boleta.parcial, 'materias': [], 'notas': []}
-            ciclo_actual['parciales'].append(parcial_actual)
  
-        parcial_actual['materias'].append(boleta)
-        parcial_actual['notas'].append(boleta.calificacion_final)
-        ciclo_actual['notas'].append(boleta.calificacion_final)
+        from collections import defaultdict
+        ciclos_dict = defaultdict(lambda: {'periodo': None, 'parciales': defaultdict(list)})
  
-    for ciclo in historial:
-        ciclo['promedio_ciclo'] = (
-            round(sum(ciclo['notas']) / len(ciclo['notas']), 2) if ciclo['notas'] else None
-        )
-        for p in ciclo['parciales']:
-            p['promedio'] = (
-                round(sum(p['notas']) / len(p['notas']), 2) if p['notas'] else None
+        for boleta in boletas_por_ciclo:
+            periodo_key = boleta.grupo.periodo.id if boleta.grupo.periodo else None
+            ciclos_dict[periodo_key]['periodo'] = boleta.grupo.periodo
+            ciclos_dict[periodo_key]['parciales'][boleta.parcial].append(boleta)
+ 
+        # Construir estructura de historial
+        for periodo_id, ciclo_data in ciclos_dict.items():
+            periodo = ciclo_data['periodo']
+            parciales_list = []
+ 
+            for parcial_num in sorted(ciclo_data['parciales'].keys()):
+                boletas = ciclo_data['parciales'][parcial_num]
+                promedio_parcial = (
+                    sum(b.calificacion_final for b in boletas) / len(boletas)
+                    if boletas else 0
+                )
+                parciales_list.append({
+                    'numero': parcial_num,
+                    'promedio': round(promedio_parcial, 1),
+                    'materias': boletas,
+                })
+ 
+            promedio_ciclo = (
+                sum(p['promedio'] for p in parciales_list) / len(parciales_list)
+                if parciales_list else 0
             )
  
-    promedio_alumno = boletas.aggregate(Avg('calificacion_final'))['calificacion_final__avg'] or 0.0
+            historial.append({
+                'periodo': periodo,
+                'grupo': alumno.alumno_grupo,
+                'parciales': parciales_list,
+                'promedio_ciclo': round(promedio_ciclo, 1),
+            })
  
-    asistencias = Asistencia.objects.filter(alumno=alumno).order_by('-fecha')
-    total_presentes = asistencias.filter(estado='P').count()
-    total_faltas    = asistencias.filter(estado__in=['A', 'R']).count()
-    total_registros = asistencias.count()
-    porcentaje_asistencia = (
-        round((total_presentes / total_registros) * 100) if total_registros > 0 else 0
+    # Promedio general histórico
+    todas_calificaciones = Calificacion.objects.filter(alumno=alumno).values_list('nota', flat=True)
+    promedio_alumno = (
+        sum(todas_calificaciones) / len(todas_calificaciones)
+        if todas_calificaciones else 0
     )
  
-    return render(request, 'academic/alumno_detalle.html', {
-        'alumno':                alumno,
-        'historial':             historial,           # NUEVO: usar esto en el template
-        'calificaciones':        boletas,              # se sigue usando para el resumen general
-        'promedio_alumno':       round(promedio_alumno, 1),
-        'asistencias':           asistencias,
-        'total_presentes':       total_presentes,
-        'total_faltas':          total_faltas,
+    # Manejar POST (editar perfil)
+    if request.method == 'POST' and request.POST.get('accion') == 'editar':
+        alumno.first_name = request.POST.get('first_name', alumno.first_name)
+        alumno.last_name = request.POST.get('last_name', alumno.last_name)
+        alumno.email = request.POST.get('email', alumno.email)
+        alumno.telefono = request.POST.get('telefono', alumno.telefono)
+        alumno.direccion = request.POST.get('direccion', alumno.direccion)
+        alumno.save()
+        return redirect('detalle_alumno', pk=alumno.pk)
+ 
+    context = {
+        'alumno': alumno,
+        'tutores_disponibles_json': tutores_disponibles_json,
+        'tutores_asignados_json': tutores_asignados_json,
+        'total_tutores_disponibles': len(tutores_disponibles),
+        'calificaciones': calificaciones,
+        'asistencias': asistencias,
+        'total_presentes': total_presentes,
+        'total_faltas': total_faltas,
         'porcentaje_asistencia': porcentaje_asistencia,
-        **ctx,
+        'historial': historial,
+        'promedio_alumno': round(promedio_alumno, 1),
+    }
+ 
+    return render(request, 'academic/alumno_detalle.html', context)
+ 
+@login_required
+@require_http_methods(['POST'])
+def asignar_tutor(request):
+    """
+    AJAX POST: Asigna un tutor a un alumno.
+    Body JSON: { "alumno_id": int, "tutor_id": int }
+    Responde: { "success": bool, "error": str? }
+    """
+    try:
+        data = json.loads(request.body)
+        alumno_id = data.get('alumno_id')
+        tutor_id = data.get('tutor_id')
+ 
+        alumno = get_object_or_404(User, pk=alumno_id, rol='ALUMNO')
+        tutor = get_object_or_404(Tutor, pk=tutor_id)
+ 
+        # Verificar permisos
+        if request.user.rol not in ('DIRECTOR', 'COORD', 'ADMIN') and request.user != alumno:
+            return JsonResponse({'success': False, 'error': 'Permiso denegado'}, status=403)
+ 
+        # Verificar que el tutor pertenece al mismo plantel
+        if tutor.plantel != alumno.plantel:
+            return JsonResponse({'success': False, 'error': 'El tutor no pertenece al plantel del alumno'}, status=400)
+ 
+        # Crear la asignación (si no existe ya)
+        asignacion, created = AlumnoTutor.objects.get_or_create(
+            alumno=alumno,
+            tutor=tutor,
+        )
+ 
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Tutor asignado exitosamente' if created else 'El tutor ya estaba asignado',
+            'tutor_id': tutor_id,
+            'codigo_acceso': tutor.codigo_acceso,
+        })
+ 
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+ 
+@login_required
+@require_http_methods(['POST'])
+def desasignar_tutor(request):
+    """
+    AJAX POST: Desasigna un tutor de un alumno.
+    Body JSON: { "alumno_id": int, "tutor_id": int }
+    Responde: { "success": bool, "error": str? }
+    """
+    try:
+        data = json.loads(request.body)
+        alumno_id = data.get('alumno_id')
+        tutor_id = data.get('tutor_id')
+ 
+        alumno = get_object_or_404(User, pk=alumno_id, rol='ALUMNO')
+        tutor = get_object_or_404(Tutor, pk=tutor_id)
+ 
+        # Verificar permisos
+        if request.user.rol not in ('DIRECTOR', 'COORD', 'ADMIN') and request.user != alumno:
+            return JsonResponse({'success': False, 'error': 'Permiso denegado'}, status=403)
+ 
+        # Eliminar la asignación
+        AlumnoTutor.objects.filter(alumno=alumno, tutor=tutor).delete()
+ 
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Tutor desasignado',
+        })
+ 
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+ 
+ 
+# ══════════════════════════════════════════════════════════════════════════════
+# DAR DE ALTA NUEVO TUTOR (para Director/Admin)
+# ══════════════════════════════════════════════════════════════════════════════
+ 
+@login_required
+@require_http_methods(['POST'])
+def crear_tutor(request):
+    """
+    Crear un nuevo tutor a nivel de plantel.
+    POST (formulario):
+      - nombre
+      - parentesco
+      - telefono
+      - correo (opcional)
+    
+    Solo accesible para director/admin del plantel.
+    """
+    if request.user.rol not in ('DIRECTOR', 'ADMIN'):
+        return JsonResponse({'success': False, 'error': 'Permiso denegado'}, status=403)
+ 
+    plantel = request.user.plantel
+    if not plantel:
+        return JsonResponse({'success': False, 'error': 'Usuario sin plantel asignado'}, status=400)
+ 
+    nombre = request.POST.get('nombre', '').strip()
+    parentesco = request.POST.get('parentesco', '').strip()
+    telefono = request.POST.get('telefono', '').strip()
+    correo = request.POST.get('correo', '').strip() or None
+ 
+    if not all([nombre, parentesco, telefono]):
+        return JsonResponse({'success': False, 'error': 'Faltan campos requeridos'}, status=400)
+ 
+    # Crear tutor (el código_acceso se genera automáticamente en save())
+    tutor = Tutor.objects.create(
+        plantel=plantel,
+        nombre=nombre,
+        parentesco=parentesco,
+        telefono=telefono,
+        correo=correo or None,
+    )
+ 
+    return JsonResponse({
+        'success': True,
+        'mensaje': f'Tutor {tutor.nombre} creado exitosamente',
+        'tutor_id': tutor.id,
+        'codigo_acceso': tutor.codigo_acceso,
     })
-
+ 
+ 
+# ══════════════════════════════════════════════════════════════════════════════
+# LISTADO DE TUTORES (para admin/director)
+# ══════════════════════════════════════════════════════════════════════════════
+ 
+@login_required
+def lista_tutores(request):
+    """
+    Listado de todos los tutores del plantel.
+    Muestra cantidad de alumnos asignados a cada tutor.
+    """
+    if request.user.rol not in ('DIRECTOR', 'COORD', 'ADMIN'):
+        return render(request, '403.html', status=403)
+ 
+    plantel = request.user.plantel
+    tutores = (
+        Tutor.objects.filter(plantel=plantel)
+        .annotate(cantidad_alumnos=Count('alumnos_asignados', distinct=True))
+        .order_by('nombre')
+    )
+ 
+    paginator = Paginator(tutores, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+ 
+    context = {
+        'tutores': page_obj,
+        'total_tutores': tutores.count(),
+    }
+ 
+    return render(request, 'academic/lista_tutores.html', context)
+ 
+ 
+# ══════════════════════════════════════════════════════════════════════════════
+# EDITAR TUTOR
+# ══════════════════════════════════════════════════════════════════════════════
+ 
+@login_required
+def editar_tutor(request, pk):
+    """
+    Editar datos de un tutor existente.
+    """
+    if request.user.rol not in ('DIRECTOR', 'ADMIN'):
+        return render(request, '403.html', status=403)
+ 
+    tutor = get_object_or_404(Tutor, pk=pk, plantel=request.user.plantel)
+ 
+    if request.method == 'POST':
+        tutor.nombre = request.POST.get('nombre', tutor.nombre)
+        tutor.parentesco = request.POST.get('parentesco', tutor.parentesco)
+        tutor.telefono = request.POST.get('telefono', tutor.telefono)
+        tutor.correo = request.POST.get('correo', tutor.correo) or None
+        tutor.activo = request.POST.get('activo') == 'on'
+        tutor.save()
+        return redirect('lista_tutores')
+ 
+    context = {'tutor': tutor}
+    return render(request, 'academic/editar_tutor.html', context)
+ 
+ 
+# ══════════════════════════════════════════════════════════════════════════════
+# ELIMINAR TUTOR
+# ══════════════════════════════════════════════════════════════════════════════
+ 
+@login_required
+def eliminar_tutor(request, pk):
+    """
+    Eliminar un tutor (soft delete: marcar como inactivo).
+    """
+    if request.user.rol not in ('DIRECTOR', 'ADMIN'):
+        return render(request, '403.html', status=403)
+ 
+    tutor = get_object_or_404(Tutor, pk=pk, plantel=request.user.plantel)
+    tutor.activo = False
+    tutor.save()
+    return redirect('lista_tutores')
+ 
 
 @login_required
 def editar_alumno(request, pk):
@@ -809,10 +1057,10 @@ def editar_alumno(request, pk):
 
 @login_required
 def regenerar_password(request, pk):
-    alumno     = get_object_or_404(User, pk=pk, plantel=request.user.plantel)
+    alumno = get_object_or_404(User, pk=pk, plantel=request.user.plantel)
     nueva_pass = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-    alumno.set_password(nueva_pass)
-    alumno.password_plana = nueva_pass  # ← agregar esta línea
+    alumno.set_password(nueva_pass)                     # Guarda hash en Django
+    alumno.set_password_recuperable(nueva_pass)         # Guarda copia encriptada (reversible)
     alumno.save()
     messages.success(request, f"Nueva contraseña para {alumno.get_full_name()}: {nueva_pass} — anótala antes de salir.")
     return redirect('detalle_alumno', pk=pk)

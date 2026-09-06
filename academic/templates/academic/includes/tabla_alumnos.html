@@ -46,11 +46,11 @@
 
                 {% if user.rol != 'DOCENTE' %}
                 <td class="px-6 py-4 text-right">
-                    {# Modal rápido #}
+                    {% comment %} {# Modal rápido #}
                     <button onclick="abrirModalAlumno({{ alumno.id }})"
                             class="text-{{ color }}-600 text-[10px] font-black uppercase hover:underline mr-3">
                         Ver detalles
-                    </button>
+                    </button> {% endcomment %}
                     {# Perfil completo #}
                     <a href="{% url 'detalle_alumno' alumno.id %}"
                        class="text-slate-400 text-[10px] font-bold uppercase hover:text-slate-700 hover:underline">

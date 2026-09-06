@@ -1,0 +1,35 @@
+{# tutor/_partials/alumnos_grid.html #}
+{% if resumen %}
+<div class="grid">
+  {% for r in resumen %}
+  <a href="{% url 'tutor:perfil_alumno' r.alumno.pk %}" class="alumno-card">
+    <div class="card-header">
+      <div class="avatar">
+        {{ r.alumno.first_name|first|upper }}{{ r.alumno.last_name|first|upper }}
+      </div>
+      <div>
+        <div class="alumno-nombre">{{ r.alumno.get_full_name }}</div>
+        <div class="alumno-grupo">{{ r.alumno.alumno_grupo|default:"Sin grupo" }}</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="stat">
+        <span class="stat-label">Asistencia este mes</span>
+        <span class="stat-val {% if r.asistencia_pct == None %}muted{% elif r.asistencia_pct >= 80 %}ok{% elif r.asistencia_pct >= 60 %}warn{% else %}danger{% endif %}">
+          {% if r.asistencia_pct == None %}Sin registros{% else %}{{ r.asistencia_pct }}%{% endif %}
+        </span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Tareas pendientes</span>
+        <span class="stat-val {% if r.tareas_pendientes == 0 %}ok{% elif r.tareas_pendientes <= 2 %}warn{% else %}danger{% endif %}">
+          {{ r.tareas_pendientes }} tarea{% if r.tareas_pendientes != 1 %}s{% endif %}
+        </span>
+      </div>
+      <span class="ver-btn">Ver detalle completo →</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">No hay alumnos vinculados a tu código de acceso.<br>Comunícate con la dirección.</div>
+{% endif %}

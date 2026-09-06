@@ -12,11 +12,59 @@ import string
 from .models import User, PermisoPersonal
 import secrets
 ALFABETO_PASSWORD = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789"
+from .admin import generar_username_alumno, generar_matricula_docente, generar_password_temporal
+from django.http import JsonResponse
+from django.contrib.admin.views.decorators import staff_member_required
+from .admin import obtener_preview  # Importamos la función helper
+
 
 # --- UTILIDADES DE SEGURIDAD Y CONTEXTO ---
 
 def is_admin(user):
     return user.is_superuser
+
+@staff_member_required
+def preview_credenciales(request):
+    rol = request.GET.get('rol')
+    plantel_id = request.GET.get('plantel')
+    plantel = None
+    if plantel_id:
+        try:
+            plantel = Plantel.objects.get(id=int(plantel_id))
+        except Plantel.DoesNotExist:
+            pass
+
+    username, password = obtener_preview(rol, plantel)
+    return JsonResponse({
+        'username': username or '',
+        'password': password or '',
+    })
+
+@login_required
+def generar_credenciales(request):
+    if request.user.rol not in ('ADMIN', 'DIRECTOR', 'COORD'):
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+
+    rol = request.GET.get('rol')
+    plantel_id = request.GET.get('plantel')
+    plantel = None
+    if plantel_id:
+        try:
+            from campuses.models import Plantel
+            plantel = Plantel.objects.get(id=int(plantel_id))
+        except:
+            pass
+
+    if rol == 'ALUMNO':
+        username = generar_username_alumno()
+        password = generar_password_temporal()
+    elif rol == 'DOCENTE' and plantel:
+        username = generar_matricula_docente(plantel)
+        password = generar_password_temporal()
+    else:
+        return JsonResponse({'error': 'No se puede generar para este rol'}, status=400)
+
+    return JsonResponse({'username': username, 'password': password})
 
 def get_campus_theme(user):
     """Retorna etiquetas y colores según el tipo de plantel logueado."""
@@ -336,7 +384,7 @@ def editar_permisos(request, pk):
 
     ROLES_DISPONIBLES = [
         ('DIRECTOR',  'Director'),
-        ('COORD',     'Coordinador'),        
+        ('COORD',     'Coordinador'),
         ('DOCENTE',   'Docente'),
         ('TUTOR',     'Padre/Tutor'),
     ]

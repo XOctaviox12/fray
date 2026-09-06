@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <script src="https://cdn.tailwindcss.com"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -267,6 +268,197 @@
         .toast-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; opacity: .5; margin-bottom: 2px; }
         .toast-msg { font-size: 12.5px; font-weight: 600; line-height: 1.45; }
 
+        /* ═══════════════════════════════════════════════════════════════════════════
+           BUSCADOR GLOBAL
+           ═══════════════════════════════════════════════════════════════════════════ */
+
+        .global-search {
+            position: relative;
+            width: min(460px, 45vw);
+            z-index: 300;
+        }
+
+        .global-search-box {
+            height: 38px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 0 10px;
+            box-shadow: var(--shadow-xs);
+            transition: border-color var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
+        }
+
+        .global-search-box:focus-within {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(245,124,0,.10);
+        }
+
+        .global-search-icon {
+            flex-shrink: 0;
+            color: var(--text-muted);
+        }
+
+        .global-search-box:focus-within .global-search-icon {
+            color: var(--color-primary);
+        }
+
+        #global-search-input {
+            width: 100%;
+            min-width: 0;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            font-family: var(--font-family);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        #global-search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .global-search-shortcut {
+            flex-shrink: 0;
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--text-muted);
+            background: var(--bg-hover);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: 3px 6px;
+            white-space: nowrap;
+        }
+
+        .global-search-results {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            display: none;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            max-height: 420px;
+            overflow-y: auto;
+        }
+
+        .global-search-results.show {
+            display: block;
+        }
+
+        .global-search-result {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 13px;
+            text-decoration: none;
+            border-bottom: 1px solid var(--border-light);
+            transition: background-color var(--transition-fast) ease;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+        }
+
+        .global-search-result:last-child {
+            border-bottom: 0;
+        }
+
+        .global-search-result:hover {
+            background: var(--bg-hover);
+        }
+
+        .search-result-icon {
+            width: 40px;
+            height: 40px;
+            flex-shrink: 0;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-secondary-light);
+            color: var(--color-secondary);
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .search-result-content {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .search-result-title {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .search-result-subtitle {
+            display: block;
+            margin-top: 3px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .search-result-arrow {
+            flex-shrink: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            opacity: 0;
+            transition: opacity var(--transition-fast) ease;
+        }
+
+        .global-search-result:hover .search-result-arrow {
+            opacity: 1;
+        }
+
+        .global-search-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 13px;
+            font-size: 9px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-light);
+            background: var(--bg-hover);
+        }
+
+        .global-search-shortcuts {
+            display: none;
+        }
+
+        .global-search-empty {
+            padding: 25px 15px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .global-search-loading {
+            padding: 20px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
         @media (max-width: 900px) {
             #sidebar { transform: translateX(-100%); }
             #sidebar.open { transform: translateX(0); }
@@ -277,6 +469,21 @@
             #page-footer { padding: var(--space-4); flex-direction: column; align-items: flex-start; gap: var(--space-2); }
             #topbar { padding: 0 var(--space-4); }
             .cycle-pill { display: none; }
+            .global-search { width: auto; flex: 1; }
+            .global-search-shortcut { display: none; }
+        }
+
+        @media (max-width: 600px) {
+            .global-search { width: 100%; }
+            .global-search-results {
+                position: fixed;
+                top: 60px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+            }
+            .search-result-arrow { display: none; }
+            .global-search-shortcuts { display: inline; }
         }
 
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -400,25 +607,62 @@
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <div id="page-wrap">
-    <header id="topbar">
-        <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menú">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-        </button>
+<header id="topbar">
 
-        <div class="topbar-center">
-            <div id="cycle-pill-container" class="cycle-pill loading">
-                <span>Ciclo</span>
-                <div class="cycle-pill-text">Cargando...</div>
-            </div>
-            <a href="{% url 'perfil' %}" class="icon-btn" title="Mi Perfil">
-                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </a>
-            <form action="{% url 'logout' %}" method="post">
-                {% csrf_token %}
-                <button type="submit" class="logout-btn">Salir</button>
-            </form>
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menú" type="button">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+    </button>
+
+    <div class="global-search">
+        <div class="global-search-box">
+            <svg class="global-search-icon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"/>
+                <path d="m20 20-3.5-3.5"/>
+            </svg>
+            <input
+                type="search"
+                id="global-search-input"
+                data-global-search
+                data-search-url="{% url 'buscar_global' %}"
+                placeholder="Buscar alumnos, docentes, grupos..."
+                autocomplete="off"
+                spellcheck="false"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded="false"
+                aria-controls="global-search-results"
+            >
         </div>
-    </header>
+        <div
+            id="global-search-results"
+            class="global-search-results"
+            data-global-search-results
+            role="listbox"
+            aria-label="Resultados de búsqueda"
+        ></div>
+    </div>
+
+    <div class="topbar-center">
+        <div id="cycle-pill-container" class="cycle-pill loading">
+            <span>Ciclo</span>
+            <div class="cycle-pill-text">Cargando...</div>
+        </div>
+
+        <a href="{% url 'perfil' %}" class="icon-btn" title="Mi Perfil">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+        </a>
+
+        <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="logout-btn">Salir</button>
+        </form>
+    </div>
+
+</header>
 
     <main id="page-content" class="page-enter">
         {% block content %}{% endblock %}
@@ -488,9 +732,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { once: true });
 });
 
-// ═════════════════════════════════════════════════════════════════════════════
-// FUNCIÓN: Cargar período activo dinámicamente (VERSIÓN MEJORADA)
-// ═════════════════════════════════════════════════════════════════════════════
 async function loadActivePeriod() {
     const container = document.getElementById('cycle-pill-container');
     const textDiv = container.querySelector('.cycle-pill-text');
@@ -505,22 +746,16 @@ async function loadActivePeriod() {
             credentials: 'same-origin'
         });
 
-        console.log(`[loadActivePeriod] Status: ${response.status}`);
-
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[loadActivePeriod] Error ${response.status}:`, errorText);
             throw new Error(`HTTP ${response.status}`);
         }
 
         const data = await response.json();
-        console.log('[loadActivePeriod] Response:', data);
 
         if (data.success && data.periodo) {
             const { display_name } = data.periodo;
             textDiv.textContent = display_name || 'Sin período';
             container.classList.remove('loading');
-            console.log('[loadActivePeriod] ✓ Período cargado exitosamente:', display_name);
         } else {
             throw new Error(data.error || 'No se pudo cargar el período');
         }
@@ -531,15 +766,261 @@ async function loadActivePeriod() {
     }
 }
 
-// Cargar período cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', loadActivePeriod);
 </script>
-<script src="https://cdn.tailwindcss.com"></script>
+
 <script>
-    tailwind.config = {
-        corePlugins: { preflight: false }
-    }
+(function () {
+    'use strict';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const input = document.querySelector('[data-global-search]');
+        if (!input) return;
+
+        const resultsBox = document.querySelector('[data-global-search-results]');
+        if (!resultsBox) return;
+
+        let debounceTimer = null;
+        let controller = null;
+        let resultadosActuales = [];
+        let indiceSeleccionado = -1;
+        let ultimaBusqueda = '';
+
+        const MIN_CHARS = 1;
+        const DEBOUNCE = 200;
+
+        function escaparHTML(texto) {
+            const div = document.createElement('div');
+            div.textContent = texto ?? '';
+            return div.innerHTML;
+        }
+
+        function mostrarResultados() {
+            resultsBox.classList.add('show');
+        }
+
+        function ocultarResultados() {
+            resultsBox.classList.remove('show');
+            indiceSeleccionado = -1;
+        }
+
+        function limpiarResultados() {
+            resultsBox.innerHTML = '';
+            resultadosActuales = [];
+            indiceSeleccionado = -1;
+        }
+
+        function mostrarCargando() {
+            resultsBox.innerHTML = '<div class="global-search-loading">Buscando...</div>';
+            mostrarResultados();
+        }
+
+        function mostrarMensaje(mensaje) {
+            resultsBox.innerHTML = `<div class="global-search-empty">🔎 ${escaparHTML(mensaje)}</div>`;
+            mostrarResultados();
+        }
+
+        function renderResultados(resultados) {
+            resultadosActuales = resultados;
+            indiceSeleccionado = -1;
+
+            if (!resultados.length) {
+                mostrarMensaje(`No encontramos resultados para "${input.value.trim()}".`);
+                return;
+            }
+
+            let html = '';
+
+            resultados.forEach(function (resultado, index) {
+                const icono = resultado.icono || '🔎';
+                const titulo = escaparHTML(resultado.titulo || '');
+                const subtitulo = escaparHTML(resultado.subtitulo || '');
+
+                html += `
+                    <button type="button" class="global-search-result" data-search-index="${index}" data-search-url="${escaparHTML(resultado.url || '')}">
+                        <span class="search-result-icon">${icono}</span>
+                        <span class="search-result-content">
+                            <span class="search-result-title">${titulo}</span>
+                            <span class="search-result-subtitle">${subtitulo}</span>
+                        </span>
+                        <span class="search-result-arrow">→</span>
+                    </button>
+                `;
+            });
+
+            html += `
+                <div class="global-search-footer">
+                    <span>${resultados.length} resultado${resultados.length === 1 ? '' : 's'}</span>
+                    <span class="global-search-shortcuts">↑ ↓ navegar · Enter abrir · Esc cerrar</span>
+                </div>
+            `;
+
+            resultsBox.innerHTML = html;
+            mostrarResultados();
+            agregarEventosResultados();
+        }
+
+        function agregarEventosResultados() {
+            const botones = resultsBox.querySelectorAll('.global-search-result');
+            botones.forEach(function (boton) {
+                boton.addEventListener('mouseenter', function () {
+                    indiceSeleccionado = Number(boton.dataset.searchIndex);
+                    actualizarSeleccion();
+                });
+
+                boton.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const url = boton.dataset.searchUrl;
+                    if (url) {
+                        window.location.href = url;
+                    }
+                });
+            });
+        }
+
+        function actualizarSeleccion() {
+            const botones = resultsBox.querySelectorAll('.global-search-result');
+            botones.forEach(function (boton, index) {
+                boton.classList.toggle('is-selected', index === indiceSeleccionado);
+            });
+
+            if (indiceSeleccionado >= 0 && botones[indiceSeleccionado]) {
+                botones[indiceSeleccionado].scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        function moverSeleccion(direccion) {
+            if (!resultadosActuales.length) return;
+
+            indiceSeleccionado += direccion;
+
+            if (indiceSeleccionado < 0) {
+                indiceSeleccionado = resultadosActuales.length - 1;
+            } else if (indiceSeleccionado >= resultadosActuales.length) {
+                indiceSeleccionado = 0;
+            }
+
+            actualizarSeleccion();
+        }
+
+        function abrirSeleccionado() {
+            if (indiceSeleccionado < 0 || !resultadosActuales[indiceSeleccionado]) return;
+            const resultado = resultadosActuales[indiceSeleccionado];
+            if (resultado.url) {
+                window.location.href = resultado.url;
+            }
+        }
+
+        async function buscar(query) {
+            query = query.trim();
+
+            if (query.length < MIN_CHARS) {
+                limpiarResultados();
+                ocultarResultados();
+                return;
+            }
+
+            if (query === ultimaBusqueda) return;
+
+            ultimaBusqueda = query;
+
+            if (controller) controller.abort();
+            controller = new AbortController();
+
+            mostrarCargando();
+
+            try {
+                const url = input.dataset.searchUrl || '/buscar-global/';
+                const response = await fetch(`${url}?q=${encodeURIComponent(query)}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    credentials: 'same-origin',
+                    signal: controller.signal
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+
+                if (query !== input.value.trim()) return;
+
+                if (!data.ok) {
+                    mostrarMensaje('No se pudo realizar la búsqueda.');
+                    return;
+                }
+
+                renderResultados(data.resultados || []);
+
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+                console.error('FRAYHUB buscador:', error);
+                mostrarMensaje('Ocurrió un problema al realizar la búsqueda.');
+            }
+        }
+
+        input.addEventListener('input', function () {
+            const query = input.value.trim();
+            clearTimeout(debounceTimer);
+
+            if (query.length < MIN_CHARS) {
+                ultimaBusqueda = '';
+                limpiarResultados();
+                ocultarResultados();
+                return;
+            }
+
+            debounceTimer = setTimeout(() => buscar(query), DEBOUNCE);
+        });
+
+        input.addEventListener('keydown', function (event) {
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                moverSeleccion(1);
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                moverSeleccion(-1);
+            } else if (event.key === 'Enter') {
+                if (indiceSeleccionado >= 0) {
+                    event.preventDefault();
+                    abrirSeleccionado();
+                }
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                ocultarResultados();
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                event.preventDefault();
+                input.focus();
+                input.select();
+            }
+            if (event.key === 'Escape' && document.activeElement !== input) {
+                ocultarResultados();
+            }
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!input.contains(event.target) && !resultsBox.contains(event.target)) {
+                ocultarResultados();
+            }
+        });
+
+        input.addEventListener('focus', function () {
+            if (input.value.trim().length >= MIN_CHARS && resultadosActuales.length) {
+                mostrarResultados();
+            }
+        });
+
+    });
+
+})();
 </script>
+
 {% block extra_js %}{% endblock %}
 </body>
 </html>

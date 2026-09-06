@@ -42,11 +42,15 @@
     .est-A{background:#fee2e2;color:#7f1d1d;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
     .comunicado{padding:1rem 1.25rem;border-bottom:1px solid #f2f3f7}
     .comunicado:last-child{border-bottom:none}
-    .tarea-item{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;border-bottom:1px solid #f2f3f7}
+    .tarea-item{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;border-bottom:1px solid #f2f3f7;gap:12px}
     .tarea-item:last-child{border-bottom:none}
     .vence-pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:#fee2e2;color:#991b1b;white-space:nowrap}
     .empty-inner{padding:2rem;text-align:center;font-size:13px;color:#9ca3af}
     .rubro-pill{font-size:10px;font-weight:600;color:#6b7280;background:#f3f4f6;padding:2px 7px;border-radius:20px}
+    .materia-bloque{padding:1rem 1.25rem;border-bottom:1px solid #f2f3f7}
+    .materia-bloque:last-child{border-bottom:none}
+    .materia-nombre{font-size:13px;font-weight:700;color:#111318;margin-bottom:6px}
+    .nota-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
     @media(max-width:600px){.kpis{grid-template-columns:repeat(2,1fr)}}
   </style>
 </head>
@@ -96,26 +100,92 @@
     </div>
   </div>
 
-  {# Tareas pendientes #}
+  {# Alerta: tareas pendientes sin entregar #}
   {% if tareas_activas %}
   <div class="card">
     <div class="card-header">
       <span class="card-title">⚠️ Tareas Pendientes</span>
       <span class="card-meta">{{ tareas_activas|length }} sin entregar</span>
     </div>
-    {% for t in tareas_activas %}
+    {% for x in tareas_activas %}
     <div class="tarea-item">
       <div>
-        <div style="font-size:13px;font-weight:600;color:#111318">{{ t.titulo }}</div>
-        <div style="font-size:11px;color:#6b7280;margin-top:2px">📚 {{ t.asignatura }}</div>
+        <div style="font-size:13px;font-weight:600;color:#111318">{{ x.tarea.titulo }}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">📚 {{ x.tarea.asignatura }}</div>
       </div>
-      <span class="vence-pill">Vence {{ t.fecha_entrega|date:"d/m/Y" }}</span>
+      <span class="vence-pill">Vence {{ x.tarea.fecha_entrega|date:"d/m/Y" }}</span>
     </div>
     {% endfor %}
   </div>
   {% endif %}
 
-  {# Calificaciones por parcial #}
+  {# Todas las tareas del ciclo, con estado real de entrega #}
+  <div class="card">
+    <div class="card-header"><span class="card-title">Tareas del Ciclo</span></div>
+    {% if tareas %}
+      {% for x in tareas %}
+      <div class="tarea-item">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#111318">{{ x.tarea.titulo }}</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px">📚 {{ x.tarea.asignatura }} · vence {{ x.tarea.fecha_entrega|date:"d/m/Y" }}</div>
+        </div>
+        <span class="vence-pill"
+          style="{% if x.estado == 'CALIFICADA' %}background:#d1fae5;color:#065f46
+                 {% elif x.estado == 'ENTREGADA' or x.estado == 'TARDE' %}background:#fef3c7;color:#78350f
+                 {% else %}background:#fee2e2;color:#991b1b{% endif %}">
+          {{ x.estado|title }}{% if x.entrega.calificacion %} · {{ x.entrega.calificacion }}{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="empty-inner">Sin tareas registradas.</div>
+    {% endif %}
+  </div>
+
+  {# Actividades #}
+  <div class="card">
+    <div class="card-header"><span class="card-title">Actividades</span></div>
+    {% if actividades %}
+      {% for x in actividades %}
+      <div class="tarea-item">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#111318">{{ x.actividad.titulo }}</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px">📚 {{ x.actividad.asignatura }} · vence {{ x.actividad.fecha_entrega|date:"d/m/Y" }}</div>
+        </div>
+        <span class="vence-pill"
+          style="{% if x.estado == 'CALIFICADA' %}background:#d1fae5;color:#065f46
+                 {% elif x.estado == 'ENTREGADA' %}background:#fef3c7;color:#78350f
+                 {% else %}background:#fee2e2;color:#991b1b{% endif %}">
+          {{ x.estado|title }}{% if x.entrega.calificacion %} · {{ x.entrega.calificacion }}{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="empty-inner">Sin actividades registradas.</div>
+    {% endif %}
+  </div>
+
+  {# Calificaciones sueltas por materia (capturas manuales, de tarea, de actividad) #}
+  <div class="card">
+    <div class="card-header"><span class="card-title">Calificaciones por Materia</span></div>
+    {% if calificaciones_por_materia %}
+      {% for asignatura, notas in calificaciones_por_materia.items %}
+      <div class="materia-bloque">
+        <div class="materia-nombre">{{ asignatura }}</div>
+        {% for n in notas %}
+        <div class="nota-row">
+          <span class="rubro-pill">{{ n.get_tipo_display }} · {{ n.fecha|date:"d/m/Y" }}</span>
+          <span class="{% if n.nota >= 9 %}nota-alta{% elif n.nota >= 6 %}nota-media{% else %}nota-baja{% endif %}" style="font-size:14px">{{ n.nota }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="empty-inner">Sin calificaciones capturadas todavía.</div>
+    {% endif %}
+  </div>
+
+  {# Boletas finales publicadas, por parcial #}
   {% if boletas_por_parcial %}
     {% for parcial_num, boletas in boletas_por_parcial.items %}
     <div class="card">
@@ -182,6 +252,37 @@
   </div>
   {% endif %}
 
+  {# Horario de clases #}
+  <div class="card">
+    <div class="card-header"><span class="card-title">Horario de Clases</span></div>
+    {% if horario %}
+    <table>
+      <thead>
+        <tr>
+          <th>Día</th>
+          <th>Hora</th>
+          <th>Materia</th>
+          <th>Docente</th>
+          <th>Aula</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in horario %}
+        <tr>
+          <td>{{ h.get_dia_display }}</td>
+          <td>{{ h.hora_inicio|time:"H:i" }}–{{ h.hora_fin|time:"H:i" }}</td>
+          <td>{{ h.asignatura }}</td>
+          <td>{{ h.maestro.get_full_name }}</td>
+          <td>{{ h.aula }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-inner">Sin horario cargado.</div>
+    {% endif %}
+  </div>
+
   {# Historial asistencia #}
   <div class="card">
     <div class="card-header">
@@ -212,7 +313,7 @@
       {% for c in comunicados %}
       <div class="comunicado">
         <div style="font-size:13px;font-weight:700;color:#111318;margin-bottom:3px">{{ c.titulo }}</div>
-        {% if c.contenido %}<div style="font-size:12px;color:#6b7280;margin-top:4px">{{ c.contenido|truncatechars:150 }}</div>{% endif %}
+        {% if c.cuerpo %}<div style="font-size:12px;color:#6b7280;margin-top:4px">{{ c.cuerpo|truncatechars:150 }}</div>{% endif %}
         <div style="font-size:10px;color:#9ca3af;margin-top:6px">{{ c.creado_en|date:"d/m/Y H:i" }}</div>
       </div>
       {% endfor %}

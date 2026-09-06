@@ -44,13 +44,15 @@
   .info-lbl { font-size:9px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.1em; }
   .info-val { font-size:12px;font-weight:600;color:var(--ink); }
 
-  /* Tutors dark card */
+  /* ── TUTORES CARD ── */
   .tutors-card { background:var(--ink);border-radius:18px;padding:18px;box-shadow:0 4px 20px rgba(17,19,24,.15); }
   .tutors-label { font-size:9px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:12px; }
-  .tutor-item { background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:11px 13px;margin-bottom:8px;transition:background .14s; }
+  .tutor-item { background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-radius:11px;padding:11px 13px;margin-bottom:8px;transition:background .14s;display:flex;justify-content:space-between;align-items:flex-start;gap:8px; }
   .tutor-item:last-child { margin-bottom:0; }
   .tutor-item:hover { background:rgba(255,255,255,.09); }
+  .tutor-info { flex:1;min-width:0; }
   .tutor-name { font-size:12px;font-weight:700;color:#fff; }
+  .tutor-parentesco { font-size:9px;color:rgba(255,255,255,.3);margin-top:2px;font-style:italic; }
   .tutor-phone { font-size:10.5px;color:rgba(255,255,255,.4);margin-top:3px;display:flex;align-items:center;gap:5px; }
 
   /* Código de acceso tutor */
@@ -69,7 +71,20 @@
   }
   .tutor-copy-btn:hover { background:rgba(255,255,255,.1);color:#8ba4fa; }
 
+  .tutor-actions { display:flex;gap:4px;flex-direction:column;flex-shrink:0; }
+  .tutor-delete-btn {
+    width:22px;height:22px;border-radius:6px;background:none;border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.35);
+    transition:all .14s;flex-shrink:0;padding:0;
+  }
+  .tutor-delete-btn:hover { background:rgba(255,0,0,.2);color:#ff6b6b; }
+
   .empty-tutors { font-size:11px;color:rgba(255,255,255,.3);font-style:italic;text-align:center;padding:12px 0; }
+
+  .btn-agregar-tutor { display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;background:rgba(79,110,247,.9);color:#fff;border:1px solid rgba(79,110,247,1);border-radius:10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s; }
+  .btn-agregar-tutor:hover { background:rgba(79,110,247,1);box-shadow:0 3px 10px rgba(79,110,247,.28); }
+  .btn-nuevo-tutor { display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .15s;margin-top:8px; }
+  .btn-nuevo-tutor:hover { background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25); }
 
   /* Right column — tabs */
   .tabs-card { background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04); }
@@ -281,37 +296,66 @@
         </div>
       </div>
 
-      <!-- Tutors -->
+      <!-- ════════════════════════════════════════════════════════════════ -->
+      <!-- TUTORES — con gestión de asignaciones (AlumnoTutor) -->
+      <!-- ════════════════════════════════════════════════════════════════ -->
       <div class="tutors-card">
-        <div class="tutors-label">Padres / Tutores</div>
-        {% for tutor in alumno.tutores.all %}
-        <div class="tutor-item">
-          <div class="tutor-name">{{ tutor.nombre }}</div>
-          <div class="tutor-phone">
-            <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24" style="color:var(--accent);"><path d="M6.62 10.79a15.15 15.15 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.27 11.72 11.72 0 003.7.59 1 1 0 011 1V20a1 1 0 01-1 1A15 15 0 013 6a1 1 0 011-1h3.5a1 1 0 011 1 11.72 11.72 0 00.59 3.7 1 1 0 01-.27 1.11l-2.2 2.2z"/></svg>
-            {{ tutor.telefono }}
-          </div>
+        <div class="tutors-label">
+          Padres / Tutores Asignados
+          <span style="font-size:10px;color:rgba(255,255,255,.5);margin-left:8px;">
+            ({{ alumno.tutores_asignados.count }} de {{ total_tutores_disponibles }})
+          </span>
+        </div>
 
-          <!-- Código de acceso al portal de padres -->
-          {% if tutor.codigo_acceso %}
-          <div class="tutor-codigo-wrap">
-            <div>
-              <div class="tutor-codigo-lbl">Código de acceso portal</div>
-              <div class="tutor-codigo-val">{{ tutor.codigo_acceso }}</div>
+        {% for asignacion in alumno.tutores_asignados.all %}
+        <div class="tutor-item">
+          <div class="tutor-info">
+            <div class="tutor-name">{{ asignacion.tutor.nombre }}</div>
+            <div class="tutor-parentesco">{{ asignacion.tutor.parentesco }}</div>
+            <div class="tutor-phone">
+              <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24" style="color:var(--accent);"><path d="M6.62 10.79a15.15 15.15 0 006.59 6.59l2.2-2.2a1 1 0 011.11-.27 11.72 11.72 0 003.7.59 1 1 0 011 1V20a1 1 0 01-1 1A15 15 0 013 6a1 1 0 011-1h3.5a1 1 0 011 1 11.72 11.72 0 00.59 3.7 1 1 0 01-.27 1.11l-2.2 2.2z"/></svg>
+              {{ asignacion.tutor.telefono }}
             </div>
+
+            {% if asignacion.tutor.codigo_acceso %}
+            <div class="tutor-codigo-wrap">
+              <div>
+                <div class="tutor-codigo-lbl">Código de acceso portal</div>
+                <div class="tutor-codigo-val">{{ asignacion.tutor.codigo_acceso }}</div>
+              </div>
+              <button
+                class="tutor-copy-btn"
+                title="Copiar código"
+                onclick="copyToClipboard('{{ asignacion.tutor.codigo_acceso }}'); showToast('Código de {{ asignacion.tutor.nombre }} copiado')">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              </button>
+            </div>
+            {% endif %}
+          </div>
+          <div class="tutor-actions">
             <button
-              class="tutor-copy-btn"
-              title="Copiar código"
-              onclick="copyToClipboard('{{ tutor.codigo_acceso }}'); showToast('Código de {{ tutor.nombre }} copiado')">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              class="tutor-delete-btn"
+              title="Desasignar"
+              onclick="desasignarTutor({{ alumno.pk }}, {{ asignacion.tutor.pk }})">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
-          {% endif %}
-
         </div>
         {% empty %}
-        <p class="empty-tutors">Sin tutores registrados</p>
+        <p class="empty-tutors">Sin tutores asignados</p>
         {% endfor %}
+
+        <button onclick="openAsignarTutorModal({{ alumno.pk }})" class="btn-agregar-tutor" style="margin-top:12px;">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+          Agregar Tutor
+        </button>
+
+        {% if user.rol in 'DIRECTOR,ADMIN' %}
+        <button onclick="openNuevoTutorModal()" class="btn-nuevo-tutor">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+          Dar de Alta Nuevo Tutor
+        </button>
+        {% endif %}
       </div>
 
     </div>
@@ -564,7 +608,82 @@
   </div>
 </div>
 
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: ASIGNAR TUTOR (Seleccionar de lista disponible) -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="modal-asignar-tutor" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeAsignarTutorModal()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="modal-title">Asignar Tutor al Alumno</div>
+
+    <div id="tutores-disponibles-list" style="max-height:350px;overflow-y:auto;margin-bottom:16px;">
+      <!-- Se llena dinámicamente con JS -->
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="modal-btn-cancel" onclick="closeAsignarTutorModal()">Cancelar</button>
+      <button type="button" class="modal-btn-submit" onclick="confirmarAsignacionTutor()">Asignar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: DAR DE ALTA NUEVO TUTOR (ADMIN/DIRECTOR) -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="modal-nuevo-tutor" class="modal-overlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeNuevoTutorModal()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="modal-title">Dar de Alta Nuevo Tutor</div>
+    <form id="form-nuevo-tutor" method="POST" action="{% url 'crear_tutor' %}">
+      {% csrf_token %}
+      <div class="modal-field-grid">
+        <div class="modal-field full">
+          <label class="modal-label">Nombre Completo</label>
+          <input type="text" name="nombre" required class="modal-input" placeholder="Ej: María García López">
+        </div>
+      </div>
+      <div class="modal-field-grid">
+        <div class="modal-field">
+          <label class="modal-label">Parentesco</label>
+          <select name="parentesco" required class="modal-input">
+            <option value="">Selecciona...</option>
+            <option value="Padre">Padre</option>
+            <option value="Madre">Madre</option>
+            <option value="Tutor legal">Tutor legal</option>
+            <option value="Abuelo/a">Abuelo/a</option>
+            <option value="Tío/a">Tío/a</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="modal-field">
+          <label class="modal-label">Teléfono</label>
+          <input type="tel" name="telefono" required class="modal-input" placeholder="Ej: +52 443 123 4567">
+        </div>
+      </div>
+      <div class="modal-field-grid">
+        <div class="modal-field full">
+          <label class="modal-label">Correo (Opcional)</label>
+          <input type="email" name="correo" class="modal-input" placeholder="correo@ejemplo.com">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="modal-btn-cancel" onclick="closeNuevoTutorModal()">Cancelar</button>
+        <button type="submit" class="modal-btn-submit">Crear Tutor</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
+const alumnoId = {{ alumno.pk }};
+const tutoresDisponibles = JSON.parse('{{ tutores_disponibles_json|escapejs }}');
+const tutoresAsignados = new Set(JSON.parse('{{ tutores_asignados_json|escapejs }}'));
+let tutorSeleccionado = null;
+
 /* Tabs */
 const tabs = document.querySelectorAll('.tab-btn');
 const panels = document.querySelectorAll('.tab-panel');
@@ -586,13 +705,13 @@ function togglePassword() {
   passDisplay.textContent = passVisible ? (realPass || 'No disponible') : '••••••••';
   if (passVisible) setTimeout(() => { passVisible = false; if (passDisplay) passDisplay.textContent = '••••••••'; }, 10000);
 }
-/* Password */
+
 function copyToClipboard(text) {
   if (!text || text === 'None') return;
   navigator.clipboard.writeText(text).catch(() => showToast('No se pudo copiar', true));
 }
 
-/* Modal */
+/* Modal: Editar Perfil */
 function openEditModal() { document.getElementById('modal-edit').classList.add('open'); document.body.style.overflow = 'hidden'; }
 function closeEditModal() { document.getElementById('modal-edit').classList.remove('open'); document.body.style.overflow = ''; }
 document.getElementById('modal-edit').addEventListener('click', e => { if (e.target === e.currentTarget) closeEditModal(); });
@@ -608,6 +727,196 @@ function showToast(msg, isError = false) {
   document.body.appendChild(t);
   setTimeout(() => t.style.opacity = '0', 2500);
   setTimeout(() => t.remove(), 3000);
+}
+
+function getCookie(name) {
+  let value = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        value = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return value;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* MODAL: Asignar Tutor (Seleccionar de lista) */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function openAsignarTutorModal(aluId) {
+  tutorSeleccionado = null;
+  renderizarTutoresDisponibles();
+  document.getElementById('modal-asignar-tutor').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAsignarTutorModal() {
+  document.getElementById('modal-asignar-tutor').classList.remove('open');
+  document.body.style.overflow = '';
+  tutorSeleccionado = null;
+}
+
+function renderizarTutoresDisponibles() {
+  const container = document.getElementById('tutores-disponibles-list');
+  const noAsignados = tutoresDisponibles.filter(t => !tutoresAsignados.has(t.id));
+
+  if (noAsignados.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:20px;">
+        <p class="empty-text">Todos los tutores están ya asignados</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = noAsignados.map(t => `
+    <div class="tutor-option"
+         onclick="seleccionarTutor(${t.id})"
+         style="
+           padding:12px;
+           border:1px solid var(--border);
+           border-radius:10px;
+           margin-bottom:8px;
+           cursor:pointer;
+           transition:all .15s;
+           ${tutorSeleccionado === t.id ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : 'background:var(--white);'}
+         ">
+      <div style="font-weight:700;${tutorSeleccionado === t.id ? 'color:#fff;' : 'color:var(--ink);'}">
+        ${t.nombre}
+      </div>
+      <div style="font-size:10px;margin-top:4px;${tutorSeleccionado === t.id ? 'color:rgba(255,255,255,.8);' : 'color:var(--ink-3);'}">
+        ${t.parentesco} · ${t.telefono}
+      </div>
+      {% if user.rol in 'DIRECTOR,ADMIN' %}
+      <div style="font-size:9px;margin-top:6px;${tutorSeleccionado === t.id ? 'color:rgba(255,255,255,.7);' : 'color:var(--accent);'}font-family:monospace;">
+        Código: ${t.codigo_acceso}
+      </div>
+      {% endif %}
+    </div>
+  `).join('');
+}
+
+function seleccionarTutor(tutorId) {
+  tutorSeleccionado = tutorSeleccionado === tutorId ? null : tutorId;
+  renderizarTutoresDisponibles();
+}
+
+function confirmarAsignacionTutor() {
+  if (!tutorSeleccionado) {
+    showToast('Selecciona un tutor', true);
+    return;
+  }
+
+  fetch('{% url "asignar_tutor" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({
+      alumno_id: alumnoId,
+      tutor_id: tutorSeleccionado,
+    }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      showToast('Tutor asignado exitosamente');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(data.error || 'Error al asignar tutor', true);
+    }
+  })
+  .catch(e => {
+    console.error(e);
+    showToast('Error de conexión', true);
+  });
+}
+
+document.getElementById('modal-asignar-tutor').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeAsignarTutorModal();
+});
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* MODAL: Dar de Alta Nuevo Tutor */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function openNuevoTutorModal() {
+  document.getElementById('modal-nuevo-tutor').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeNuevoTutorModal() {
+  document.getElementById('modal-nuevo-tutor').classList.remove('open');
+  document.body.style.overflow = '';
+  document.getElementById('form-nuevo-tutor').reset();
+}
+
+document.getElementById('modal-nuevo-tutor').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeNuevoTutorModal();
+});
+
+document.getElementById('form-nuevo-tutor').addEventListener('submit', function (e) {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData(form);
+
+  fetch(form.action, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: formData,
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      showToast(data.mensaje || 'Tutor creado exitosamente');
+      closeNuevoTutorModal();
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(data.error || 'Error al crear tutor', true);
+    }
+  })
+  .catch(e => {
+    console.error(e);
+    showToast('Error de conexión', true);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* DESASIGNAR TUTOR */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function desasignarTutor(aluId, tutorId) {
+  if (!confirm('¿Desasignar este tutor?')) return;
+
+  fetch('{% url "desasignar_tutor" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({
+      alumno_id: aluId,
+      tutor_id: tutorId,
+    }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      showToast('Tutor desasignado');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(data.error || 'Error', true);
+    }
+  })
+  .catch(e => showToast('Error de conexión', true));
 }
 </script>
 {% endblock %}

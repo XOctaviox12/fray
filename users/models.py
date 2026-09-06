@@ -104,12 +104,14 @@ class User(AbstractUser):
 
 
 class Tutor(models.Model):
-    alumno     = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tutores')
+    plantel    = models.ForeignKey(Plantel, on_delete=models.CASCADE, related_name='tutores', null=True, blank=True)
+    alumno     = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tutores', null=True, blank=True)
     nombre     = models.CharField(max_length=100)
     parentesco = models.CharField(max_length=50)
     telefono   = models.CharField(max_length=20)
     correo     = models.EmailField(blank=True, null=True)
     codigo_acceso = models.CharField(max_length=12, unique=True, blank=True)
+    activo     = models.BooleanField(default=True)
 
     def save(self, *args, **kwargs):
         if not self.codigo_acceso:
@@ -122,8 +124,15 @@ class Tutor(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.nombre} - {self.alumno.get_full_name()}"
+        return f"{self.nombre} - {self.alumno.get_full_name() if self.alumno else self.plantel}"
 
+class AlumnoTutor(models.Model):
+    alumno = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'rol': 'ALUMNO'}, related_name='tutores_asignados')
+    tutor = models.ForeignKey(Tutor, on_delete=models.CASCADE, related_name='alumnos_asignados')
+    asignado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [['alumno', 'tutor']]
 
 class DocenteGrupo(models.Model):
     """

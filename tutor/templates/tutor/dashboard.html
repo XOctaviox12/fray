@@ -16,7 +16,7 @@
     .logout:hover{background:#dc2626;color:#fff}
     .main{max-width:900px;margin:0 auto;padding:28px 20px}
     h1{font-family:'Instrument Serif',serif;font-size:24px;font-weight:400;margin-bottom:4px}
-    .sub{font-size:13px;color:#6b7280;margin-bottom:2rem}
+    .sub{font-size:13px;color:#6b7280;margin-bottom:2rem;display:flex;align-items:center}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
     .alumno-card{background:#fff;border:1px solid #e8eaf0;border-radius:16px;overflow:hidden;text-decoration:none;transition:all .15s;display:block}
     .alumno-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
@@ -32,6 +32,14 @@
     .ok{color:#059669} .warn{color:#d97706} .danger{color:#dc2626} .muted{color:#9ca3af}
     .ver-btn{display:block;margin:12px 0 0;text-align:center;background:#f7f8fc;border:1px solid #e8eaf0;border-radius:9px;padding:8px;font-size:12px;font-weight:700;color:#4f6ef7;text-decoration:none}
     .empty{text-align:center;padding:3rem;color:#9ca3af;font-size:14px}
+    .card{background:#fff;border:1px solid #e8eaf0;border-radius:16px;overflow:hidden;margin-bottom:1.5rem}
+    .card-header-plain{padding:.875rem 1.25rem;border-bottom:1px solid #e8eaf0;background:#f7f8fc;display:flex;align-items:center;justify-content:space-between}
+    .comunicado-item{padding:1rem 1.25rem;border-bottom:1px solid #f2f3f7}
+    .comunicado-item:last-child{border-bottom:none}
+    .comunicado-empty{padding:2rem;text-align:center;font-size:13px;color:#9ca3af}
+    .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;margin-right:6px;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    @media(max-width:600px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -49,43 +57,46 @@
 
 <div class="main">
   <h1>Bienvenido, {{ tutor.nombre }}</h1>
-  <p class="sub">Portal de seguimiento académico · {{ tutor.get_parentesco_display|default:tutor.parentesco }}</p>
+  <p class="sub"><span class="live-dot"></span>Portal de seguimiento académico · {{ tutor.get_parentesco_display|default:tutor.parentesco }}</p>
 
-  {% if resumen %}
-  <div class="grid">
-    {% for r in resumen %}
-    <a href="{% url 'tutor:perfil_alumno' r.alumno.pk %}" class="alumno-card">
-      <div class="card-header">
-        <div class="avatar">
-          {{ r.alumno.first_name|first|upper }}{{ r.alumno.last_name|first|upper }}
-        </div>
-        <div>
-          <div class="alumno-nombre">{{ r.alumno.get_full_name }}</div>
-          <div class="alumno-grupo">{{ r.alumno.alumno_grupo|default:"Sin grupo" }}</div>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="stat">
-          <span class="stat-label">Asistencia este mes</span>
-          <span class="stat-val {% if r.asistencia_pct == None %}muted{% elif r.asistencia_pct >= 80 %}ok{% elif r.asistencia_pct >= 60 %}warn{% else %}danger{% endif %}">
-            {% if r.asistencia_pct == None %}Sin registros{% else %}{{ r.asistencia_pct }}%{% endif %}
-          </span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">Tareas pendientes</span>
-          <span class="stat-val {% if r.tareas_pendientes == 0 %}ok{% elif r.tareas_pendientes <= 2 %}warn{% else %}danger{% endif %}">
-            {{ r.tareas_pendientes }} tarea{% if r.tareas_pendientes != 1 %}s{% endif %}
-          </span>
-        </div>
-        <span class="ver-btn">Ver detalle completo →</span>
-      </div>
-    </a>
-    {% endfor %}
+  {# ── Comunicados: card fijo, solo el contenido interno se reemplaza ── #}
+  <div class="card">
+    <div id="comunicados-container">
+      {% include 'tutor/_partials/comunicados_card.html' %}
+    </div>
   </div>
-  {% else %}
-  <div class="empty">No hay alumnos vinculados a tu código de acceso.<br>Comunícate con la dirección.</div>
-  {% endif %}
+
+  {# ── Grid de alumnos: se reemplaza completo (grid o mensaje vacío) ── #}
+  <div id="alumnos-grid-container">
+    {% include 'tutor/_partials/alumnos_grid.html' %}
+  </div>
 </div>
 
+<script>
+(function () {
+  const ENDPOINT = "{% url 'tutor:dashboard_actualizar' %}";
+  const INTERVALO_MS = 60000; // 60 segundos — ajusta según qué tan "en vivo" lo necesites
+
+  function actualizar() {
+    fetch(ENDPOINT, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (data) {
+        document.getElementById('comunicados-container').innerHTML = data.comunicados;
+        document.getElementById('alumnos-grid-container').innerHTML = data.alumnos;
+      })
+      .catch(function (err) {
+        console.warn('No se pudo actualizar el dashboard:', err);
+      });
+  }
+
+  setInterval(actualizar, INTERVALO_MS);
+
+  // Si el padre deja la pestaña abierta y vuelve después de un rato,
+  // refresca de inmediato en vez de esperar al siguiente ciclo.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') actualizar();
+  });
+})();
+</script>
 </body>
 </html>

@@ -1,0 +1,22 @@
+{# tutor/_partials/comunicados_card.html #}
+<div class="card-header-plain">
+  <span style="font-size:13px;font-weight:700;color:#111318">📢 Comunicados</span>
+  {% if comunicados %}<span style="font-size:10px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.07em">{{ comunicados|length }} recientes</span>{% endif %}
+</div>
+{% if comunicados %}
+  {% for c in comunicados %}
+  <div class="comunicado-item">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:700;color:#111318">{{ c.titulo }}</span>
+      <span style="font-size:10px;font-weight:600;color:#6b7280;background:#f3f4f6;padding:2px 8px;border-radius:20px">
+        {% if c.autor.es_director %}Dirección{% elif c.autor.rol == 'COORD' %}Coordinación{% else %}{{ c.autor.get_full_name }}{% endif %}
+        {% if c.grupo %} · {{ c.grupo }}{% endif %}
+      </span>
+    </div>
+    {% if c.cuerpo %}<div style="font-size:12px;color:#6b7280;margin-top:6px">{{ c.cuerpo|truncatechars:150 }}</div>{% endif %}
+    <div style="font-size:10px;color:#9ca3af;margin-top:6px">{{ c.creado_en|date:"d/m/Y H:i" }}</div>
+  </div>
+  {% endfor %}
+{% else %}
+<div class="comunicado-empty">Sin comunicados recientes.</div>
+{% endif %}

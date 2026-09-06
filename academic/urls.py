@@ -28,7 +28,15 @@ urlpatterns = [
     path('alumno/<int:pk>/detalle/',         views.detalle_alumno,          name='detalle_alumno'),
     path('alumno/<int:pk>/regenerar-password/', views.regenerar_password,   name='regenerar_password'),
     path('academic/alumno/<int:pk>/json/', views.detalle_alumno_json, name='detalle_alumno_json'),
-
+     path('api/asignar-tutor/', views.asignar_tutor, name='asignar_tutor'),
+    path('api/desasignar-tutor/', views.desasignar_tutor, name='desasignar_tutor'),
+ 
+    # Gestión de tutores (admin/director)
+    path('tutores/', views.lista_tutores, name='lista_tutores'),
+    path('tutores/crear/', views.crear_tutor, name='crear_tutor'),
+    path('tutores/<int:pk>/editar/', views.editar_tutor, name='editar_tutor'),
+    path('tutores/<int:pk>/eliminar/', views.eliminar_tutor, name='eliminar_tutor'),
+    
     # ── HORARIOS ──────────────────────────────────────────────────────────────
     path('carga-horaria/',                   views.carga_horaria_alumno,    name='carga_horaria'),
     path('clase/crear/',                     views.crear_clase,             name='crear_clase'),

@@ -29,4 +29,6 @@ urlpatterns = [
     # Gestión de personal
     path('personal/',                        views.lista_personal,      name='lista_personal'),
     path('personal/<int:pk>/permisos/',      views.editar_permisos,     name='editar_permisos'),
+    path('admin/users/user/generar-credenciales/', views.generar_credenciales, name='generar_credenciales'),
+    path('admin/users/user/preview-credenciales/', views.preview_credenciales, name='preview_credenciales'),
 ]

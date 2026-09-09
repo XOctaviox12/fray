@@ -525,6 +525,12 @@
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h12"/></svg>
             Grupos
         </a>
+        <a href="{% url 'lista_alumnos' %}" class="nav-item {% block nav_alumnos %}{% endblock %}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h4M15 12h4M5 18a4 4 0 018 0"/>
+            </svg>
+            Alumnos
+        </a>
         <div class="nav-section">Historial</div>
         <a href="{% url 'lista_graduados' %}" class="nav-item {% block nav_graduados %}{% endblock %}">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>

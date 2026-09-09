@@ -220,7 +220,6 @@ def logout_view(request):
 
 
 # ── Autenticación ─────────────────────────────────────────────────────
-
 def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
@@ -233,16 +232,20 @@ def login_view(request):
 
             user = authenticate(request, username=username, password=password)
             if user:
-                login(request, user)
-                if user.is_superuser:
-                    return redirect('/admin/')
-                elif user.rol == 'DOCENTE':
-                    return redirect('dashboard_docente')
+                if user.rol == 'ALUMNO':
+                    form.add_error(None, "Los alumnos deben usar la app móvil para iniciar sesión.")
                 else:
-                    return redirect('dashboard')
-            # Mensaje genérico: no reveles si el usuario/email existe o no,
-            # evita que alguien use el login para enumerar cuentas válidas.
-            messages.error(request, "Credenciales incorrectas.")
+                    login(request, user)
+                    if user.is_superuser:
+                        return redirect('/admin/')
+                    elif user.rol == 'DOCENTE':
+                        return redirect('dashboard_docente')
+                    else:
+                        return redirect('dashboard')
+            else:
+                # Mensaje genérico: no reveles si el usuario/email existe o no,
+                # evita que alguien use el login para enumerar cuentas válidas.
+                form.add_error(None, "Credenciales incorrectas.")
     else:
         form = LoginForm()
     return render(request, 'registration/login.html', {'form': form})

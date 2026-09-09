@@ -387,9 +387,20 @@
             <div class="info-field-label">Teléfono</div>
             <div class="info-field-value">{{ alumno.telefono|default:"No registrado" }}</div>
           </div>
-          <div class="info-field">
-            <div class="info-field-label">Grupo Asignado</div>
-            <div class="info-field-value">{{ alumno.alumno_grupo|default:"Sin grupo" }}</div>
+                    <div class="info-field full">
+            <div class="info-field-label">Grupo Asignado / Inscripción</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:2px;">
+              <select id="select-grupo-alumno" class="modal-input" style="flex:1;">
+                <option value="">— Sin grupo —</option>
+                {% for g in grupos_plantel %}
+                  <option value="{{ g.id }}" {% if alumno.alumno_grupo_id == g.id %}selected{% endif %}>{{ g }}</option>
+                {% endfor %}
+              </select>
+              <button type="button" onclick="guardarGrupoAlumno()" class="btn-sm btn-sm-accent" style="white-space:nowrap;">
+                Guardar
+              </button>
+            </div>
+            <div id="grupo-alumno-msg" style="font-size:10.5px;color:var(--ink-3);margin-top:4px;"></div>
           </div>
           <div class="info-field">
             <div class="info-field-label">Estatus</div>
@@ -917,6 +928,41 @@ function desasignarTutor(aluId, tutorId) {
     }
   })
   .catch(e => showToast('Error de conexión', true));
+}
+/* ────────────────────────────────────────────────────────────────────────── */
+/* GRUPO / INSCRIPCIÓN */
+/* ────────────────────────────────────────────────────────────────────────── */
+
+function guardarGrupoAlumno() {
+  const select = document.getElementById('select-grupo-alumno');
+  const msg = document.getElementById('grupo-alumno-msg');
+  const grupoId = select.value ? parseInt(select.value, 10) : null;
+
+  msg.textContent = 'Guardando...';
+
+  fetch(`/academic/alumno/${alumnoId}/cambiar-grupo/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken'),
+    },
+    body: JSON.stringify({ grupo_id: grupoId }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      msg.textContent = '';
+      showToast(data.grupo ? `Inscrito en ${data.grupo.nombre}` : 'Alumno sin grupo');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      msg.textContent = '';
+      showToast(data.error || 'Error al guardar el grupo', true);
+    }
+  })
+  .catch(() => {
+    msg.textContent = '';
+    showToast('Error de conexión', true);
+  });
 }
 </script>
 {% endblock %}

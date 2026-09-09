@@ -28,7 +28,9 @@ urlpatterns = [
     path('alumno/<int:pk>/detalle/',         views.detalle_alumno,          name='detalle_alumno'),
     path('alumno/<int:pk>/regenerar-password/', views.regenerar_password,   name='regenerar_password'),
     path('academic/alumno/<int:pk>/json/', views.detalle_alumno_json, name='detalle_alumno_json'),
-     path('api/asignar-tutor/', views.asignar_tutor, name='asignar_tutor'),
+    path('alumnos/lista/',                        views.lista_alumnos,        name='lista_alumnos'),
+    path('alumno/<int:pk>/cambiar-grupo/',         views.cambiar_grupo_alumno, name='cambiar_grupo_alumno'),
+    path('api/asignar-tutor/', views.asignar_tutor, name='asignar_tutor'),
     path('api/desasignar-tutor/', views.desasignar_tutor, name='desasignar_tutor'),
  
     # Gestión de tutores (admin/director)

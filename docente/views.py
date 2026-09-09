@@ -455,12 +455,15 @@ def obtener_parcial_activo(grupo, asignatura, docente):
             return numero
     return 4
 
+from django.db.models import Q
+
 @docente_required
 def crear_tarea(request):
     grupos_unicos = (
-        request.user.grupos_asignados
+        Grupo.objects
+        .filter(asignaturas__docentes=request.user, periodo__activo=True)
         .select_related('carrera', 'periodo')
-        .filter(periodo__activo=True)
+        .distinct()
         .order_by('grado', 'nombre')
     )
     asignaciones = [
@@ -475,7 +478,7 @@ def crear_tarea(request):
             tarea = form.save(commit=False)
             tarea.docente = request.user
             tarea.parcial = obtener_parcial_activo(tarea.grupo, tarea.asignatura, request.user)
-            tarea.publicada = request.POST.get('publicada') == '1'   # ← esto faltaba
+            tarea.publicada = request.POST.get('publicada') == '1'
             try:
                 tarea.save()
                 messages.success(request, f'✅ Tarea "{tarea.titulo}" creada correctamente.')
@@ -495,7 +498,6 @@ def crear_tarea(request):
         'grupos_unicos': grupos_unicos,
         'asignaciones': asignaciones,
     })
-    
     
 @docente_required
 def editar_tarea(request, pk):

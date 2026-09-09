@@ -13,6 +13,7 @@ from users.views import get_campus_theme
 from django.views.generic import DetailView
 import random
 import string
+import secrets
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from datetime import date as ddate
@@ -830,6 +831,7 @@ def detalle_alumno(request, pk):
         'porcentaje_asistencia': porcentaje_asistencia,
         'historial': historial,
         'promedio_alumno': round(promedio_alumno, 1),
+        'grupos_plantel': Grupo.objects.filter(plantel=plantel).order_by('grado', 'nombre'),
     }
  
     return render(request, 'academic/alumno_detalle.html', context)
@@ -1035,7 +1037,7 @@ def eliminar_tutor(request, pk):
     tutor.save()
     return redirect('lista_tutores')
  
-
+@rol_requerido('DIRECTOR', 'COORD', 'ADMIN') 
 @login_required
 def editar_alumno(request, pk):
     ctx    = get_plantel_context(request.user)
@@ -1055,6 +1057,7 @@ def editar_alumno(request, pk):
     return render(request, 'academic/editar_alumno.html', {'form': form, 'alumno': alumno, **ctx})
 
 
+@rol_requerido('DIRECTOR', 'COORD', 'ADMIN') 
 @login_required
 def regenerar_password(request, pk):
     alumno = get_object_or_404(User, pk=pk, plantel=request.user.plantel)
@@ -1891,3 +1894,159 @@ def historial_academico_alumno(request, pk):
         'ciclos': ciclos,
     })
  
+@rol_requerido('DIRECTOR', 'COORD', 'ADMIN')
+def lista_alumnos(request):
+    """
+    Directorio de alumnos con filtro por grado y nombre. Dar clic en un
+    alumno lleva a detalle_alumno (datos, contraseña, tutor e inscripción
+    en un solo lugar). Desde aquí también se puede dar de alta un alumno
+    nuevo (con o sin grupo), sin salir de esta pantalla.
+    """
+    ctx     = get_plantel_context(request.user)
+    plantel = request.user.plantel
+
+    # ── Alta de alumno nuevo ────────────────────────────────────────────
+    if request.method == 'POST' and request.POST.get('accion') == 'nuevo_alumno':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name  = request.POST.get('last_name', '').strip()
+        email      = request.POST.get('email', '').strip()
+        telefono   = request.POST.get('telefono', '').strip()
+        direccion  = request.POST.get('direccion', '').strip()
+        fecha_nac  = request.POST.get('fecha_nacimiento', '')
+        grupo_id   = request.POST.get('grupo_id', '')
+
+        errores = []
+        if not first_name:
+            errores.append('El nombre es obligatorio.')
+        if not last_name:
+            errores.append('Los apellidos son obligatorios.')
+
+        if email:
+            from django.core.validators import validate_email
+            from django.core.exceptions import ValidationError
+            try:
+                validate_email(email)
+            except ValidationError:
+                errores.append('El correo electrónico no tiene un formato válido.')
+
+        fecha_nac_parsed = None
+        if fecha_nac:
+            try:
+                fecha_nac_parsed = ddate.fromisoformat(fecha_nac)
+            except ValueError:
+                errores.append('La fecha de nacimiento no tiene un formato válido.')
+
+        grupo = None
+        if grupo_id:
+            grupo = Grupo.objects.filter(id=grupo_id, plantel=plantel).first()
+            if not grupo:
+                errores.append('El grupo seleccionado no es válido.')
+
+        if errores:
+            for e in errores:
+                messages.error(request, e)
+        else:
+            # secrets.choice es criptográficamente seguro; random NO lo es
+            # y nunca debe usarse para generar credenciales.
+            while True:
+                sufijo = ''.join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(5))
+                nuevo_username = f"fray{sufijo}"
+                if not User.objects.filter(username=nuevo_username).exists():
+                    break
+            password_temporal = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+
+            nuevo_alumno = User(
+                username=nuevo_username,
+                first_name=first_name,
+                last_name=last_name,
+                email=email or '',
+                telefono=telefono or None,
+                direccion=direccion or None,
+                rol='ALUMNO',
+                plantel=plantel,
+                alumno_grupo=grupo,
+            )
+            if fecha_nac_parsed:
+                nuevo_alumno.fecha_nacimiento = fecha_nac_parsed
+
+            nuevo_alumno.set_password(password_temporal)
+            nuevo_alumno.set_password_recuperable(password_temporal)
+            nuevo_alumno.save()
+
+            messages.success(
+                request,
+                f"✅ Alumno inscrito: {nuevo_alumno.get_full_name()} "
+                f"| Matrícula: {nuevo_alumno.username} "
+                f"| Contraseña temporal: {password_temporal} — anótala antes de salir."
+            )
+            return redirect('lista_alumnos')
+
+    # ── Listado + filtros (igual que antes) ─────────────────────────────
+    query = request.GET.get('q', '').strip()
+    grado = request.GET.get('grado', '').strip()
+
+    alumnos_qs = User.objects.filter(
+        rol='ALUMNO', plantel=plantel
+    ).select_related('alumno_grupo', 'alumno_grupo__carrera').order_by('last_name', 'first_name')
+
+    if query:
+        alumnos_qs = alumnos_qs.filter(
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(username__icontains=query)
+        )
+
+    if grado:
+        if grado == 'SIN_GRUPO':
+            alumnos_qs = alumnos_qs.filter(alumno_grupo__isnull=True)
+        else:
+            alumnos_qs = alumnos_qs.filter(alumno_grupo__grado=grado)
+
+    grados_disponibles = (
+        Grupo.objects.filter(plantel=plantel)
+        .order_by('grado').values_list('grado', flat=True).distinct()
+    )
+
+    paginator = Paginator(alumnos_qs, 24)
+    page_obj  = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'academic/lista_alumnos.html', {
+        'alumnos':            page_obj,
+        'page_obj':           page_obj,
+        'query':              query,
+        'grado_seleccionado': grado,
+        'grados_disponibles': grados_disponibles,
+        'grupos_plantel':     Grupo.objects.filter(plantel=plantel).order_by('grado', 'nombre'),  # ← NUEVO, para el select del modal
+        **ctx,
+    })
+    
+@rol_requerido('DIRECTOR', 'COORD', 'ADMIN')
+@require_http_methods(['POST'])
+def cambiar_grupo_alumno(request, pk):
+    """
+    AJAX: asigna o cambia el grupo de un alumno ya existente (inscripción /
+    re-inscripción), sin pasar por el modal de "nuevo alumno" de grupo_detail.
+    Body JSON: { "grupo_id": int | null }
+    """
+    alumno = get_object_or_404(User, pk=pk, plantel=request.user.plantel, rol='ALUMNO')
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+
+    grupo_id = data.get('grupo_id')
+
+    if grupo_id in (None, '', 0):
+        alumno.alumno_grupo = None
+        alumno.save(update_fields=['alumno_grupo'])
+        return JsonResponse({'success': True, 'grupo': None})
+
+    grupo = get_object_or_404(Grupo, pk=grupo_id, plantel=request.user.plantel)
+    alumno.alumno_grupo = grupo
+    alumno.save(update_fields=['alumno_grupo'])
+
+    return JsonResponse({
+        'success': True,
+        'grupo': {'id': grupo.id, 'nombre': str(grupo), 'grado': grupo.grado},
+    })

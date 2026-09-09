@@ -14,4 +14,5 @@ urlpatterns = [
     path('api/periodo-activo/', views.api_periodo_activo, name='api_periodo_activo'),
     path('graduados/', views.lista_graduados, name='lista_graduados'),
     path('buscar/', views.buscar_global,     name='buscar_global'),
+    path('api/periodo-activo/', views.api_periodo_activo, name='api_periodo_activo'),
 ]
